@@ -18,6 +18,7 @@ import {
   Target,
 } from 'lucide-react'
 import { useStore } from '../store/useStore'
+import { MathText } from '../components/ui/MathText'
 
 type Level = 'beginner' | 'intermediate' | 'advanced'
 type LabId = 'clt' | 'lln' | 'bayes' | 'sampling' | 'errors' | 'ci' | 'bootstrap' | 'permutation' | 'anova' | 'mle' | 'bayesian' | 'regression'
@@ -304,6 +305,7 @@ export function LearnPage() {
   const [falsePositive, setFalsePositive] = useState(0.08)
   const [lessonNotes, setLessonNotes] = useState('')
   const [completed, setCompleted] = useState<string[]>(() => JSON.parse(localStorage.getItem('learn-progress') ?? '[]') as string[])
+  const [historyTick, setHistoryTick] = useState(0)
 
   const theorem = THEOREMS.find((item) => item.id === selectedTheorem) ?? THEOREMS[0]
   const paths = Array.from(new Set(THEOREMS.map((item) => item.path)))
@@ -355,6 +357,7 @@ export function LearnPage() {
     const entry = `${lab} lab, n=${sampleSize}, reps=${reps}, population=${population}`
     const nextHistory = [entry, ...JSON.parse(localStorage.getItem('sandbox-history') ?? '[]')].slice(0, 8)
     localStorage.setItem('sandbox-history', JSON.stringify(nextHistory))
+    setHistoryTick((value) => value + 1)
   }
 
   const markComplete = (id: string) => {
@@ -367,6 +370,18 @@ export function LearnPage() {
   const bars = histogram(simulation)
   const labMean = simulation.length ? mean(simulation) : 0
   const labSd = simulation.length ? sd(simulation) : 0
+  const sandboxHistory = useMemo(() => JSON.parse(localStorage.getItem('sandbox-history') ?? '[]') as string[], [historyTick])
+
+  const exportLearningReport = () => {
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>StatAnveshak Learning Report</title><style>body{font-family:Inter,Arial,sans-serif;line-height:1.5;margin:32px;color:#1f2937}h1,h2{color:#312e81}.card{border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:12px 0}</style></head><body><h1>StatAnveshak Learning Report</h1><div class="card"><h2>Progress</h2><p>${completed.length}/${THEOREMS.length} theorem modules completed. Quiz score: ${quizScore}/${QUIZZES.length}.</p></div><div class="card"><h2>Current Theorem</h2><p><strong>${theorem.title}</strong></p><p>${theorem.statement}</p><p>${theorem.intuition}</p></div><div class="card"><h2>Latest Lab</h2><p>${lab}, sample size ${sampleSize}, repetitions ${reps}, population ${population}</p><p>Mean ${labMean.toFixed(4)}, SD ${labSd.toFixed(4)}</p></div><div class="card"><h2>Notes</h2><pre>${lessonNotes.replace(/[<>&]/g, (char) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[char] ?? char))}</pre></div></body></html>`
+    const blob = new Blob([html], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'statanveshak-learning-report.html'
+    link.click()
+    URL.revokeObjectURL(url)
+  }
 
   return (
     <div className="h-full overflow-y-auto bg-slate-50 p-6 dark:bg-slate-900">
@@ -386,6 +401,9 @@ export function LearnPage() {
             <Metric label="Progress" value={`${completed.length}/${THEOREMS.length}`} />
             <Metric label="Quiz" value={`${quizScore}/${QUIZZES.length}`} />
           </div>
+          <button onClick={exportLearningReport} className="rounded-md bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 dark:bg-slate-700">
+            Export learning report
+          </button>
         </div>
 
         <div className="mb-6 grid gap-4 lg:grid-cols-4">
@@ -458,6 +476,14 @@ export function LearnPage() {
               <Panel title="Proof Sketch" icon={BookOpen}>
                 <ol className="space-y-1">{theorem.proof.map((item, index) => <li key={item}>{index + 1}. {item}</li>)}</ol>
               </Panel>
+            </div>
+            <div className="mt-4 rounded-lg bg-slate-50 p-4 dark:bg-slate-900/60">
+              <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                <Sparkles size={15} className="text-indigo-500" />
+                Accessible Formula and Visual
+              </div>
+              <MathText value={formulaFor(theorem.id)} block label={`${theorem.title} formula`} />
+              <TheoremVisual id={theorem.id} />
             </div>
             {showViolation && (
               <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
@@ -537,6 +563,12 @@ export function LearnPage() {
                 <div className="flex h-full w-full items-center justify-center text-sm text-slate-400">Run a lab to see the simulated distribution.</div>
               )}
             </div>
+            {sandboxHistory.length > 0 && (
+              <div className="mt-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Sandbox history</p>
+                {sandboxHistory.slice(0, 4).map((item) => <p key={item} className="text-xs text-slate-500">- {item}</p>)}
+              </div>
+            )}
           </section>
         </div>
 
@@ -603,6 +635,16 @@ export function LearnPage() {
               <CodeBlock title="CI in Python" code={'ci = (xbar - 1.96*s/np.sqrt(n), xbar + 1.96*s/np.sqrt(n))'} />
               <CodeBlock title="Bayes" code={'posterior = likelihood * prior / evidence'} />
               <CodeBlock title="LaTeX" code={'\\bar{x} \\pm z_{\\alpha/2}\\frac{s}{\\sqrt{n}}'} />
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-900/60">
+                <p className="mb-2 text-xs font-semibold text-slate-500">Rendered CI formula</p>
+                <MathText value={'\\bar{x} \\pm z_{\\alpha/2}\\frac{s}{\\sqrt{n}}'} block />
+              </div>
+              <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-900/60">
+                <p className="mb-2 text-xs font-semibold text-slate-500">Rendered Bayes formula</p>
+                <MathText value={'P(A\\mid B)=\\frac{P(B\\mid A)P(A)}{P(B)}'} block />
+              </div>
             </div>
             <textarea value={lessonNotes} onChange={(event) => setLessonNotes(event.target.value)} placeholder="Proof notes, symbolic derivation steps, classroom exercise prompts..." className="mt-4 h-32 w-full rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100" />
           </section>
@@ -740,6 +782,56 @@ function CodeBlock({ title, code }: { title: string; code: string }) {
     <div className="rounded-lg bg-slate-900 p-3">
       <p className="mb-2 text-xs font-semibold text-slate-400">{title}</p>
       <code className="text-xs text-emerald-300">{code}</code>
+    </div>
+  )
+}
+
+function formulaFor(id: string) {
+  const formulas: Record<string, string> = {
+    bayes: 'P(A\\mid B)=\\frac{P(B\\mid A)P(A)}{P(B)}',
+    clt: '\\frac{\\bar{X}_n-\\mu}{\\sigma/\\sqrt{n}}\\Rightarrow N(0,1)',
+    lln: '\\bar{X}_n\\xrightarrow{p}\\mu',
+    chebyshev: 'P(|X-\\mu|\\ge k\\sigma)\\le \\frac{1}{k^2}',
+    markov: 'P(X\\ge a)\\le \\frac{E[X]}{a}',
+    slutsky: 'X_n\\Rightarrow X,\\ Y_n\\xrightarrow{p}c\\Rightarrow X_nY_n\\Rightarrow cX',
+    'neyman-pearson': '\\Lambda(x)=\\frac{L(\\theta_1\\mid x)}{L(\\theta_0\\mid x)}',
+    mle: '\\hat{\\theta}=\\arg\\max_{\\theta}L(\\theta\\mid x)',
+  }
+  return formulas[id] ?? '\\theta'
+}
+
+function TheoremVisual({ id }: { id: string }) {
+  if (id === 'bayes') {
+    return (
+      <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
+        <div className="rounded bg-blue-100 p-2 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">Prior</div>
+        <div className="rounded bg-amber-100 p-2 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">Evidence</div>
+        <div className="rounded bg-emerald-100 p-2 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Posterior</div>
+      </div>
+    )
+  }
+  if (id === 'clt') {
+    return (
+      <div className="mt-3 flex h-20 items-end justify-center gap-1 rounded bg-white p-2 dark:bg-slate-800">
+        {[8, 18, 35, 54, 70, 54, 35, 18, 8].map((height, index) => <span key={index} className="w-6 rounded-t bg-indigo-500" style={{ height: `${height}%` }} />)}
+      </div>
+    )
+  }
+  if (id === 'lln') {
+    return (
+      <div className="mt-3 h-20 rounded bg-white p-2 dark:bg-slate-800">
+        <div className="relative h-full border-b border-l border-slate-200 dark:border-slate-700">
+          <div className="absolute left-0 right-0 top-1/2 border-t border-dashed border-emerald-500" />
+          <div className="absolute left-2 top-3 h-10 w-[90%] rounded-full border-t-4 border-indigo-500" />
+        </div>
+      </div>
+    )
+  }
+  return (
+    <div className="mt-3 grid grid-cols-4 gap-2 text-xs">
+      {['Assume', 'Model', 'Compute', 'Decide'].map((step) => (
+        <div key={step} className="rounded bg-slate-100 p-2 text-center text-slate-600 dark:bg-slate-700 dark:text-slate-300">{step}</div>
+      ))}
     </div>
   )
 }

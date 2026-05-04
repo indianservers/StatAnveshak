@@ -6,6 +6,8 @@ import { useStore } from '../../store/useStore'
 import { ToastProvider } from '../ui/Toast'
 import { CommandPalette } from '../ui/CommandPalette'
 import { UiPolishLayer } from '../ui/UiPolishLayer'
+import { OnboardingTour } from '../ui/OnboardingTour'
+import { TestRecommenderDrawer } from '../ui/TestRecommenderDrawer'
 
 export function AppShell() {
   const { theme, highContrast, largeText, zoomLevel, density } = useStore()
@@ -32,6 +34,8 @@ export function AppShell() {
         </div>
         <CommandPalette />
         <UiPolishLayer />
+        <OnboardingTour />
+        <TestRecommenderDrawer />
       </ToastProvider>
     </div>
   )

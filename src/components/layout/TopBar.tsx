@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { ChevronRight, Clock, Columns3, Contrast, Database, FileText, HelpCircle, Minus, Moon, Plus, RotateCcw, Save, Search, Sun, Type } from 'lucide-react'
+import { AlertTriangle, ChevronRight, Clock, Columns3, Contrast, Database, FileText, HelpCircle, Minus, Moon, Plus, RotateCcw, Save, Search, Sun, Target, Type } from 'lucide-react'
 import { useStore } from '../../store/useStore'
 import { saveDataset } from '../../lib/storage'
 import { useToast } from '../ui/toastContext'
+import { datasetGuardrails } from '../../lib/guardrails'
 
 const PAGE_NAMES: Record<string, string> = {
   '/': 'Home',
@@ -80,6 +81,7 @@ export function TopBar() {
     const categorical = activeDataset.schema.filter((col) => col.type === 'categorical' || col.type === 'text' || col.type === 'boolean').length
     return `${numeric}N ${categorical}C`
   }, [activeDataset])
+  const guardrails = useMemo(() => datasetGuardrails(activeDataset), [activeDataset])
   const breadcrumb = useMemo(() => {
     const parts = location.pathname.split('/').filter(Boolean)
     if (parts.length === 0) return ['Workspace', 'Home']
@@ -205,6 +207,21 @@ export function TopBar() {
       >
         <Database size={12} />
         Dataset
+      </button>
+
+      <button
+        onClick={() => window.dispatchEvent(new Event('open-test-recommender'))}
+        className="hidden lg:flex items-center gap-1.5 text-xs border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-md transition-colors"
+        title="Open test recommender and data guardrails"
+      >
+        <Target size={12} />
+        Wizard
+        {guardrails.length > 0 && (
+          <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-1 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+            <AlertTriangle size={10} />
+            {guardrails.length}
+          </span>
+        )}
       </button>
 
       <button

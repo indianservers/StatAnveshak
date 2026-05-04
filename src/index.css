@@ -85,3 +85,27 @@ body {
   70% { transform: scale(1.03); }
   100% { transform: scale(1); }
 }
+
+@media (max-width: 768px) {
+  .app-sidebar {
+    position: absolute;
+    z-index: 35;
+    height: 100vh;
+    max-width: min(85vw, 15rem);
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.35);
+  }
+
+  .app-sidebar.w-14 {
+    max-width: 3.5rem;
+    box-shadow: none;
+  }
+
+  main.page-fade,
+  main {
+    min-width: 0;
+  }
+
+  table {
+    font-size: 0.78rem;
+  }
+}

@@ -134,7 +134,7 @@ export function Sidebar() {
 
   return (
     <aside
-      className={`flex flex-col bg-slate-900 text-slate-100 transition-all duration-200 ${
+      className={`app-sidebar flex flex-col bg-slate-900 text-slate-100 transition-all duration-200 ${
         sidebarOpen ? 'w-60' : 'w-14'
       } min-h-screen shrink-0`}
     >
