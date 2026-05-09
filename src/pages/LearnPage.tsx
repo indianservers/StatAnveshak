@@ -148,6 +148,118 @@ const THEOREMS: Theorem[] = [
   },
 ]
 
+const COMMON_THEOREM_MODIFICATIONS = [
+  'Open with a 30-second real-life hook before showing the formula.',
+  'Add a one-slider demo where learners predict the direction before running it.',
+  'Show the theorem in plain language, symbols, and one tiny numerical example.',
+  'Use a misconception card that asks what the theorem does not say.',
+  'Add a before-and-after visual so learners see the theorem change a distribution, belief, or bound.',
+  'Include a two-minute peer explanation prompt: teach it without using the theorem name.',
+  'Add a confidence check with traffic-light choices: sure, unsure, lost.',
+  'Let learners deliberately break one assumption and observe the failure.',
+  'End with a one-sentence reporting template connected to real data.',
+  'Add a mini-challenge that asks learners to choose when the theorem is useful.',
+]
+
+const UNIQUE_THEOREM_MODIFICATIONS: Record<string, string[]> = {
+  bayes: [
+    'Turn the theorem into a detective case with prior clues, evidence strength, and posterior suspect ranking.',
+    'Use a medical-test base-rate simulator with 1,000 animated people blocks.',
+    'Add a “base-rate trap” challenge where the intuitive answer is intentionally wrong.',
+    'Let students drag prior, sensitivity, and false-positive sliders and watch posterior odds move.',
+    'Show Bayes as a probability tree first, then collapse the tree into the formula.',
+    'Add a spam-filter scenario with words as evidence and posterior inbox decisions.',
+    'Compare posterior probability versus likelihood so students stop mixing them up.',
+    'Use odds form as a bonus mode: prior odds times Bayes factor equals posterior odds.',
+    'Ask learners to write one sentence explaining why rare events need base rates.',
+    'Add a “courtroom evidence” analogy where evidence updates belief but never proves certainty.',
+  ],
+  clt: [
+    'Let learners sample from wildly skewed, binary, and uniform populations side by side.',
+    'Animate many raw samples falling into a sampling-distribution histogram.',
+    'Add a “guess the sample size” game based on how normal the means look.',
+    'Show sample means, not raw data, as the hero visual to prevent the classic CLT confusion.',
+    'Use a factory-quality example where average defect rate stabilizes across batches.',
+    'Add an infinite-variance warning demo with extreme values that refuse to behave nicely.',
+    'Show standard error shrinking with n using a ruler overlay.',
+    'Add a “CLT is not magic” card explaining independence and finite variance.',
+    'Let students compare n=5, n=30, and n=100 in three synchronized panels.',
+    'End with a confidence interval bridge showing why normal approximations become usable.',
+  ],
+  lln: [
+    'Use a running coin-flip race where early chaos slowly settles near the true probability.',
+    'Add a “short run versus long run” slider that dramatizes why streaks do not disprove probability.',
+    'Show cumulative average as a trail line that calms down over time.',
+    'Ask students to predict whether the next observation fixes or only nudges the average.',
+    'Use sports shooting percentage as an example of noisy early performance.',
+    'Add a casino fairness example showing why large counts expose expected value.',
+    'Compare independent trials with dependent trials to show why assumptions matter.',
+    'Add a “law of small numbers” misconception warning.',
+    'Let students reset and rerun simulations to see convergence is reliable but not identical.',
+    'Connect the theorem to why sample size matters before any inference module.',
+  ],
+  chebyshev: [
+    'Present it as a worst-case safety guarantee for any finite-variance distribution.',
+    'Add a distribution-shape selector to show the bound works even when the shape is ugly.',
+    'Use a “how much can hide in the tails?” visual with shaded outer regions.',
+    'Compare Chebyshev bounds with normal-rule percentages to show conservative versus model-based thinking.',
+    'Add a budget-risk analogy: variance limits how often huge deviations can happen.',
+    'Let learners choose k and watch the guaranteed maximum tail probability update.',
+    'Use a “no shape assumptions” badge to make the theorem feel powerful.',
+    'Show why k must be bigger than 1 for the bound to become informative.',
+    'Add a proof tile that turns Markov inequality into Chebyshev in one click.',
+    'End with a challenge asking when a loose guarantee is better than a precise but false model.',
+  ],
+  markov: [
+    'Introduce it with a nonnegative resource example: waiting time, cost, rainfall, or claims.',
+    'Add a threshold slider where E[X]/a drops as the threshold rises.',
+    'Show the theorem as “average budget cannot support too many huge values.”',
+    'Use a queue wait-time example to make the bound immediately practical.',
+    'Add a negative-value failure demo so the nonnegative assumption becomes memorable.',
+    'Let learners compare actual simulated tail probability with the Markov upper bound.',
+    'Show Markov as the parent idea behind Chebyshev and other concentration bounds.',
+    'Add a “minimum information theorem” badge: only the mean is needed.',
+    'Use stacked bars to show total expected mass covering the tail event.',
+    'End with a quick decision prompt: is Markov useful, too loose, or invalid here?',
+  ],
+  slutsky: [
+    'Use a plug-in standard error story to show why estimated constants can replace true constants asymptotically.',
+    'Add two moving sequences: one keeps its shape, the other collapses to a constant.',
+    'Show “random but eventually stable” as the central intuition.',
+    'Connect it to z-statistics where sigma is replaced by sample standard deviation.',
+    'Add an animation where multiplying by a converging factor barely changes the limiting distribution.',
+    'Use a warning panel for when both sequences have nondegenerate limits.',
+    'Add a theorem-family map linking convergence in probability, distribution, and continuous mapping.',
+    'Create a “can I plug this in?” checklist for students.',
+    'Use simulation to compare small-sample wobble with large-sample stability.',
+    'End with a bridge to asymptotic confidence intervals and Wald tests.',
+  ],
+  'neyman-pearson': [
+    'Frame it as designing the strongest detector under a fixed false-alarm budget.',
+    'Use a security scanner example with Type I error as false alarm rate.',
+    'Let learners drag the rejection cutoff and watch size and power trade off.',
+    'Show likelihood-ratio regions as highlighted areas on two overlapping curves.',
+    'Add a “simple versus composite hypotheses” warning before learners overgeneralize.',
+    'Use a leaderboard where competing tests try to beat the likelihood-ratio test.',
+    'Connect power visually to area under H1 inside the rejection region.',
+    'Add a courtroom analogy: strongest evidence against H0 is where H1 explains data better.',
+    'Include a Type I/Type II tradeoff dial with plain-English labels.',
+    'End with a design question: what false-positive rate can the study tolerate?',
+  ],
+  mle: [
+    'Turn likelihood into a mountain-climbing visual where the peak is the estimate.',
+    'Use coin bias estimation so students can feel why observed frequency often wins.',
+    'Add a log-likelihood toggle showing the same peak with easier arithmetic.',
+    'Let learners drag the parameter and watch the observed data become more or less plausible.',
+    'Compare true parameter, sample estimate, and maximum likelihood estimate on one line.',
+    'Add a misspecification warning with precise-looking but wrong estimates.',
+    'Use a “data fixed, parameter moves” reminder to avoid probability confusion.',
+    'Show curvature around the peak as a first intuition for uncertainty.',
+    'Add multiple-start examples where flat or multimodal likelihoods create ambiguity.',
+    'End with a recipe card: write likelihood, log it, optimize, check assumptions.',
+  ],
+}
+
 const QUIZZES: Quiz[] = [
   {
     question: 'A p-value is best described as:',
@@ -503,11 +615,12 @@ export function LearnPage() {
               <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Statistics Learning Studio</h1>
             </div>
             <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">
-              Theorems, probability labs, inference simulators, quizzes, proof notes, case studies, and mistake checks in one teaching workspace.
+              Core Statistics page for theorems, probability labs, inference simulators, quizzes, proof notes, case studies, and mistake checks in one teaching workspace.
             </p>
           </div>
-          <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="grid grid-cols-4 gap-2 text-center">
             <Metric label="Theorems" value={THEOREMS.length} />
+            <Metric label="Mod Ideas" value={THEOREMS.length * 20} />
             <Metric label="Progress" value={`${completed.length}/${THEOREMS.length}`} />
             <Metric label="Quiz" value={`${quizScore}/${QUIZZES.length}`} />
           </div>
@@ -642,6 +755,7 @@ export function LearnPage() {
               <MathText value={formulaFor(theorem.id)} block label={`${theorem.title} formula`} />
               <TheoremVisual id={theorem.id} />
             </div>
+            <TheoremModificationPanel theorem={theorem} />
             {showViolation && (
               <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
                 {theorem.violation}
@@ -1127,6 +1241,45 @@ function Panel({ title, icon: Icon, children }: { title: string; icon: typeof Bo
         {title}
       </div>
       <div className="text-sm leading-6 text-slate-600 dark:text-slate-300">{children}</div>
+    </div>
+  )
+}
+
+function TheoremModificationPanel({ theorem }: { theorem: Theorem }) {
+  const unique = UNIQUE_THEOREM_MODIFICATIONS[theorem.id] ?? []
+  return (
+    <div className="mt-4 rounded-lg border border-indigo-100 bg-indigo-50/70 p-4 dark:border-indigo-900 dark:bg-indigo-950/30">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-bold text-slate-800 dark:text-white">Teaching Modifications for {theorem.title}</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            10 common upgrades plus 10 theorem-specific upgrades to increase enthusiasm, clarity, and retention.
+          </p>
+        </div>
+        <span className="rounded-full bg-white px-2 py-1 text-xs font-semibold text-indigo-600 dark:bg-slate-800 dark:text-indigo-300">20 ideas</span>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ModificationList title="10 Common Modifications" items={COMMON_THEOREM_MODIFICATIONS} tone="common" />
+        <ModificationList title="10 Unique Modifications" items={unique} tone="unique" />
+      </div>
+    </div>
+  )
+}
+
+function ModificationList({ title, items, tone }: { title: string; items: string[]; tone: 'common' | 'unique' }) {
+  return (
+    <div className="rounded-lg bg-white p-3 dark:bg-slate-800">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{title}</p>
+      <ol className="space-y-2 text-xs leading-5 text-slate-600 dark:text-slate-300">
+        {items.map((item, index) => (
+          <li key={item} className="flex gap-2">
+            <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${tone === 'common' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'}`}>
+              {index + 1}
+            </span>
+            <span>{item}</span>
+          </li>
+        ))}
+      </ol>
     </div>
   )
 }

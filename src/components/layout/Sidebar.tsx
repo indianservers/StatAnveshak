@@ -83,7 +83,8 @@ const NAV_GROUPS = [
   {
     label: 'Learn',
     items: [
-      { to: '/learn', icon: BookOpen, label: 'Teaching Mode' },
+      { to: '/learn', icon: BookOpen, label: 'Core Statistics' },
+      { to: '/solver', icon: Calculator, label: 'Solver' },
       { to: '/settings', icon: Settings, label: 'Settings' },
     ],
   },

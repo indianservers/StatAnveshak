@@ -25,6 +25,7 @@ const SyllabusModulesPage = lazy(() => import('./pages/SyllabusModulesPage').the
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })))
 const ReportsPage = lazy(() => import('./pages/ReportsPage').then((m) => ({ default: m.ReportsPage })))
 const LearnPage = lazy(() => import('./pages/LearnPage').then((m) => ({ default: m.LearnPage })))
+const SolverPage = lazy(() => import('./pages/SolverPage').then((m) => ({ default: m.SolverPage })))
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })))
 
@@ -70,6 +71,7 @@ function App() {
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="reports" element={<ReportsPage />} />
               <Route path="learn" element={<LearnPage />} />
+              <Route path="solver" element={<SolverPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>

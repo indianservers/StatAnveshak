@@ -32,7 +32,11 @@ const COMMANDS = [
   { label: 'Computer Science Modules', path: '/modules', category: 'CS Modules' },
   { label: 'Dashboard', path: '/dashboard', category: 'Output' },
   { label: 'Reports', path: '/reports', category: 'Output' },
+  { label: 'Core Statistics', path: '/learn', category: 'Learn' },
+  { label: 'Probability Theorem Modifications', path: '/learn', category: 'Learn' },
   { label: 'Teaching Mode', path: '/learn', category: 'Learn' },
+  { label: 'Solver', path: '/solver', category: 'Learn' },
+  { label: 'Karl Pearson Correlation Solver', path: '/solver', category: 'Learn' },
   { label: 'Settings', path: '/settings', category: 'Learn' },
 ]
 

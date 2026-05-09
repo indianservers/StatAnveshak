@@ -54,3 +54,11 @@ test('query workbench route is available', async ({ page }) => {
   await expect(page.getByText('No dataset loaded', { exact: true })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Upload Data' })).toBeVisible()
 })
+
+test('solver page includes Karl Pearson practice set', async ({ page }) => {
+  await page.goto('/solver')
+  await expect(page.getByRole('heading', { name: 'Solver' })).toBeVisible()
+  await expect(page.getByText('How to solve problems like these')).toBeVisible()
+  await expect(page.getByText('Advertising expenses and sales')).toBeVisible()
+  await expect(page.getByText('Pearson r')).toBeVisible()
+})
