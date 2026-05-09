@@ -13,6 +13,8 @@ const PAGE_NAMES: Record<string, string> = {
   '/data/preview': 'Preview',
   '/data/grid': 'Data Grid',
   '/data/clean': 'Clean & Transform',
+  '/data/workbench': 'Statistics Workbench',
+  '/data/query': 'Query Workbench',
   '/explore/summary': 'Summary Statistics',
   '/explore/charts': 'Charts',
   '/explore/correlation': 'Correlation',
@@ -59,8 +61,6 @@ export function TopBar() {
   const { notify } = useToast()
 
   const recentDatasets = useMemo(() => [...datasets].sort((a, b) => b.createdAt - a.createdAt).slice(0, 8), [datasets])
-  const currentPage = PAGE_NAMES[location.pathname]
-    ?? (location.pathname.startsWith('/distributions/') ? 'Distributions' : location.pathname.startsWith('/stat-modules/') ? 'Stat Modules' : location.pathname.startsWith('/syllabus/') ? 'Syllabus Modules' : location.pathname.startsWith('/modules/') ? 'CS Modules' : 'Workspace')
   const dataHealth = useMemo(() => {
     if (!activeDataset) return null
     const missing = activeDataset.schema.reduce((sum, col) => sum + col.missing, 0)

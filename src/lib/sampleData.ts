@@ -2,7 +2,7 @@ import type { SampleDataset } from '../types'
 
 type Row = Record<string, unknown>
 
-const categories = {
+export const SAMPLE_DATASET_CATEGORIES = {
   education: 'Education',
   business: 'Business',
   biology: 'Biology',
@@ -19,6 +19,8 @@ const categories = {
   public: 'Public Policy',
   realEstate: 'Real Estate',
 }
+
+const categories = SAMPLE_DATASET_CATEGORIES
 
 const round = (value: number, digits = 2) => Number(value.toFixed(digits))
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
@@ -701,6 +703,380 @@ export const SAMPLE_DATASETS: SampleDataset[] = [
       assay_pct: round(clamp(normal(rand, 100 - penalty, 1.4), 75, 105), 2),
       impurity_pct: round(clamp(normal(rand, 0.25 + penalty / 30, 0.12), 0.02, 4), 2),
       moisture_pct: round(clamp(normal(rand, 1.8 + penalty / 20, 0.35), 0.5, 5.5), 2),
+    }
+  }),
+  sample('plant-growth', 'Plant Growth', 'Greenhouse plant height, sunlight, watering, and fertilizer response', categories.biology, ['anova', 'growth-curves', 'experiment'], 180, (i, rand) => {
+    const fertilizer = pick(['Control', 'Organic', 'NPK'], rand)
+    const sunlight = round(clamp(normal(rand, 6.5, 1.7), 2, 11), 1)
+    const water = round(clamp(normal(rand, 420, 110), 120, 760), 1)
+    return {
+      plant_id: `PG${i + 1}`,
+      species: pick(['Tomato', 'Basil', 'Bean', 'Marigold'], rand),
+      fertilizer,
+      sunlight_hours: sunlight,
+      water_ml_week: water,
+      leaf_count: Math.round(clamp(normal(rand, 18 + sunlight * 1.4, 6), 3, 60)),
+      height_cm: round(clamp(9 + sunlight * 2.6 + water / 70 + (fertilizer === 'NPK' ? 8 : fertilizer === 'Organic' ? 5 : 0) + normal(rand, 0, 5), 5, 95), 1),
+    }
+  }),
+  sample('microbial-growth', 'Microbial Growth', 'Culture density by temperature, pH, medium, and incubation time', categories.biology, ['time-series', 'nonlinear-growth', 'lab'], 240, (i, rand) => {
+    const hours = i % 48
+    const temp = round(clamp(normal(rand, 32, 5), 18, 45), 1)
+    const ph = round(clamp(normal(rand, 7.1, 0.6), 5, 9), 2)
+    return {
+      culture_id: `MG${Math.floor(i / 8) + 1}`,
+      hours,
+      medium: pick(['LB', 'M9', 'Nutrient Broth'], rand),
+      temperature_c: temp,
+      ph,
+      optical_density: round(clamp(0.08 + hours * 0.035 - Math.abs(temp - 37) * 0.025 - Math.abs(ph - 7) * 0.08 + normal(rand, 0, 0.12), 0.02, 2.4), 3),
+      contamination_flag: rand() < 0.04,
+    }
+  }),
+  sample('wildlife-survey', 'Wildlife Survey', 'Field sightings by habitat, season, survey effort, and species count', categories.biology, ['counts', 'ecology', 'sampling'], 220, (i, rand) => {
+    const effort = round(clamp(normal(rand, 4.5, 1.8), 1, 10), 1)
+    const habitat = pick(['Forest', 'Grassland', 'Wetland', 'Scrub'], rand)
+    return {
+      transect_id: `WS${i + 1}`,
+      habitat,
+      season: pick(['Pre-monsoon', 'Monsoon', 'Post-monsoon', 'Winter'], rand),
+      effort_hours: effort,
+      distance_km: round(clamp(normal(rand, 3.2, 1.1), 0.6, 8), 1),
+      species_richness: Math.round(clamp(normal(rand, habitat === 'Wetland' ? 16 : 10, 4) + effort, 1, 35)),
+      sightings_count: Math.round(clamp(normal(rand, effort * (habitat === 'Forest' ? 7 : 5), 9), 0, 85)),
+    }
+  }),
+  sample('gene-expression', 'Gene Expression', 'Gene expression intensity across treatment groups and time points', categories.biology, ['multivariate', 'differential-expression', 'bioinformatics'], 300, (i, rand) => {
+    const treatment = pick(['Control', 'Drug A', 'Drug B'], rand)
+    const timepoint = pick([0, 6, 12, 24, 48], rand)
+    const response = treatment === 'Drug A' ? 0.45 : treatment === 'Drug B' ? -0.25 : 0
+    return {
+      gene_id: `GENE${(i % 60) + 1}`,
+      sample_group: treatment,
+      timepoint_hours: timepoint,
+      expression_log2: round(clamp(normal(rand, 7 + response + timepoint / 80, 1.2), 2, 13), 3),
+      gc_content_pct: round(clamp(normal(rand, 49, 8), 25, 75), 1),
+      read_count: Math.round(clamp(Math.exp(normal(rand, 9.5 + response, 0.8)), 100, 95000)),
+      significant_marker: Math.abs(response) > 0.3 && rand() > 0.55,
+    }
+  }),
+  sample('football-team-stats', 'Football Team Stats', 'Match-level football possession, shots, fouls, and outcomes', categories.sports, ['classification', 'team-performance', 'match-analysis'], 240, (i, rand) => {
+    const shots = Math.round(clamp(normal(rand, 11, 4), 1, 28))
+    const possession = round(clamp(normal(rand, 50, 12), 20, 80), 1)
+    return {
+      match_id: `FB${i + 1}`,
+      team: pick(['Mumbai FC', 'Kolkata United', 'Chennai City', 'Goa SC', 'Kerala Club'], rand),
+      venue: pick(['Home', 'Away', 'Neutral'], rand),
+      possession_pct: possession,
+      shots,
+      shots_on_target: Math.round(clamp(normal(rand, shots * 0.38, 2), 0, shots)),
+      fouls: Math.round(clamp(normal(rand, 12, 5), 0, 32)),
+      result: possession + shots * 2 + normal(rand, 0, 18) > 72 ? 'Win' : pick(['Draw', 'Loss'], rand),
+    }
+  }),
+  sample('marathon-runners', 'Marathon Runners', 'Runner finish times with age group, training volume, and hydration', categories.sports, ['regression', 'endurance', 'performance'], 260, (i, rand) => {
+    const training = round(clamp(normal(rand, 48, 18), 5, 120), 1)
+    const age = Math.round(clamp(normal(rand, 36, 11), 18, 72))
+    return {
+      runner_id: `MR${i + 1}`,
+      age,
+      gender_group: pick(['Female', 'Male', 'Open'], rand),
+      weekly_km: training,
+      prior_marathons: Math.round(clamp(normal(rand, 2.4, 2.1), 0, 18)),
+      hydration_stops: Math.round(clamp(normal(rand, 7, 2), 1, 14)),
+      finish_minutes: round(clamp(330 - training * 1.6 + age * 0.8 + normal(rand, 0, 28), 130, 520), 1),
+    }
+  }),
+  sample('basketball-shots', 'Basketball Shots', 'Shot attempts by court zone, defender distance, and make result', categories.sports, ['logistic-regression', 'spatial', 'shot-quality'], 300, (i, rand) => {
+    const distance = round(clamp(normal(rand, 16, 8), 1, 32), 1)
+    const defender = round(clamp(normal(rand, 3.5, 1.8), 0.2, 10), 1)
+    return {
+      shot_id: `BS${i + 1}`,
+      player_role: pick(['Guard', 'Forward', 'Center'], rand),
+      zone: pick(['Paint', 'Midrange', 'Corner Three', 'Above Break Three'], rand),
+      shot_distance_ft: distance,
+      defender_distance_ft: defender,
+      shot_clock_seconds: round(clamp(normal(rand, 11, 6), 0.5, 24), 1),
+      made: rand() < clamp(0.66 - distance / 90 + defender / 30, 0.18, 0.78),
+    }
+  }),
+  sample('kabaddi-raids', 'Kabaddi Raids', 'Raid outcomes by player role, defenders, timing, and bonus attempts', categories.sports, ['categorical', 'risk', 'indian-sports'], 220, (i, rand) => {
+    const defenders = Math.round(clamp(normal(rand, 5, 1.5), 1, 7))
+    return {
+      raid_id: `KB${i + 1}`,
+      team: pick(['Bengal', 'Patna', 'Jaipur', 'Pune', 'Delhi'], rand),
+      raider_role: pick(['Lead Raider', 'All-rounder', 'Substitute'], rand),
+      defenders_on_court: defenders,
+      raid_second: Math.round(clamp(normal(rand, 25, 11), 1, 40)),
+      bonus_attempt: rand() < 0.28,
+      points_scored: Math.round(clamp(normal(rand, 1.4 + (7 - defenders) * 0.25, 1.1), 0, 6)),
+      tackled: rand() < clamp(0.42 + defenders * 0.045, 0.22, 0.78),
+    }
+  }),
+  sample('solid-waste-audit', 'Solid Waste Audit', 'Daily waste generation, segregation, recycling, and collection delays', categories.environment, ['sustainability', 'proportion', 'operations'], 240, (i, rand) => {
+    const waste = round(clamp(normal(rand, 1250, 360), 220, 2800), 1)
+    return {
+      ward_id: `WA${(i % 36) + 1}`,
+      day: i + 1,
+      zone_type: pick(['Residential', 'Market', 'Mixed', 'Institutional'], rand),
+      waste_kg: waste,
+      wet_waste_pct: round(clamp(normal(rand, 54, 12), 15, 88), 1),
+      segregation_pct: round(clamp(normal(rand, 62, 18), 5, 98), 1),
+      recycling_kg: round(clamp(waste * normal(rand, 0.18, 0.06), 0, waste * 0.55), 1),
+      collection_delayed: rand() < 0.16,
+    }
+  }),
+  sample('warehouse-picking', 'Warehouse Picking', 'Order picking time by zone, picker load, SKU mix, and errors', categories.operations, ['productivity', 'queueing', 'quality'], 260, (i, rand) => {
+    const lines = Math.round(clamp(normal(rand, 18, 8), 1, 55))
+    return {
+      pick_id: `PK${i + 1}`,
+      zone: pick(['A', 'B', 'C', 'Cold Storage'], rand),
+      shift: pick(['Morning', 'Evening', 'Night'], rand),
+      order_lines: lines,
+      picker_experience_months: Math.round(clamp(normal(rand, 18, 12), 1, 72)),
+      pick_minutes: round(clamp(5 + lines * normal(rand, 1.8, 0.35), 2, 150), 1),
+      scan_errors: Math.round(clamp(normal(rand, lines * 0.035, 1), 0, 8)),
+    }
+  }),
+  sample('clinic-appointments', 'Clinic Appointments', 'Appointment demand, wait times, provider load, and no-show flags', categories.operations, ['scheduling', 'service-quality', 'forecasting'], 240, (i, rand) => {
+    const booked = Math.round(clamp(normal(rand, 42, 11), 8, 80))
+    return {
+      clinic_day: i + 1,
+      department: pick(['General', 'Dental', 'Pediatrics', 'Dermatology'], rand),
+      provider_count: Math.round(clamp(normal(rand, 4, 1.4), 1, 9)),
+      appointments_booked: booked,
+      walk_ins: Math.round(clamp(normal(rand, 9, 5), 0, 35)),
+      avg_wait_minutes: round(clamp(normal(rand, 18 + booked / 5, 9), 2, 95), 1),
+      no_show_rate_pct: round(clamp(normal(rand, 13, 5), 1, 38), 1),
+    }
+  }),
+  sample('migration-survey', 'Migration Survey', 'Household migration, remittances, education, and employment status', categories.social, ['survey', 'demographics', 'categorical'], 260, (i, rand) => {
+    const remittance = Math.round(clamp(Math.exp(normal(rand, 9.4, 0.9)), 0, 120000))
+    return {
+      household_id: `MS${i + 1}`,
+      origin_region: pick(['North', 'South', 'East', 'West', 'Central'], rand),
+      destination_type: pick(['Same State', 'Other State', 'International'], rand),
+      education_level: pick(['Primary', 'Secondary', 'Graduate', 'Postgraduate'], rand),
+      migrant_members: Math.round(clamp(normal(rand, 1.4, 0.9), 0, 5)),
+      monthly_remittance: remittance,
+      employment_sector: pick(['Construction', 'Services', 'Manufacturing', 'Domestic Work', 'IT'], rand),
+    }
+  }),
+  sample('digital-access', 'Digital Access', 'Internet access, device ownership, skills, and online service use', categories.social, ['equity', 'ordinal', 'digital-divide'], 280, (i, rand) => ({
+    respondent_id: `DA${i + 1}`,
+    location_type: pick(['Urban', 'Rural', 'Peri-urban'], rand),
+    income_band: pick(['Low', 'Lower Middle', 'Middle', 'High'], rand),
+    devices_owned: Math.round(clamp(normal(rand, 2.2, 1.2), 0, 8)),
+    internet_hours_week: round(clamp(normal(rand, 18, 14), 0, 90), 1),
+    digital_skill_score: Math.round(clamp(normal(rand, 62, 21), 0, 100)),
+    used_egov_service: rand() < 0.46,
+  })),
+  sample('time-use-study', 'Time Use Study', 'Daily hours spent on work, care, commute, leisure, and sleep', categories.social, ['composition', 'survey', 'wellbeing'], 240, (i, rand) => {
+    const work = round(clamp(normal(rand, 7.5, 2.6), 0, 14), 1)
+    const commute = round(clamp(normal(rand, 1.2, 0.8), 0, 5), 1)
+    return {
+      diary_id: `TU${i + 1}`,
+      day_type: pick(['Weekday', 'Weekend'], rand),
+      employment_status: pick(['Full-time', 'Part-time', 'Student', 'Homemaker', 'Retired'], rand),
+      work_hours: work,
+      care_hours: round(clamp(normal(rand, 2.1, 1.8), 0, 10), 1),
+      commute_hours: commute,
+      leisure_hours: round(clamp(24 - work - commute - normal(rand, 9, 1.2), 0, 12), 1),
+      sleep_hours: round(clamp(normal(rand, 7.2, 1.1), 3.5, 11), 1),
+    }
+  }),
+  sample('highway-toll', 'Highway Toll Traffic', 'Vehicle counts, toll revenue, lane wait, and incident flags', categories.transport, ['time-series', 'traffic-flow', 'revenue'], 260, (i, rand) => {
+    const vehicles = Math.round(clamp(normal(rand, 3800, 1200), 400, 9000))
+    return {
+      plaza_day: i + 1,
+      plaza_id: `TP${(i % 12) + 1}`,
+      vehicle_mix: pick(['Cars Heavy', 'Trucks Heavy', 'Balanced'], rand),
+      vehicles,
+      avg_wait_seconds: round(clamp(normal(rand, 55 + vehicles / 120, 22), 5, 260), 1),
+      toll_revenue: Math.round(vehicles * clamp(normal(rand, 82, 18), 25, 180)),
+      incident_reported: rand() < 0.07,
+    }
+  }),
+  sample('bike-share-trips', 'Bike Share Trips', 'Bike-share rentals by station, duration, weather, and subscriber type', categories.transport, ['mobility', 'seasonality', 'demand'], 320, (i, rand) => {
+    const temp = round(clamp(normal(rand, 27, 6), 8, 42), 1)
+    return {
+      trip_id: `BKSH${i + 1}`,
+      start_station: pick(['Central', 'University', 'Market', 'Metro Gate', 'Park'], rand),
+      user_type: pick(['Subscriber', 'Casual'], rand),
+      hour: Math.floor(rand() * 24),
+      temperature_c: temp,
+      trip_minutes: round(clamp(normal(rand, 22 - Math.abs(temp - 27) / 2, 11), 2, 95), 1),
+      distance_km: round(clamp(normal(rand, 3.8, 2), 0.3, 18), 2),
+    }
+  }),
+  sample('seo-keywords', 'SEO Keywords', 'Keyword impressions, rank position, clicks, and landing page type', categories.web, ['ranking', 'conversion', 'search'], 260, (i, rand) => {
+    const position = round(clamp(normal(rand, 18, 12), 1, 80), 1)
+    const impressions = Math.round(clamp(Math.exp(normal(rand, 8.2, 1.1)), 20, 90000))
+    return {
+      keyword_id: `KW${i + 1}`,
+      intent: pick(['Informational', 'Commercial', 'Navigational', 'Transactional'], rand),
+      landing_page_type: pick(['Blog', 'Product', 'Category', 'Docs'], rand),
+      avg_position: position,
+      impressions,
+      clicks: Math.round(impressions * clamp(0.34 / Math.sqrt(position), 0.002, 0.42)),
+      conversions: Math.round(impressions * clamp(0.018 / Math.sqrt(position), 0, 0.06)),
+    }
+  }),
+  sample('email-engagement', 'Email Engagement', 'Email campaign opens, clicks, unsubscribes, and audience segments', categories.web, ['funnel', 'ab-test', 'engagement'], 240, (i, rand) => {
+    const sent = Math.round(clamp(normal(rand, 8200, 2500), 800, 22000))
+    return {
+      campaign_id: `EM${i + 1}`,
+      segment: pick(['New Leads', 'Active Users', 'Dormant Users', 'Premium'], rand),
+      subject_variant: pick(['A', 'B', 'C'], rand),
+      sent,
+      open_rate_pct: round(clamp(normal(rand, 28, 8), 3, 68), 1),
+      click_rate_pct: round(clamp(normal(rand, 5.2, 2.6), 0.1, 22), 1),
+      unsubscribe_rate_pct: round(clamp(normal(rand, 0.45, 0.25), 0, 2.5), 2),
+    }
+  }),
+  sample('api-performance', 'API Performance', 'API endpoint latency, request volume, error rate, and cache hit data', categories.web, ['monitoring', 'latency', 'reliability'], 300, (i, rand) => {
+    const requests = Math.round(clamp(normal(rand, 52000, 21000), 1000, 180000))
+    return {
+      endpoint: pick(['/login', '/search', '/checkout', '/report', '/sync'], rand),
+      hour: i % 24,
+      requests,
+      p95_latency_ms: round(clamp(normal(rand, 320 + requests / 900, 130), 40, 1800), 1),
+      error_rate_pct: round(clamp(normal(rand, 0.9 + requests / 90000, 0.55), 0, 8), 2),
+      cache_hit_pct: round(clamp(normal(rand, 64, 18), 0, 99), 1),
+      deploy_window: rand() < 0.08,
+    }
+  }),
+  sample('soil-nutrients', 'Soil Nutrients', 'Soil nitrogen, phosphorus, potassium, organic carbon, and crop suitability', categories.agriculture, ['multivariate', 'classification', 'soil-health'], 240, (i, rand) => ({
+    field_id: `SN${i + 1}`,
+    district: pick(['Nashik', 'Guntur', 'Hisar', 'Madurai', 'Kota'], rand),
+    soil_texture: pick(['Sandy', 'Loamy', 'Clay', 'Silty'], rand),
+    nitrogen_kg_ha: round(clamp(normal(rand, 280, 95), 40, 650), 1),
+    phosphorus_kg_ha: round(clamp(normal(rand, 32, 14), 4, 95), 1),
+    potassium_kg_ha: round(clamp(normal(rand, 210, 70), 35, 520), 1),
+    organic_carbon_pct: round(clamp(normal(rand, 0.72, 0.28), 0.08, 2.2), 2),
+    suitable_crop: pick(['Rice', 'Wheat', 'Cotton', 'Pulses', 'Vegetables'], rand),
+  })),
+  sample('dairy-production', 'Dairy Production', 'Daily milk yield by feed mix, breed, lactation stage, and health checks', categories.agriculture, ['regression', 'animal-health', 'farm-management'], 220, (i, rand) => {
+    const feed = round(clamp(normal(rand, 12, 3.2), 3, 24), 1)
+    return {
+      animal_id: `DY${i + 1}`,
+      breed: pick(['Gir', 'Sahiwal', 'HF Cross', 'Jersey Cross'], rand),
+      lactation_month: Math.round(clamp(normal(rand, 5, 2.8), 1, 14)),
+      feed_kg_day: feed,
+      water_liters_day: round(clamp(normal(rand, 58, 16), 18, 120), 1),
+      health_score: Math.round(clamp(normal(rand, 82, 10), 35, 100)),
+      milk_liters_day: round(clamp(2.5 + feed * 1.1 + normal(rand, 0, 3.5), 1, 38), 1),
+    }
+  }),
+  sample('irrigation-efficiency', 'Irrigation Efficiency', 'Irrigation water use, evapotranspiration, crop stage, and yield response', categories.agriculture, ['water-use', 'efficiency', 'regression'], 240, (i, rand) => {
+    const water = round(clamp(normal(rand, 38, 14), 5, 95), 1)
+    return {
+      plot_id: `IR${i + 1}`,
+      irrigation_method: pick(['Flood', 'Sprinkler', 'Drip'], rand),
+      crop_stage: pick(['Vegetative', 'Flowering', 'Grain Fill', 'Harvest'], rand),
+      water_mm_week: water,
+      evapotranspiration_mm: round(clamp(normal(rand, 31, 8), 8, 62), 1),
+      soil_moisture_pct: round(clamp(normal(rand, 24 + water / 6, 7), 4, 58), 1),
+      water_use_efficiency: round(clamp(normal(rand, 1.8 + (water < 45 ? 0.35 : 0), 0.45), 0.4, 4.5), 2),
+    }
+  }),
+  sample('pest-monitoring', 'Pest Monitoring', 'Trap counts, crop stage, pesticide use, and field damage ratings', categories.agriculture, ['counts', 'risk', 'crop-protection'], 220, (i, rand) => {
+    const traps = Math.round(clamp(normal(rand, 18, 10), 0, 75))
+    return {
+      scouting_id: `PM${i + 1}`,
+      crop: pick(['Cotton', 'Rice', 'Maize', 'Vegetables'], rand),
+      pest_type: pick(['Aphid', 'Borer', 'Whitefly', 'Armyworm'], rand),
+      trap_count: traps,
+      crop_stage: pick(['Seedling', 'Vegetative', 'Flowering', 'Maturity'], rand),
+      pesticide_applied: rand() < clamp(traps / 90, 0.05, 0.82),
+      damage_pct: round(clamp(normal(rand, traps * 0.42, 7), 0, 80), 1),
+    }
+  }),
+  sample('inspection-scores', 'Inspection Scores', 'Supplier inspection scorecards, nonconformities, and acceptance decisions', categories.quality, ['supplier-quality', 'classification', 'scorecard'], 220, (i, rand) => {
+    const score = Math.round(clamp(normal(rand, 84, 11), 35, 100))
+    return {
+      inspection_id: `IS${i + 1}`,
+      supplier_tier: pick(['Tier 1', 'Tier 2', 'Tier 3'], rand),
+      product_family: pick(['Electronics', 'Textiles', 'Machined Parts', 'Packaging'], rand),
+      visual_defects: Math.round(clamp(normal(rand, 3, 2.4), 0, 18)),
+      dimensional_defects: Math.round(clamp(normal(rand, 1.8, 1.6), 0, 12)),
+      audit_score: score,
+      accepted: score > 78 && rand() > 0.12,
+    }
+  }),
+  sample('municipal-budget', 'Municipal Budget', 'Department budgets, utilization, project progress, and citizen requests', categories.public, ['budgeting', 'governance', 'performance'], 220, (i, rand) => {
+    const budget = round(clamp(normal(rand, 18, 9), 1, 65), 2)
+    return {
+      project_id: `MB${i + 1}`,
+      department: pick(['Roads', 'Water', 'Sanitation', 'Parks', 'Health'], rand),
+      ward: `Ward ${Math.floor(rand() * 40) + 1}`,
+      budget_crore: budget,
+      spend_crore: round(clamp(budget * normal(rand, 0.68, 0.2), 0, budget * 1.15), 2),
+      progress_pct: round(clamp(normal(rand, 62, 24), 0, 100), 1),
+      citizen_requests: Math.round(clamp(normal(rand, 140, 70), 0, 520)),
+    }
+  }),
+  sample('relief-distribution', 'Relief Distribution', 'Relief camp supplies, households served, stockouts, and delivery delays', categories.public, ['logistics', 'equity', 'emergency-response'], 200, (i, rand) => {
+    const households = Math.round(clamp(normal(rand, 260, 95), 35, 720))
+    return {
+      camp_id: `RD${i + 1}`,
+      district: pick(['Coastal', 'Hill', 'River Basin', 'Urban'], rand),
+      households_served: households,
+      food_kits: Math.round(clamp(normal(rand, households * 1.05, 55), 0, households * 1.6)),
+      water_liters: Math.round(clamp(normal(rand, households * 12, 900), 0, households * 26)),
+      delivery_delay_hours: round(clamp(normal(rand, 9, 7), 0, 60), 1),
+      stockout_reported: rand() < 0.18,
+    }
+  }),
+  sample('rental-market', 'Rental Market', 'Rental listings by neighborhood, area, amenities, and monthly rent', categories.realEstate, ['regression', 'pricing', 'market-analysis'], 260, (i, rand) => {
+    const area = Math.round(clamp(normal(rand, 920, 340), 180, 2600))
+    const bedrooms = Math.round(clamp(area / 470 + normal(rand, 0, 0.45), 1, 5))
+    return {
+      listing_id: `RM${i + 1}`,
+      neighborhood: pick(['Central', 'Tech Corridor', 'Suburban', 'University', 'Industrial'], rand),
+      area_sqft: area,
+      bedrooms,
+      furnished: rand() < 0.42,
+      transit_minutes: Math.round(clamp(normal(rand, 18, 11), 1, 70)),
+      monthly_rent: Math.round(clamp(area * 38 + bedrooms * 2200 + normal(rand, 0, 8500), 4000, 180000)),
+    }
+  }),
+  sample('commercial-leasing', 'Commercial Leasing', 'Office lease rates, occupancy, floor plate, and tenant sector data', categories.realEstate, ['commercial', 'pricing', 'occupancy'], 220, (i, rand) => {
+    const area = Math.round(clamp(normal(rand, 8400, 4200), 600, 32000))
+    return {
+      lease_id: `CL${i + 1}`,
+      business_district: pick(['CBD', 'IT Park', 'Industrial Estate', 'Suburban Hub'], rand),
+      tenant_sector: pick(['IT', 'Finance', 'Retail', 'Healthcare', 'Logistics'], rand),
+      floor_area_sqft: area,
+      lease_rate_sqft: round(clamp(normal(rand, 94, 35), 18, 260), 2),
+      occupancy_pct: round(clamp(normal(rand, 82, 15), 25, 100), 1),
+      lease_term_years: Math.round(clamp(normal(rand, 4.2, 2.1), 1, 12)),
+    }
+  }),
+  sample('construction-progress', 'Construction Progress', 'Project milestones, cost variance, labor hours, and delay risk', categories.realEstate, ['project-management', 'risk', 'forecasting'], 240, (i, rand) => {
+    const planned = round(clamp(normal(rand, 54, 28), 1, 100), 1)
+    const actual = round(clamp(planned + normal(rand, -4, 13), 0, 100), 1)
+    return {
+      project_id: `CP${i + 1}`,
+      project_type: pick(['Apartment', 'Villa', 'Office', 'Retail'], rand),
+      phase: pick(['Foundation', 'Structure', 'MEP', 'Finishing', 'Handover'], rand),
+      planned_progress_pct: planned,
+      actual_progress_pct: actual,
+      labor_hours_week: Math.round(clamp(normal(rand, 2200, 850), 250, 6200)),
+      cost_variance_pct: round(clamp(normal(rand, (planned - actual) / 3, 6), -18, 36), 1),
+      delay_risk: actual + 8 < planned,
+    }
+  }),
+  sample('land-records', 'Land Records', 'Parcel area, zoning, valuation, ownership age, and dispute flags', categories.realEstate, ['categorical', 'valuation', 'governance'], 230, (i, rand) => {
+    const area = round(clamp(Math.exp(normal(rand, 8.1, 1.1)), 500, 250000), 1)
+    return {
+      parcel_id: `LR${i + 1}`,
+      zone: pick(['Residential', 'Commercial', 'Agricultural', 'Mixed Use'], rand),
+      area_sqft: area,
+      road_access: pick(['None', 'Minor Road', 'Main Road', 'Highway'], rand),
+      ownership_age_years: round(clamp(normal(rand, 11, 8), 0.2, 65), 1),
+      assessed_value_lakhs: round(clamp(area * normal(rand, 0.006, 0.002), 1, 850), 2),
+      dispute_flag: rand() < 0.08,
     }
   }),
 ]

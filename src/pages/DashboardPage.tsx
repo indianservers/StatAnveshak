@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import Plotly from 'plotly.js-dist-min'
 import { useStore } from '../store/useStore'
 import { datasetKpis, numericColumn, numericDescriptiveRows, summaryStats } from '../lib/stats'
@@ -29,7 +29,7 @@ function formatCell(value: number | string) {
 
 export function DashboardPage() {
   const { activeDataset, theme, addDataset, setActiveDataset } = useStore()
-  const [loadingView, setLoadingView] = useState(false)
+  const loadingView = false
   const chart1Ref = useRef<HTMLDivElement>(null)
   const chart2Ref = useRef<HTMLDivElement>(null)
   const chart3Ref = useRef<HTMLDivElement>(null)
@@ -63,13 +63,6 @@ export function DashboardPage() {
     }),
     [paperBg, plotBg, fontColor]
   )
-
-  useEffect(() => {
-    if (!activeDataset) return
-    setLoadingView(true)
-    const timer = window.setTimeout(() => setLoadingView(false), 220)
-    return () => window.clearTimeout(timer)
-  }, [activeDataset?.id])
 
   useEffect(() => {
     if (!activeDataset || loadingView || numCols.length === 0) return

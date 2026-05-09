@@ -1,13 +1,32 @@
 import { Link } from 'react-router-dom'
-import { Upload, BarChart2, Activity, Calculator, BookOpen, Database, Sigma, Star, Clock } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Upload, BarChart2, Activity, Calculator, BookOpen, Database, Sigma, Star, Clock, Layers3 } from 'lucide-react'
 import { useStore } from '../store/useStore'
-import { SAMPLE_DATASETS } from '../lib/sampleData'
+import { SAMPLE_DATASET_CATEGORIES, SAMPLE_DATASETS } from '../lib/sampleData'
 import { sampleToDataset } from '../lib/dataset'
 import { saveDataset } from '../lib/storage'
 
 export function HomePage() {
   const { datasets, setActiveDataset, addDataset, favoriteModules } = useStore()
+  const [selectedCategory, setSelectedCategory] = useState('All')
   const recentPages = JSON.parse(localStorage.getItem('anveshak-recent-pages') ?? '[]') as Array<{ path: string; label: string }>
+  const sampleCategories = Object.values(SAMPLE_DATASET_CATEGORIES)
+
+  const categoryCounts = useMemo(() => {
+    return SAMPLE_DATASETS.reduce<Record<string, number>>((counts, sample) => {
+      counts[sample.category] = (counts[sample.category] ?? 0) + 1
+      return counts
+    }, {})
+  }, [])
+
+  const groupedSamples = useMemo(() => {
+    return sampleCategories
+      .map((category) => ({
+        category,
+        samples: SAMPLE_DATASETS.filter((sample) => sample.category === category),
+      }))
+      .filter((group) => selectedCategory === 'All' ? group.samples.length > 0 : group.category === selectedCategory)
+  }, [sampleCategories, selectedCategory])
 
   const loadSample = async (id: string) => {
     const sample = SAMPLE_DATASETS.find((s) => s.id === id)
@@ -81,36 +100,70 @@ export function HomePage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Sample Datasets */}
         <section>
-          <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Sample Datasets</h2>
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700">
-            {SAMPLE_DATASETS.map((s) => (
-              <div key={s.id} className="flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
-                  <Database size={14} className="text-slate-500" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{s.name}</p>
-                  <p className="text-xs text-slate-400 truncate">{s.description}</p>
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {s.tags.slice(0, 2).map((tag) => (
-                      <span
-                        key={tag}
-                        className="text-xs text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <span className="text-xs text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded shrink-0">
-                  {s.category}
-                </span>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-500">
+              <Layers3 size={14} /> Sample Datasets
+            </h2>
+            <span className="text-xs text-slate-400">
+              {SAMPLE_DATASETS.length} datasets across {sampleCategories.length} categories
+            </span>
+          </div>
+          <div className="mb-3 flex gap-2 overflow-x-auto pb-2">
+            {['All', ...sampleCategories].map((category) => {
+              const active = selectedCategory === category
+              const count = category === 'All' ? SAMPLE_DATASETS.length : categoryCounts[category] ?? 0
+
+              return (
                 <button
-                  onClick={() => loadSample(s.id)}
-                  className="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 px-3 py-1 rounded-md transition-colors shrink-0"
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                  className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                    active
+                      ? 'border-indigo-500 bg-indigo-600 text-white'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-300 hover:text-indigo-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                  }`}
                 >
-                  Load
+                  {category} <span className={active ? 'text-indigo-100' : 'text-slate-400'}>{count}</span>
                 </button>
+              )
+            })}
+          </div>
+          <div className="space-y-4">
+            {groupedSamples.map((group) => (
+              <div key={group.category} className="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
+                <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-2 dark:border-slate-700 dark:bg-slate-900/40">
+                  <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">{group.category}</h3>
+                  <span className="text-xs text-slate-400">{group.samples.length} datasets</span>
+                </div>
+                <div className="divide-y divide-slate-100 dark:divide-slate-700">
+                  {group.samples.map((s) => (
+                    <div key={s.id} className="flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-700">
+                        <Database size={14} className="text-slate-500" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{s.name}</p>
+                        <p className="truncate text-xs text-slate-400">{s.description}</p>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {s.tags.slice(0, 2).map((tag) => (
+                            <span
+                              key={tag}
+                              className="rounded bg-indigo-50 px-2 py-0.5 text-xs text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => loadSample(s.id)}
+                        className="shrink-0 rounded-md bg-indigo-50 px-3 py-1 text-xs text-indigo-600 transition-colors hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400"
+                      >
+                        Load
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </div>

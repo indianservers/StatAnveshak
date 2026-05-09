@@ -3,10 +3,12 @@ import { FolderOpen, Plus, Trash2, Download, Upload } from 'lucide-react'
 import { loadProjects, saveProject, deleteProject } from '../lib/storage'
 import { useStore } from '../store/useStore'
 import type { Project } from '../types'
+import { isProject } from '../lib/validation'
 
 export function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [newName, setNewName] = useState('')
+  const [error, setError] = useState<string | null>(null)
   const { activeProject, setActiveProject, activeDataset } = useStore()
 
   useEffect(() => {
@@ -26,6 +28,7 @@ export function ProjectsPage() {
     await saveProject(p)
     setProjects((ps) => [...ps, p])
     setActiveProject(p)
+    setError(null)
     setNewName('')
   }
 
@@ -48,11 +51,33 @@ export function ProjectsPage() {
   const importProject = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const text = await file.text()
-    const p = JSON.parse(text) as Project
-    await saveProject(p)
-    setProjects((ps) => [...ps.filter((x) => x.id !== p.id), p])
-    e.target.value = ''
+    try {
+      const text = await file.text()
+      const parsed = JSON.parse(text) as unknown
+      if (!isProject(parsed)) throw new Error('That file is not a valid StatAnveshak project export.')
+      await saveProject(parsed)
+      setProjects((ps) => [...ps.filter((x) => x.id !== parsed.id), parsed])
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Project import failed.')
+    } finally {
+      e.target.value = ''
+    }
+  }
+
+  const updateNotes = async (project: Project, notes: string) => {
+    const next = { ...project, notes, updatedAt: Date.now() }
+    await saveProject(next)
+    setProjects((items) => items.map((item) => item.id === next.id ? next : item))
+    if (activeProject?.id === next.id) setActiveProject(next)
+  }
+
+  const attachActiveDataset = async (project: Project) => {
+    if (!activeDataset || project.datasetIds.includes(activeDataset.id)) return
+    const next = { ...project, datasetIds: [...project.datasetIds, activeDataset.id], updatedAt: Date.now() }
+    await saveProject(next)
+    setProjects((items) => items.map((item) => item.id === next.id ? next : item))
+    setActiveProject(next)
   }
 
   return (
@@ -64,6 +89,12 @@ export function ProjectsPage() {
           <input type="file" accept=".json" className="sr-only" onChange={importProject} />
         </label>
       </div>
+
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+          {error}
+        </div>
+      )}
 
       {/* Create new */}
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 mb-6 flex gap-3">
@@ -121,6 +152,24 @@ export function ProjectsPage() {
                   <Trash2 size={14} />
                 </button>
               </div>
+              {activeProject?.id === p.id && (
+                <div className="mt-4 space-y-3" onClick={(event) => event.stopPropagation()}>
+                  <textarea
+                    value={p.notes}
+                    onChange={(event) => updateNotes(p, event.target.value)}
+                    placeholder="Project notes, decisions, or analysis questions"
+                    className="min-h-24 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+                  />
+                  <button
+                    type="button"
+                    disabled={!activeDataset || p.datasetIds.includes(activeDataset.id)}
+                    onClick={() => attachActiveDataset(p)}
+                    className="rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                  >
+                    {activeDataset && p.datasetIds.includes(activeDataset.id) ? 'Active dataset attached' : 'Attach active dataset'}
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>

@@ -9,6 +9,8 @@ import { useNavigate } from 'react-router-dom'
 import { SAMPLE_DATASETS } from '../../lib/sampleData'
 import { sampleToDataset } from '../../lib/dataset'
 import type { ColumnSchema, Dataset } from '../../types'
+import { DATASET_FILE_LIMIT_BYTES, uniqueColumnNames } from '../../lib/validation'
+import { detectSchemaInWorker } from '../../lib/workerClient'
 
 type PendingImport = {
   id: string
@@ -21,6 +23,7 @@ type PendingImport = {
   data: Record<string, unknown>[]
   schema: ColumnSchema[]
   columns: string[]
+  warnings: string[]
   progress: number
   eta: string
   status: 'ready' | 'parsing'
@@ -41,6 +44,9 @@ function formatBytes(value?: number) {
 }
 
 function detectFile(file: File) {
+  if (file.size > DATASET_FILE_LIMIT_BYTES) {
+    throw new Error(`${file.name}: file is larger than ${formatBytes(DATASET_FILE_LIMIT_BYTES)}. Split it or use a smaller extract.`)
+  }
   if (file.name.match(/\.csv$/i)) return { sourceType: 'csv' as const, details: 'CSV detected, delimiter: comma', confidence: 96 }
   if (file.name.match(/\.(tsv|txt)$/i)) return { sourceType: 'csv' as const, details: 'Delimited text detected, delimiter: tab/auto', confidence: 88 }
   if (file.name.match(/\.xlsx?$/i)) return { sourceType: 'excel' as const, details: 'Excel workbook detected, first sheet selected', confidence: 94 }
@@ -75,6 +81,7 @@ export function UploadPage() {
       data: [],
       schema: [],
       columns: [],
+      warnings: [],
       progress: 12,
       eta: 'estimating',
       status: 'parsing',
@@ -111,7 +118,11 @@ export function UploadPage() {
       }
       if (data.length === 0) throw new Error(`${file.name}: file appears to be empty or has no data rows.`)
 
-      const schema = detectSchema(data)
+      const schema = data.length > 5000 ? await detectSchemaInWorker(data) : detectSchema(data)
+      const warnings = [
+        ...(schema.some((col) => col.missing > 0) ? ['Missing values were detected. Review missing-value rules before analysis.'] : []),
+        ...(new Set(schema.map((col) => col.name.toLowerCase())).size !== schema.length ? ['Duplicate column names were detected and will be made unique on import.'] : []),
+      ]
       const finished: PendingImport = {
         id,
         fileName: file.name,
@@ -122,6 +133,7 @@ export function UploadPage() {
         data,
         schema,
         columns: schema.map((col) => col.name),
+        warnings,
         progress: 100,
         eta: 'done',
         status: 'ready',
@@ -148,14 +160,16 @@ export function UploadPage() {
   }, [parseFile])
 
   const commitImport = async (item: PendingImport) => {
-    const renamedData = item.data.map((row) => Object.fromEntries(item.schema.map((col, index) => [item.columns[index] || col.name, row[col.name]])))
-    const schema = detectSchema(renamedData)
+    const columns = uniqueColumnNames(item.columns)
+    const renamedData = item.data.map((row) => Object.fromEntries(item.schema.map((col, index) => [columns[index] || col.name, row[col.name]])))
+    const schema = renamedData.length > 5000 ? await detectSchemaInWorker(renamedData) : detectSchema(renamedData)
+    const queuedAt = Number(item.id.split('_')[1]) || 0
     const ds: Dataset = {
-      id: `ds_${Date.now()}`,
-      name: item.displayName,
+      id: `ds_${item.id}`,
+      name: item.displayName.trim() || item.fileName.replace(/\.[^.]+$/, ''),
       rows: renamedData.length,
       cols: schema.length,
-      createdAt: Date.now(),
+      createdAt: queuedAt,
       schema,
       sourceType: item.sourceType,
       fileSize: item.fileSize,
@@ -253,6 +267,13 @@ export function UploadPage() {
                     <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500 dark:bg-slate-700">{formatBytes(item.fileSize)}</span>
                   </div>
                   <p className="mt-1 text-xs text-slate-400">{item.details} - confidence {item.confidence}%</p>
+                  {item.warnings.length > 0 && (
+                    <ul className="mt-2 space-y-1">
+                      {item.warnings.map((warning) => (
+                        <li key={warning} className="text-xs text-amber-600 dark:text-amber-300">{warning}</li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
                 <button disabled={item.status !== 'ready'} onClick={() => commitImport(item)} className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-3 py-2 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
                   <CheckCircle size={14} />

@@ -10,7 +10,13 @@ import { OnboardingTour } from '../ui/OnboardingTour'
 import { TestRecommenderDrawer } from '../ui/TestRecommenderDrawer'
 
 export function AppShell() {
-  const { theme, highContrast, largeText, zoomLevel, density } = useStore()
+  const { theme, highContrast, largeText, zoomLevel, density, hydrateStorage } = useStore()
+
+  useEffect(() => {
+    hydrateStorage().catch((error) => {
+      console.error('Failed to hydrate browser storage:', error)
+    })
+  }, [hydrateStorage])
 
   useEffect(() => {
     const base = largeText ? 17 : 16

@@ -5,6 +5,7 @@ import { Download, FileCode, FileText, Printer, Table2 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { Link } from 'react-router-dom'
 import { Upload } from 'lucide-react'
+import { escapeHtml } from '../lib/validation'
 
 export function ReportsPage() {
   const { activeDataset } = useStore()
@@ -70,7 +71,7 @@ export function ReportsPage() {
 <body>
 <h1>Anveshak Analysis Report</h1>
 <div class="meta">
-  <b>Dataset:</b> ${activeDataset.name} &nbsp;|&nbsp;
+  <b>Dataset:</b> ${escapeHtml(activeDataset.name)} &nbsp;|&nbsp;
   <b>Rows:</b> ${activeDataset.rows.toLocaleString()} &nbsp;|&nbsp;
   <b>Columns:</b> ${activeDataset.cols} &nbsp;|&nbsp;
   <b>Generated:</b> ${new Date().toLocaleString()}
@@ -80,22 +81,22 @@ export function ReportsPage() {
 <h2>Column Schema</h2>
 <table>
   <tr><th>Column</th><th>Type</th><th>Unique</th><th>Missing</th><th>Missing %</th></tr>
-  ${activeDataset.schema.map((c) => `<tr><td>${c.name}</td><td>${c.type}</td><td>${c.unique}</td><td>${c.missing}</td><td>${c.missingPct.toFixed(1)}%</td></tr>`).join('')}
+  ${activeDataset.schema.map((c) => `<tr><td>${escapeHtml(c.name)}</td><td>${escapeHtml(c.type)}</td><td>${c.unique}</td><td>${c.missing}</td><td>${c.missingPct.toFixed(1)}%</td></tr>`).join('')}
 </table>
 
 ${stats.map(({ col, stats: s }) => `
-<h2>Summary Statistics: ${col}</h2>
+<h2>Summary Statistics: ${escapeHtml(col)}</h2>
 <table>
-  <tr>${s.map((r) => `<th>${r.label}</th>`).join('')}</tr>
-  <tr>${s.map((r) => `<td>${r.value}</td>`).join('')}</tr>
+  <tr>${s.map((r) => `<th>${escapeHtml(r.label)}</th>`).join('')}</tr>
+  <tr>${s.map((r) => `<td>${escapeHtml(r.value)}</td>`).join('')}</tr>
 </table>
 `).join('')}
 
 ${corr ? `
 <h2>Correlation Matrix</h2>
 <table>
-  <tr><th></th>${corr.cols.map((c) => `<th>${c}</th>`).join('')}</tr>
-  ${corr.matrix.map((row, i) => `<tr><th>${corr.cols[i]}</th>${row.map((v) => `<td style="color:${Math.abs(v) > 0.7 ? '#dc2626' : '#334155'}">${v.toFixed(3)}</td>`).join('')}</tr>`).join('')}
+  <tr><th></th>${corr.cols.map((c) => `<th>${escapeHtml(c)}</th>`).join('')}</tr>
+  ${corr.matrix.map((row, i) => `<tr><th>${escapeHtml(corr.cols[i])}</th>${row.map((v) => `<td style="color:${Math.abs(v) > 0.7 ? '#dc2626' : '#334155'}">${v.toFixed(3)}</td>`).join('')}</tr>`).join('')}
 </table>
 ` : ''}
 

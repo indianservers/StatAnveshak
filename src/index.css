@@ -76,6 +76,28 @@ body {
 .ui-compact .gap-5 { gap: 0.875rem; }
 .ui-compact .gap-4 { gap: 0.75rem; }
 
+.input-select {
+  width: 100%;
+  border-radius: 0.375rem;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: #334155;
+  outline: none;
+}
+
+.input-select:focus {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.12);
+}
+
+.dark .input-select {
+  border-color: #475569;
+  background: #334155;
+  color: #e2e8f0;
+}
+
 .copy-pop {
   animation: copy-pop 220ms ease-out;
 }

@@ -11,7 +11,6 @@ import {
   Lightbulb,
   Network,
   Play,
-  RefreshCw,
   Search,
   Sigma,
   Sparkles,
@@ -22,6 +21,7 @@ import { MathText } from '../components/ui/MathText'
 
 type Level = 'beginner' | 'intermediate' | 'advanced'
 type LabId = 'clt' | 'lln' | 'bayes' | 'sampling' | 'errors' | 'ci' | 'bootstrap' | 'permutation' | 'anova' | 'mle' | 'bayesian' | 'regression'
+type StudyMode = 'self-study' | 'exam-prep' | 'classroom'
 
 type Theorem = {
   id: string
@@ -196,6 +196,69 @@ const CASE_STUDIES = [
   ['Finance Risk', 'Model heavy tails, VaR thresholds, bootstrapped uncertainty, and stress scenarios.'],
 ]
 
+const COURSE_MAP = [
+  { title: 'Probability', prereq: 'None', time: '4h', topics: ['Sample spaces', 'Events', 'Conditional probability', 'Counting'] },
+  { title: 'Distributions', prereq: 'Probability', time: '5h', topics: ['PMF/PDF/CDF', 'Expectation', 'Variance', 'Quantiles'] },
+  { title: 'Sampling', prereq: 'Distributions', time: '3h', topics: ['Sampling bias', 'CLT', 'LLN', 'Standard error'] },
+  { title: 'Inference', prereq: 'Sampling', time: '6h', topics: ['Tests', 'p-values', 'Confidence intervals', 'Power'] },
+  { title: 'Regression', prereq: 'Inference', time: '5h', topics: ['OLS', 'Diagnostics', 'Logistic models', 'Confounding'] },
+  { title: 'Bayesian', prereq: 'Probability', time: '4h', topics: ['Prior', 'Likelihood', 'Posterior', 'Decision theory'] },
+  { title: 'Theorems', prereq: 'All tracks', time: '6h', topics: ['Proofs', 'Assumptions', 'Counterexamples', 'Applications'] },
+]
+
+const DAILY_PLAN = [
+  'Read the theorem statement and assumptions.',
+  'Run one simulation with default settings.',
+  'Change one assumption and compare the result.',
+  'Answer two practice questions.',
+  'Write one sentence explaining the idea without formulas.',
+]
+
+const PROBABILITY_PUZZLES = [
+  { title: 'Two dice sum', prompt: 'What is P(sum = 7)?', answer: '6 / 36 = 1 / 6' },
+  { title: 'At least one head', prompt: 'Two fair coins: P(at least one head)?', answer: '3 / 4' },
+  { title: 'Birthday pair', prompt: 'Which grows faster: people or possible pairs?', answer: 'Pairs grow as n(n-1)/2.' },
+  { title: 'Conditional test', prompt: 'If P(A and B)=0.12 and P(B)=0.30, find P(A|B).', answer: '0.40' },
+]
+
+const DISTRIBUTION_GUIDE = [
+  { name: 'Bernoulli', use: 'One yes/no trial', support: '0 or 1', mean: 'p', variance: 'p(1-p)' },
+  { name: 'Binomial', use: 'Success count in n trials', support: '0..n', mean: 'np', variance: 'np(1-p)' },
+  { name: 'Poisson', use: 'Event counts in an interval', support: '0,1,2,...', mean: 'lambda', variance: 'lambda' },
+  { name: 'Normal', use: 'Errors and averages', support: 'all real values', mean: 'mu', variance: 'sigma^2' },
+  { name: 'Exponential', use: 'Waiting times', support: 'x >= 0', mean: '1/lambda', variance: '1/lambda^2' },
+  { name: 'Beta', use: 'Probabilities/proportions', support: '0..1', mean: 'a/(a+b)', variance: 'ab/[(a+b)^2(a+b+1)]' },
+]
+
+const FOUNDATION_DRILLS = [
+  { title: 'Mean vs Median', prompt: 'Dataset [2, 4, 5, 9, 100]. Which center is more robust?', answer: 'Median. The mean is pulled by 100.' },
+  { title: 'Z-score', prompt: 'If x=82, mean=70, sd=6, what is z?', answer: 'z = (82-70)/6 = 2.' },
+  { title: 'Covariance sign', prompt: 'When x rises and y usually falls, covariance is...', answer: 'Negative.' },
+  { title: 'Best summary', prompt: 'For right-skewed income data, report...', answer: 'Median and IQR, often with mean as secondary context.' },
+]
+
+const INFERENCE_SCENARIOS = [
+  { title: 'One sample mean', design: 'One numeric variable vs known target', test: 'One-sample t-test or Wilcoxon signed-rank' },
+  { title: 'Two independent means', design: 'Numeric outcome, two groups', test: 'Welch t-test or Mann-Whitney' },
+  { title: 'Paired before/after', design: 'Same subjects measured twice', test: 'Paired t-test or paired bootstrap' },
+  { title: 'Categorical association', design: 'Two categorical variables', test: 'Chi-square independence or Fisher exact' },
+  { title: 'Many group means', design: 'Numeric outcome, 3+ groups', test: 'ANOVA or Kruskal-Wallis' },
+]
+
+const REGRESSION_SCENARIOS = [
+  { title: 'Simple linear regression', cue: 'One numeric predictor and one numeric outcome.', watch: 'Residual pattern, leverage, slope interpretation.' },
+  { title: 'Multiple regression', cue: 'Several predictors explain one numeric outcome.', watch: 'Confounding, collinearity, coefficient context.' },
+  { title: 'Logistic regression', cue: 'Binary outcome modeled as probability.', watch: 'Odds ratios, threshold choice, calibration.' },
+  { title: 'Model selection', cue: 'Compare candidate predictors and transformations.', watch: 'Overfitting and validation performance.' },
+]
+
+const BAYESIAN_MODULES = [
+  { title: 'Beta-Binomial', formula: '\\text{Beta}(a,b)+x\\text{ successes in }n\\Rightarrow \\text{Beta}(a+x,b+n-x)', use: 'Conversion rates and probabilities.' },
+  { title: 'Normal-Normal', formula: '\\mu\\mid x \\propto \\text{prior}(\\mu)\\times \\text{likelihood}(x\\mid\\mu)', use: 'Updating a mean with normal evidence.' },
+  { title: 'Bayes Factor', formula: 'BF_{10}=\\frac{P(data\\mid H_1)}{P(data\\mid H_0)}', use: 'Evidence ratio between hypotheses.' },
+  { title: 'Posterior Predictive', formula: 'P(\\tilde{x}\\mid x)=\\int P(\\tilde{x}\\mid\\theta)P(\\theta\\mid x)d\\theta', use: 'Check whether model predictions look like real data.' },
+]
+
 const IMPLEMENTED_MODS = [
   'Guided learning paths',
   'Interactive theorem pages',
@@ -305,7 +368,26 @@ export function LearnPage() {
   const [falsePositive, setFalsePositive] = useState(0.08)
   const [lessonNotes, setLessonNotes] = useState('')
   const [completed, setCompleted] = useState<string[]>(() => JSON.parse(localStorage.getItem('learn-progress') ?? '[]') as string[])
-  const [historyTick, setHistoryTick] = useState(0)
+  const [sandboxHistory, setSandboxHistory] = useState<string[]>(() => JSON.parse(localStorage.getItem('sandbox-history') ?? '[]') as string[])
+  const [studyMode, setStudyMode] = useState<StudyMode>('self-study')
+  const [activeTrack, setActiveTrack] = useState('Probability')
+  const [eventA, setEventA] = useState(0.4)
+  const [eventB, setEventB] = useState(0.5)
+  const [eventAB, setEventAB] = useState(0.2)
+  const [coinFlips, setCoinFlips] = useState(2)
+  const [coinTrials] = useState(100)
+  const [coinResult, setCoinResult] = useState<number | null>(null)
+  const [distExample, setDistExample] = useState('Normal')
+  const [outlierValue, setOutlierValue] = useState(30)
+  const [biasLevel, setBiasLevel] = useState(0.2)
+  const [alphaLevel, setAlphaLevel] = useState(0.05)
+  const [effectSize, setEffectSize] = useState(0.5)
+  const [regSlope, setRegSlope] = useState(1.4)
+  const [noiseLevel, setNoiseLevel] = useState(0.8)
+  const [bayesSuccesses, setBayesSuccesses] = useState(8)
+  const [bayesTrials, setBayesTrials] = useState(20)
+  const [priorA, setPriorA] = useState(2)
+  const [priorB, setPriorB] = useState(2)
 
   const theorem = THEOREMS.find((item) => item.id === selectedTheorem) ?? THEOREMS[0]
   const paths = Array.from(new Set(THEOREMS.map((item) => item.path)))
@@ -357,7 +439,7 @@ export function LearnPage() {
     const entry = `${lab} lab, n=${sampleSize}, reps=${reps}, population=${population}`
     const nextHistory = [entry, ...JSON.parse(localStorage.getItem('sandbox-history') ?? '[]')].slice(0, 8)
     localStorage.setItem('sandbox-history', JSON.stringify(nextHistory))
-    setHistoryTick((value) => value + 1)
+    setSandboxHistory(nextHistory)
   }
 
   const markComplete = (id: string) => {
@@ -370,7 +452,35 @@ export function LearnPage() {
   const bars = histogram(simulation)
   const labMean = simulation.length ? mean(simulation) : 0
   const labSd = simulation.length ? sd(simulation) : 0
-  const sandboxHistory = useMemo(() => JSON.parse(localStorage.getItem('sandbox-history') ?? '[]') as string[], [historyTick])
+  const activeCourse = COURSE_MAP.find((course) => course.title === activeTrack) ?? COURSE_MAP[0]
+  const trackIndex = COURSE_MAP.findIndex((course) => course.title === activeCourse.title)
+  const trackMastery = Math.round(((completed.length / Math.max(THEOREMS.length, 1)) * 45) + ((trackIndex + 1) / COURSE_MAP.length) * 35 + (quizScore / QUIZZES.length) * 20)
+  const conditional = eventB > 0 ? eventAB / eventB : 0
+  const independent = Math.abs(eventAB - eventA * eventB) < 0.02
+  const drillData = [4, 6, 8, 10, outlierValue]
+  const drillMean = mean(drillData)
+  const drillMedian = [...drillData].sort((a, b) => a - b)[2]
+  const estimatedPower = Math.min(0.99, Math.max(alphaLevel, alphaLevel + effectSize * 0.55 + Math.sqrt(sampleSize) / 120))
+  const typeTwo = 1 - estimatedPower
+  const bonferroni = alphaLevel / 5
+  const ciWidth = 2 * 1.96 * (1 + noiseLevel) / Math.sqrt(sampleSize)
+  const regressionPoints = useMemo(() => Array.from({ length: 18 }, (_, index) => {
+    const x = index / 2
+    return { x, y: 2 + regSlope * x + randomNormal(0, noiseLevel) }
+  }), [regSlope, noiseLevel])
+  const betaPostA = priorA + bayesSuccesses
+  const betaPostB = priorB + Math.max(0, bayesTrials - bayesSuccesses)
+  const betaPosteriorMean = betaPostA / (betaPostA + betaPostB)
+
+  const simulateCoins = () => {
+    let successes = 0
+    for (let trial = 0; trial < coinTrials; trial++) {
+      let heads = 0
+      for (let flip = 0; flip < coinFlips; flip++) if (Math.random() < 0.5) heads++
+      if (heads >= 1) successes++
+    }
+    setCoinResult(successes / coinTrials)
+  }
 
   const exportLearningReport = () => {
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>StatAnveshak Learning Report</title><style>body{font-family:Inter,Arial,sans-serif;line-height:1.5;margin:32px;color:#1f2937}h1,h2{color:#312e81}.card{border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:12px 0}</style></head><body><h1>StatAnveshak Learning Report</h1><div class="card"><h2>Progress</h2><p>${completed.length}/${THEOREMS.length} theorem modules completed. Quiz score: ${quizScore}/${QUIZZES.length}.</p></div><div class="card"><h2>Current Theorem</h2><p><strong>${theorem.title}</strong></p><p>${theorem.statement}</p><p>${theorem.intuition}</p></div><div class="card"><h2>Latest Lab</h2><p>${lab}, sample size ${sampleSize}, repetitions ${reps}, population ${population}</p><p>Mean ${labMean.toFixed(4)}, SD ${labSd.toFixed(4)}</p></div><div class="card"><h2>Notes</h2><pre>${lessonNotes.replace(/[<>&]/g, (char) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[char] ?? char))}</pre></div></body></html>`
@@ -454,6 +564,53 @@ export function LearnPage() {
             </div>
           </section>
         </div>
+
+        <section className="mb-6 rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold text-slate-800 dark:text-white">Complete Curriculum Map</h2>
+              <p className="text-sm text-slate-500">Tracks, prerequisites, study mode, daily plan, estimated time, mastery, and progression.</p>
+            </div>
+            <select value={studyMode} onChange={(event) => setStudyMode(event.target.value as StudyMode)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100">
+              <option value="self-study">Self-study mode</option>
+              <option value="exam-prep">Exam prep mode</option>
+              <option value="classroom">Teacher/classroom mode</option>
+            </select>
+          </div>
+          <div className="grid gap-3 lg:grid-cols-[1fr_280px]">
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+              {COURSE_MAP.map((course, index) => {
+                const locked = index > trackIndex + 1
+                return (
+                  <button
+                    key={course.title}
+                    onClick={() => setActiveTrack(course.title)}
+                    className={`rounded-lg border p-3 text-left ${activeTrack === course.title ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-200 dark:border-slate-700'} ${locked ? 'opacity-60' : ''}`}
+                  >
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <span className="font-semibold text-slate-800 dark:text-slate-100">{course.title}</span>
+                      <span className="text-xs text-slate-400">{locked ? 'Locked soon' : course.time}</span>
+                    </div>
+                    <p className="text-xs text-slate-500">Prereq: {course.prereq}</p>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {course.topics.slice(0, 3).map((topic) => <span key={topic} className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500 dark:bg-slate-700">{topic}</span>)}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+            <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-900/60">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Active plan</p>
+              <h3 className="mt-1 font-bold text-slate-800 dark:text-white">{activeCourse.title}</h3>
+              <p className="text-xs text-slate-500">Mode: {studyMode.replace('-', ' ')}</p>
+              <div className="my-3 h-2 rounded bg-slate-200 dark:bg-slate-700"><div className="h-2 rounded bg-indigo-500" style={{ width: `${Math.min(100, trackMastery)}%` }} /></div>
+              <p className="text-xs text-slate-500">Mastery estimate: {trackMastery}%</p>
+              <ol className="mt-3 space-y-1 text-xs text-slate-600 dark:text-slate-300">
+                {DAILY_PLAN.map((step, index) => <li key={step}>{index + 1}. {step}</li>)}
+              </ol>
+            </div>
+          </div>
+        </section>
 
         <div className="grid gap-6 xl:grid-cols-[1.25fr_1fr]">
           <section className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
@@ -571,6 +728,253 @@ export function LearnPage() {
             )}
           </section>
         </div>
+
+        <section className="mt-6 rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
+          <div className="mb-4 flex items-center gap-2">
+            <Network size={16} className="text-indigo-500" />
+            <h2 className="text-lg font-bold text-slate-800 dark:text-white">Probability Workshop</h2>
+          </div>
+          <div className="grid gap-4 xl:grid-cols-4">
+            <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-900/60">
+              <p className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200">Sample Space Builder</p>
+              <p className="text-xs text-slate-500">Coin flips: {coinFlips}; outcomes: {2 ** coinFlips}</p>
+              <input type="range" min="1" max="8" value={coinFlips} onChange={(event) => setCoinFlips(Number(event.target.value))} className="mt-3 w-full accent-indigo-600" />
+              <button onClick={simulateCoins} className="mt-3 rounded-md bg-indigo-600 px-3 py-2 text-xs text-white">Simulate random experiment</button>
+              {coinResult !== null && <p className="mt-2 text-xs text-slate-500">Estimated P(at least one head): {pct(coinResult)}</p>}
+            </div>
+            <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-900/60">
+              <p className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200">Event Algebra and Independence</p>
+              <Slider label="P(A)" value={eventA} setValue={setEventA} />
+              <Slider label="P(B)" value={eventB} setValue={setEventB} />
+              <Slider label="P(A and B)" value={eventAB} setValue={setEventAB} />
+              <p className="mt-2 text-xs text-slate-500">P(A|B) = {pct(conditional)}. {independent ? 'A and B look approximately independent.' : 'A and B do not look independent.'}</p>
+            </div>
+            <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-900/60">
+              <p className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200">Venn and Conditional Tree</p>
+              <div className="relative h-32 rounded bg-white dark:bg-slate-800">
+                <div className="absolute left-8 top-6 h-20 w-20 rounded-full bg-indigo-400/50" />
+                <div className="absolute left-20 top-6 h-20 w-20 rounded-full bg-emerald-400/50" />
+                <div className="absolute bottom-2 left-2 text-xs text-slate-500">A union B = {pct(Math.min(1, eventA + eventB - eventAB))}</div>
+              </div>
+              <p className="mt-2 text-xs text-slate-500">Mutually exclusive requires P(A and B)=0; independent requires P(A and B)=P(A)P(B).</p>
+            </div>
+            <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-900/60">
+              <p className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200">Counting and Puzzle Bank</p>
+              <MathText value={'{}^nP_r=\\frac{n!}{(n-r)!},\\quad {}^nC_r=\\frac{n!}{r!(n-r)!}'} block />
+              <div className="mt-2 space-y-2">
+                {PROBABILITY_PUZZLES.map((puzzle) => (
+                  <details key={puzzle.title} className="rounded border border-slate-200 bg-white p-2 text-xs dark:border-slate-700 dark:bg-slate-800">
+                    <summary className="cursor-pointer font-semibold text-slate-700 dark:text-slate-200">{puzzle.title}</summary>
+                    <p className="mt-1 text-slate-500">{puzzle.prompt}</p>
+                    <p className="mt-1 text-indigo-600 dark:text-indigo-300">{puzzle.answer}</p>
+                  </details>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-6 rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <BarChart3 size={16} className="text-indigo-500" />
+              <h2 className="text-lg font-bold text-slate-800 dark:text-white">Distribution Learning Lab</h2>
+            </div>
+            <select value={distExample} onChange={(event) => setDistExample(event.target.value)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100">
+              {DISTRIBUTION_GUIDE.map((dist) => <option key={dist.name}>{dist.name}</option>)}
+            </select>
+          </div>
+          <div className="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
+            <div className="overflow-auto rounded-lg border border-slate-200 dark:border-slate-700">
+              <table className="w-full text-xs">
+                <thead className="bg-slate-50 text-slate-500 dark:bg-slate-700/50">
+                  <tr>{['Distribution', 'When to use', 'Support', 'Mean', 'Variance'].map((head) => <th key={head} className="px-3 py-2 text-left">{head}</th>)}</tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                  {DISTRIBUTION_GUIDE.map((dist) => (
+                    <tr key={dist.name} className={dist.name === distExample ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''}>
+                      <td className="px-3 py-2 font-semibold text-slate-700 dark:text-slate-200">{dist.name}</td>
+                      <td className="px-3 py-2 text-slate-500">{dist.use}</td>
+                      <td className="px-3 py-2 text-slate-500">{dist.support}</td>
+                      <td className="px-3 py-2 text-slate-500">{dist.mean}</td>
+                      <td className="px-3 py-2 text-slate-500">{dist.variance}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-900/60">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{distExample}: PMF/PDF/CDF and Quantiles</p>
+              <div className="mt-3 flex h-32 items-end gap-1 rounded bg-white p-2 dark:bg-slate-800">
+                {[12, 22, 38, 65, 88, 65, 38, 22, 12].map((height, index) => <span key={index} className="flex-1 rounded-t bg-indigo-500" style={{ height: `${distExample === 'Poisson' || distExample === 'Binomial' ? Math.max(8, height - index * 4) : height}%` }} />)}
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded bg-white p-2 dark:bg-slate-800">Transformation: Y = aX + b changes center and spread.</div>
+                <div className="rounded bg-white p-2 dark:bg-slate-800">Convolution: sums combine distributions and often smooth shape.</div>
+                <div className="rounded bg-white p-2 dark:bg-slate-800">Joint to marginal: sum/integrate over the other variable.</div>
+                <div className="rounded bg-white p-2 dark:bg-slate-800">Conditional: restrict the sample space, then renormalize.</div>
+              </div>
+              <p className="mt-3 text-xs text-slate-500">Open the Distributions page for full parameter sliders, fitting, random generation, and goodness-of-fit.</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-6 rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
+          <div className="mb-4 flex items-center gap-2">
+            <Sigma size={16} className="text-indigo-500" />
+            <h2 className="text-lg font-bold text-slate-800 dark:text-white">Statistics Foundations Practice</h2>
+          </div>
+          <div className="grid gap-4 xl:grid-cols-4">
+            <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-900/60">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Descriptive Statistics Drill</p>
+              <p className="mt-2 text-xs text-slate-500">Data: {drillData.join(', ')}</p>
+              <Slider label="Outlier value" value={outlierValue / 100} setValue={(value) => setOutlierValue(Math.round(value * 100))} />
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <Metric label="Mean" value={drillMean.toFixed(2)} />
+                <Metric label="Median" value={drillMedian.toFixed(2)} />
+              </div>
+              <p className="mt-2 text-xs text-slate-500">Outlier influence simulator: watch mean move faster than median.</p>
+            </div>
+            <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-900/60">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Bias and Sampling</p>
+              <Slider label="Sampling bias" value={biasLevel} setValue={setBiasLevel} />
+              <div className="mt-3 h-24 rounded bg-white p-2 dark:bg-slate-800">
+                <div className="h-3 rounded bg-emerald-400" style={{ width: `${Math.max(5, (1 - biasLevel) * 100)}%` }} />
+                <div className="mt-4 h-3 rounded bg-rose-400" style={{ width: `${Math.max(5, biasLevel * 100)}%` }} />
+              </div>
+              <p className="mt-2 text-xs text-slate-500">Sampling bias shifts estimates even when the formula is correct.</p>
+            </div>
+            <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-900/60">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Covariance Geometry</p>
+              <div className="relative mt-3 h-32 rounded bg-white dark:bg-slate-800">
+                {Array.from({ length: 12 }, (_, index) => (
+                  <span key={index} className="absolute h-2 w-2 rounded-full bg-indigo-500" style={{ left: `${8 + index * 7}%`, bottom: `${16 + index * 5 + randomNormal(0, 4)}%` }} />
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-slate-500">Upward cloud: positive covariance and positive correlation.</p>
+            </div>
+            <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-900/60">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Practice Bank</p>
+              <div className="mt-2 space-y-2">
+                {FOUNDATION_DRILLS.map((drill) => (
+                  <details key={drill.title} className="rounded border border-slate-200 bg-white p-2 text-xs dark:border-slate-700 dark:bg-slate-800">
+                    <summary className="cursor-pointer font-semibold text-slate-700 dark:text-slate-200">{drill.title}</summary>
+                    <p className="mt-1 text-slate-500">{drill.prompt}</p>
+                    <p className="mt-1 text-indigo-600 dark:text-indigo-300">{drill.answer}</p>
+                  </details>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-6 rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
+          <div className="mb-4 flex items-center gap-2">
+            <Target size={16} className="text-indigo-500" />
+            <h2 className="text-lg font-bold text-slate-800 dark:text-white">Inference Testing Arena</h2>
+          </div>
+          <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-900/60">
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">p-value, Errors, Power</p>
+                <Slider label="Alpha" value={alphaLevel} setValue={setAlphaLevel} />
+                <Slider label="Effect size" value={effectSize} setValue={setEffectSize} />
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  <Metric label="Type I" value={pct(alphaLevel)} />
+                  <Metric label="Power" value={pct(estimatedPower)} />
+                  <Metric label="Type II" value={pct(typeTwo)} />
+                </div>
+                <div className="mt-3 h-8 rounded bg-slate-200 dark:bg-slate-700">
+                  <div className="h-8 rounded bg-rose-400" style={{ width: `${alphaLevel * 100}%` }} title="p-value rejection region" />
+                </div>
+              </div>
+              <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-900/60">
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">CI and Multiple Testing</p>
+                <Slider label="Noise" value={noiseLevel / 3} setValue={(value) => setNoiseLevel(value * 3)} />
+                <p className="mt-2 text-xs text-slate-500">Approx CI width: {ciWidth.toFixed(3)}</p>
+                <p className="text-xs text-slate-500">Bonferroni for 5 tests: alpha = {bonferroni.toFixed(4)}</p>
+                <div className="mt-4 relative h-4 rounded bg-blue-100 dark:bg-blue-950">
+                  <div className="absolute left-[25%] right-[25%] h-4 rounded bg-blue-500" />
+                </div>
+              </div>
+            </div>
+            <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-900/60">
+              <p className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">Hypothesis Test Decision Tree</p>
+              <div className="grid gap-2">
+                {INFERENCE_SCENARIOS.map((scenario) => (
+                  <div key={scenario.title} className="rounded bg-white p-3 text-xs dark:bg-slate-800">
+                    <p className="font-semibold text-slate-700 dark:text-slate-200">{scenario.title}</p>
+                    <p className="text-slate-500">{scenario.design}</p>
+                    <p className="mt-1 text-indigo-600 dark:text-indigo-300">{scenario.test}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-6 rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
+          <div className="mb-4 flex items-center gap-2">
+            <BarChart3 size={16} className="text-indigo-500" />
+            <h2 className="text-lg font-bold text-slate-800 dark:text-white">Regression and Modeling Studio</h2>
+          </div>
+          <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
+            <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-900/60">
+              <div className="grid gap-3 md:grid-cols-2">
+                <Slider label="Slope" value={regSlope / 3} setValue={(value) => setRegSlope(value * 3)} />
+                <Slider label="Noise" value={noiseLevel / 3} setValue={(value) => setNoiseLevel(value * 3)} />
+              </div>
+              <div className="relative mt-3 h-56 rounded bg-white dark:bg-slate-800">
+                {regressionPoints.map((point, index) => (
+                  <span key={index} className="absolute h-2 w-2 rounded-full bg-indigo-500" style={{ left: `${Math.min(94, point.x * 10)}%`, bottom: `${Math.min(92, Math.max(4, point.y * 7))}%` }} />
+                ))}
+                <div className="absolute left-3 right-3 top-1/2 border-t-2 border-emerald-500" style={{ transform: `rotate(${-Math.min(35, regSlope * 12)}deg)` }} />
+              </div>
+              <p className="mt-2 text-xs text-slate-500">Residual diagnostics coach: random scatter around the line is healthier than curves, funnels, or extreme leverage.</p>
+            </div>
+            <div className="grid gap-3">
+              {REGRESSION_SCENARIOS.map((scenario) => (
+                <div key={scenario.title} className="rounded-lg bg-slate-50 p-3 dark:bg-slate-900/60">
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{scenario.title}</p>
+                  <p className="text-xs text-slate-500">{scenario.cue}</p>
+                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-300">Watch: {scenario.watch}</p>
+                </div>
+              ))}
+              <div className="rounded-lg bg-indigo-50 p-3 text-xs text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300">
+                Train/test simulator: as model complexity rises, training error usually falls, but test error can rise from overfitting.
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-6 rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
+          <div className="mb-4 flex items-center gap-2">
+            <Brain size={16} className="text-indigo-500" />
+            <h2 className="text-lg font-bold text-slate-800 dark:text-white">Bayesian Learning Lab</h2>
+          </div>
+          <div className="grid gap-4 xl:grid-cols-[320px_1fr]">
+            <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-900/60">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Beta-Binomial Updating</p>
+              <label className="mt-3 block text-xs text-slate-500">Prior alpha: {priorA}<input type="range" min="1" max="20" value={priorA} onChange={(event) => setPriorA(Number(event.target.value))} className="w-full accent-indigo-600" /></label>
+              <label className="mt-3 block text-xs text-slate-500">Prior beta: {priorB}<input type="range" min="1" max="20" value={priorB} onChange={(event) => setPriorB(Number(event.target.value))} className="w-full accent-indigo-600" /></label>
+              <label className="mt-3 block text-xs text-slate-500">Successes: {bayesSuccesses}<input type="range" min="0" max={bayesTrials} value={bayesSuccesses} onChange={(event) => setBayesSuccesses(Number(event.target.value))} className="w-full accent-indigo-600" /></label>
+              <label className="mt-3 block text-xs text-slate-500">Trials: {bayesTrials}<input type="range" min="1" max="100" value={bayesTrials} onChange={(event) => setBayesTrials(Number(event.target.value))} className="w-full accent-indigo-600" /></label>
+              <Metric label="Posterior mean" value={pct(betaPosteriorMean)} />
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              {BAYESIAN_MODULES.map((module) => (
+                <div key={module.title} className="rounded-lg bg-slate-50 p-4 dark:bg-slate-900/60">
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{module.title}</p>
+                  <p className="mb-2 text-xs text-slate-500">{module.use}</p>
+                  <MathText value={module.formula} block />
+                </div>
+              ))}
+              <div className="rounded-lg bg-indigo-50 p-4 text-xs text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300 md:col-span-2">
+                MCMC visual walk: a chain should explore the high-posterior region, mix well, and avoid getting stuck. Posterior predictive checks ask whether simulated future data resembles observed data.
+              </div>
+            </div>
+          </div>
+        </section>
 
         <div className="mt-6 grid gap-6 xl:grid-cols-3">
           <section className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">

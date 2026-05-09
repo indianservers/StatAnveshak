@@ -1,13 +1,35 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import type { ReactNode } from 'react'
-import { Calculator, GitBranch, ListChecks, Shapes } from 'lucide-react'
-import { SYLLABUS_MODULE_BY_KEY, SYLLABUS_MODULES, type SyllabusModuleKey } from '../lib/syllabusModules'
+import { BarChart3, BookOpen, Brain, Calculator, FlaskConical, GitBranch, GraduationCap, ListChecks, Network, Shapes, Sigma } from 'lucide-react'
+import { SYLLABUS_MODULE_BY_KEY, SYLLABUS_MODULES, type SyllabusModuleGroup, type SyllabusModuleKey } from '../lib/syllabusModules'
 
-const ICONS: Record<SyllabusModuleKey, typeof Shapes> = {
+const ICONS: Partial<Record<SyllabusModuleKey, typeof Shapes>> = {
   sample_spaces: Shapes,
   conditional_bayes: GitBranch,
   counting: Calculator,
+  distribution_explorer: BarChart3,
+  joint_marginal_conditional: Shapes,
+  random_variable_simulator: FlaskConical,
+  law_large_numbers: Sigma,
+  central_limit_theorem: BarChart3,
+  bayesian_inference: Brain,
+  markov_chains: Network,
+  theorem_library: BookOpen,
+  proof_intuition: GraduationCap,
+  learning_paths: GraduationCap,
+  practice_quizzes: ListChecks,
+}
+
+const GROUP_COPY: Record<SyllabusModuleGroup, string> = {
+  'Probability Foundations': 'Core probability ideas',
+  'Probability Labs': 'Interactive probability simulators',
+  'Inference & Resampling': 'Modern uncertainty workflows',
+  'Design & Experimentation': 'Causal and product experiments',
+  'Modeling & Validation': 'Models, forecasts, and validation',
+  'Data Quality': 'Missingness, outliers, and influence',
+  'Theorems & Learning': 'Proofs, paths, and practice',
+  Reporting: 'Interpretation and narration',
 }
 
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value))
@@ -31,6 +53,10 @@ export function SyllabusModulesPage() {
   const initial = SYLLABUS_MODULE_BY_KEY[moduleKey as SyllabusModuleKey] ? moduleKey as SyllabusModuleKey : 'sample_spaces'
   const [activeKey, setActiveKey] = useState<SyllabusModuleKey>(initial)
   const active = SYLLABUS_MODULE_BY_KEY[activeKey]
+  const grouped = SYLLABUS_MODULES.reduce((acc, module) => {
+    acc[module.group] = [...(acc[module.group] ?? []), module]
+    return acc
+  }, {} as Record<SyllabusModuleGroup, typeof SYLLABUS_MODULES>)
 
   const select = (key: SyllabusModuleKey) => {
     setActiveKey(key)
@@ -44,22 +70,27 @@ export function SyllabusModulesPage() {
           <h1 className="font-bold text-slate-800 dark:text-white">Syllabus Modules</h1>
           <p className="text-xs text-slate-400">UG/PG statistics syllabus coverage, built one topic at a time.</p>
         </div>
-        <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Probability Foundations</p>
-        {SYLLABUS_MODULES.map((module) => {
-          const Icon = ICONS[module.key]
-          return (
-            <button
-              key={module.key}
-              onClick={() => select(module.key)}
-              className={`mb-1 flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm ${
-                activeKey === module.key ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
-              }`}
-            >
-              <Icon size={15} />
-              <span className="min-w-0 flex-1 truncate">{module.title}</span>
-            </button>
-          )
-        })}
+        {(Object.entries(grouped) as [SyllabusModuleGroup, typeof SYLLABUS_MODULES][]).map(([group, modules]) => (
+          <div key={group} className="mb-4">
+            <p className="mb-1 px-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{group}</p>
+            <p className="mb-2 px-1 text-[11px] text-slate-400">{GROUP_COPY[group]}</p>
+            {modules.map((module) => {
+              const Icon = ICONS[module.key] ?? Sigma
+              return (
+                <button
+                  key={module.key}
+                  onClick={() => select(module.key)}
+                  className={`mb-1 flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm ${
+                    activeKey === module.key ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  <Icon size={15} />
+                  <span className="min-w-0 flex-1 truncate">{module.title}</span>
+                </button>
+              )
+            })}
+          </div>
+        ))}
       </aside>
 
       <main className="flex-1 overflow-y-auto p-6">
@@ -80,6 +111,7 @@ export function SyllabusModulesPage() {
           {activeKey === 'sample_spaces' && <SampleSpacesModule />}
           {activeKey === 'conditional_bayes' && <ConditionalBayesModule />}
           {activeKey === 'counting' && <CountingModule />}
+          {activeKey !== 'sample_spaces' && activeKey !== 'conditional_bayes' && activeKey !== 'counting' && <SuiteModuleView moduleKey={activeKey} />}
         </div>
       </main>
     </div>
@@ -219,6 +251,89 @@ function CountingModule() {
   )
 }
 
+function SuiteModuleView({ moduleKey }: { moduleKey: SyllabusModuleKey }) {
+  const module = SYLLABUS_MODULE_BY_KEY[moduleKey]
+  const [a, setA] = useState(0.55)
+  const [b, setB] = useState(0.35)
+  const [n, setN] = useState(40)
+  const [x, setX] = useState(18)
+  const [rate, setRate] = useState(3)
+  const [trials, setTrials] = useState(1000)
+
+  const worked = useMemo<Array<[string, string | number]>>(() => {
+    const p = clamp01(a)
+    const q = clamp01(b)
+    const nn = Math.max(1, Math.round(n))
+    const xx = Math.max(0, Math.min(nn, Math.round(x)))
+    const lambda = Math.max(0.001, rate)
+    const mcSe = Math.sqrt(p * (1 - p) / Math.max(1, trials))
+    const betaMean = (2 + xx) / (2 + 2 + nn)
+    const lift = p > 0 ? (q - p) / p : NaN
+    const poissonMean = lambda
+    const waitMoreThanOne = Math.exp(-lambda)
+    const markovA = p * a + (1 - p) * b
+    const moduleRows: Partial<Record<SyllabusModuleKey, Array<[string, string | number]>>> = {
+      distribution_explorer: [['Bernoulli mean', fmt(p)], ['Bernoulli variance', fmt(p * (1 - p))], ['Binomial mean', fmt(nn * p)], ['Binomial SD', fmt(Math.sqrt(nn * p * (1 - p)))]],
+      joint_marginal_conditional: [['P(X=1,Y=1)', fmt(p * q)], ['P(X=1)', fmt(p)], ['P(Y=1)', fmt(q)], ['Independent?', 'yes when joint = marginal product']],
+      random_variable_simulator: [['Sample size', nn], ['Expected successes', fmt(nn * p)], ['Expected failures', fmt(nn * (1 - p))], ['Empirical target', 'compare generated mean to theory']],
+      law_large_numbers: [['Trial probability', fmt(p)], ['Expected heads after n', fmt(nn * p)], ['Running mean target', fmt(p)], ['Variance of mean', fmt(p * (1 - p) / nn)]],
+      central_limit_theorem: [['Parent p/skew control', fmt(p)], ['Sample size', nn], ['Standard error', fmt(Math.sqrt(p * (1 - p) / nn))], ['Shape expectation', nn >= 30 ? 'normal-like' : 'still rough']],
+      bayesian_inference: [['Prior', 'Beta(2, 2)'], ['Posterior alpha', 2 + xx], ['Posterior beta', 2 + nn - xx], ['Posterior mean', fmt(betaMean)]],
+      markov_chains: [['P(stay A)', fmt(a)], ['P(B to A)', fmt(b)], ['Next P(A)', fmt(markovA)], ['Steady P(A)', fmt(b / (1 - a + b))]],
+      poisson_process: [['Rate lambda', fmt(lambda)], ['Expected count', fmt(poissonMean)], ['P(wait > 1)', fmt(waitMoreThanOne)], ['P(no arrivals in 1)', fmt(waitMoreThanOne)]],
+      monte_carlo: [['Trials', trials], ['Estimated probability', fmt(p)], ['Approx MC SE', fmt(mcSe)], ['95% simulation error', `+/- ${fmt(1.96 * mcSe)}`]],
+      bootstrap_lab: [['Original n', nn], ['Bootstrap resample n', nn], ['Example mean', fmt(p)], ['Percentile CI idea', '2.5% to 97.5% bootstrap quantiles']],
+      permutation_tests: [['Group A mean', fmt(p)], ['Group B mean', fmt(q)], ['Observed difference', fmt(q - p)], ['Null action', 'shuffle labels many times']],
+      resampling_comparison: [['Parametric focus', 'model-based SE'], ['Bootstrap focus', 'uncertainty interval'], ['Permutation focus', 'null label exchange'], ['Use together?', 'yes for teaching contrast']],
+      experimental_design: [['Factor A levels', Math.max(2, Math.round(a * 10))], ['Factor B levels', Math.max(2, Math.round(b * 10))], ['Cells', Math.max(2, Math.round(a * 10)) * Math.max(2, Math.round(b * 10))], ['Core rule', 'randomize before comparing']],
+      ab_testing: [['Control rate', fmt(p)], ['Variant rate', fmt(q)], ['Absolute lift', fmt(q - p)], ['Relative lift', fmt(lift)]],
+      survival_analysis: [['At risk', nn], ['Events', xx], ['One-step survival', fmt(1 - xx / nn)], ['Censoring note', 'censored rows stay in risk set until censor time']],
+      advanced_time_series: [['Lag-1 phi', fmt(2 * p - 1)], ['Forecast horizon', Math.max(1, Math.round(b * 12))], ['Stationarity cue', Math.abs(2 * p - 1) < 1 ? 'stable AR(1)' : 'unstable'], ['Backtest', 'compare forecast error on held-out tail']],
+      multivariate_statistics: [['Variables', Math.max(2, Math.round(a * 10))], ['Outcomes', Math.max(2, Math.round(b * 6))], ['Core object', 'covariance matrix'], ['Watch', 'scale and collinearity']],
+      model_selection_validation: [['Train percent', `${Math.round(p * 100)}%`], ['Test percent', `${Math.round((1 - p) * 100)}%`], ['AIC penalty per parameter', 2], ['CV folds', Math.max(2, Math.round(b * 10))]],
+      missing_data: [['Missing percent', `${Math.round(p * 100)}%`], ['Complete percent', `${Math.round((1 - p) * 100)}%`], ['Likely first step', p > 0.2 ? 'diagnose before modeling' : 'document and handle'], ['Sensitivity analysis', 'compare methods']],
+      outlier_influence: [['Q1', fmt(p)], ['Q3', fmt(q + 0.5)], ['IQR', fmt(q + 0.5 - p)], ['Upper fence', fmt(q + 0.5 + 1.5 * (q + 0.5 - p))]],
+      theorem_library: [['Theorems indexed', 12], ['Card fields', 'statement, assumptions, intuition, use'], ['Core warning', 'assumptions matter'], ['Best habit', 'connect theorem to a lab']],
+      proof_intuition: [['Proof layers', 4], ['Mode 1', 'plain intuition'], ['Mode 2', 'formal sketch'], ['Mode 3', 'counterexample']],
+      learning_paths: [['Beginner path', 'probability -> EDA -> inference'], ['Analyst path', 'data -> tests -> reports'], ['Research path', 'proofs -> models -> validation'], ['Exam path', 'formula drills + quizzes']],
+      practice_quizzes: [['Question types', 'MCQ, numeric, interpretation'], ['Hint stages', 3], ['Mastery target', 'repeat missed concepts'], ['Feedback', 'why answer is right/wrong']],
+      report_narration: [['Result', 'what changed'], ['Magnitude', 'how much'], ['Uncertainty', 'CI or posterior range'], ['Caveat', 'assumption and design limits']],
+    }
+    return moduleRows[moduleKey] ?? [['Status', 'Ready'], ['Inputs', 'Use sliders'], ['Output', 'Guided module'], ['Next', 'Open Learn for deeper labs']]
+  }, [a, b, n, x, rate, trials, moduleKey])
+
+  return (
+    <ModuleShell guide={[
+      `Start with the purpose: ${module.purpose}`,
+      'Review the core concepts and formulas before using the worked panel.',
+      'Change the controls and ask which quantity moved, which stayed fixed, and why.',
+      'Close the loop by writing a one-sentence interpretation in reporting language.',
+    ]}>
+      <div className="grid gap-5 xl:grid-cols-[360px_1fr]">
+        <section className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
+          <h2 className="mb-3 text-lg font-bold text-slate-800 dark:text-white">Interactive Controls</h2>
+          <RangeInput label="Probability / split A" value={a} onChange={setA} />
+          <RangeInput label="Probability / split B" value={b} onChange={setB} />
+          <NumberInput label="n / sample size" value={n} onChange={(value) => setN(Math.max(1, Math.round(value)))} max={10000} />
+          <NumberInput label="x / successes or events" value={x} onChange={(value) => setX(Math.max(0, Math.round(value)))} max={10000} />
+          <NumberInput label="Rate lambda" value={rate} onChange={setRate} max={100} />
+          <NumberInput label="Simulation trials" value={trials} onChange={(value) => setTrials(Math.max(10, Math.round(value)))} max={100000} />
+        </section>
+
+        <section className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
+          <h2 className="mb-3 text-lg font-bold text-slate-800 dark:text-white">Worked Module Panel</h2>
+          <ResultGrid rows={worked} />
+          <div className="mt-5 grid gap-4 lg:grid-cols-3">
+            <InfoList title="Concepts" items={module.concepts} />
+            <InfoList title="Formulas" items={module.formulas} />
+            <InfoList title="Kit Pieces" items={module.kit} />
+          </div>
+        </section>
+      </div>
+    </ModuleShell>
+  )
+}
+
 function ModuleShell({ guide, children }: { guide: string[]; children: ReactNode }) {
   return (
     <div className="space-y-5">
@@ -236,12 +351,37 @@ function ModuleShell({ guide, children }: { guide: string[]; children: ReactNode
   )
 }
 
+function RangeInput({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
+  return (
+    <label className="mb-3 block text-xs text-slate-500">
+      {label}: {fmt(value)}
+      <input type="range" min="0.001" max="0.999" step="0.001" value={value} onChange={(event) => onChange(Number(event.target.value))} className="mt-2 w-full accent-indigo-600" />
+    </label>
+  )
+}
+
 function Input({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return (
     <label className="mb-3 block text-xs text-slate-500">
       {label}
       <input value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100" />
     </label>
+  )
+}
+
+function InfoList({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-700/50">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{title}</p>
+      <div className="space-y-2">
+        {items.map((item) => (
+          <div key={item} className="flex items-start gap-2 text-xs text-slate-600 dark:text-slate-300">
+            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-500" />
+            <span>{item}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 

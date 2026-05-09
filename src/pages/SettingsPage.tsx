@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useStore } from '../store/useStore'
-import { loadDatasets, deleteDataset, loadProjects } from '../lib/storage'
+import { loadDatasets, deleteDataset, loadProjects, deleteProject } from '../lib/storage'
 import { Trash2, Database, RefreshCw } from 'lucide-react'
 
 export function SettingsPage() {
-  const { theme, toggleTheme } = useStore()
+  const { theme, toggleTheme, highContrast, toggleHighContrast, largeText, toggleLargeText, density, toggleDensity, resetZoom, setActiveDataset, setActiveProject } = useStore()
   const [storageInfo, setStorageInfo] = useState<{ datasets: number; projects: number }>({ datasets: 0, projects: 0 })
+  const [status, setStatus] = useState<string | null>(null)
 
   useEffect(() => {
     Promise.all([loadDatasets(), loadProjects()]).then(([ds, ps]) => {
@@ -16,9 +17,33 @@ export function SettingsPage() {
   const clearAllData = async () => {
     if (!confirm('Clear all saved datasets and projects from browser storage?')) return
     const ds = await loadDatasets()
-    await Promise.all(ds.map((d) => deleteDataset(d.id)))
-    setStorageInfo({ datasets: 0, projects: storageInfo.projects })
-    alert('All datasets cleared.')
+    const ps = await loadProjects()
+    await Promise.all([...ds.map((d) => deleteDataset(d.id)), ...ps.map((p) => deleteProject(p.id))])
+    setActiveDataset(null)
+    setActiveProject(null)
+    setStorageInfo({ datasets: 0, projects: 0 })
+    setStatus('Saved datasets and projects were cleared from browser storage.')
+  }
+
+  const resetLocalPreferences = () => {
+    ;[
+      'pref-sidebar-open',
+      'pref-theme',
+      'pref-high-contrast',
+      'pref-large-text',
+      'pref-zoom-level',
+      'pref-density',
+      'pref-favorite-modules',
+      'anveshak-onboarding-complete',
+      'anveshak-tour-done',
+      'anveshak-recent-pages',
+      'learn-progress',
+      'sandbox-history',
+      'stat-module-favorites',
+      'stat-module-recents',
+    ].forEach((key) => localStorage.removeItem(key))
+    resetZoom()
+    setStatus('Local preferences and tutorial progress were reset.')
   }
 
   return (
@@ -39,6 +64,17 @@ export function SettingsPage() {
               className="text-sm border border-slate-200 dark:border-slate-600 px-4 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-slate-600 dark:text-slate-300"
             >
               Toggle {theme === 'light' ? 'Dark' : 'Light'} Mode
+            </button>
+          </div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-3">
+            <button onClick={toggleHighContrast} className="rounded-md border border-slate-200 px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">
+              {highContrast ? 'Disable' : 'Enable'} high contrast
+            </button>
+            <button onClick={toggleLargeText} className="rounded-md border border-slate-200 px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">
+              {largeText ? 'Disable' : 'Enable'} large text
+            </button>
+            <button onClick={toggleDensity} className="rounded-md border border-slate-200 px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">
+              Switch to {density === 'compact' ? 'comfortable' : 'compact'}
             </button>
           </div>
         </div>
@@ -62,8 +98,15 @@ export function SettingsPage() {
             onClick={clearAllData}
             className="flex items-center gap-1.5 text-sm text-red-600 border border-red-200 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 px-3 py-1.5 rounded-lg transition-colors"
           >
-            <Trash2 size={13} /> Clear All Datasets
+            <Trash2 size={13} /> Clear Saved Datasets and Projects
           </button>
+          <button
+            onClick={resetLocalPreferences}
+            className="mt-3 flex items-center gap-1.5 text-sm text-slate-600 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-lg transition-colors dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+          >
+            <RefreshCw size={13} /> Reset Local Preferences
+          </button>
+          {status && <p className="mt-3 text-sm text-emerald-600 dark:text-emerald-300">{status}</p>}
         </div>
 
         {/* Privacy */}

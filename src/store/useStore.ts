@@ -1,8 +1,17 @@
 import { create } from 'zustand'
 import type { Dataset, Project, ChartConfig } from '../types'
+import { loadDatasets, loadProjects } from '../lib/storage'
 
 const loadBool = (key: string, fallback: boolean) => localStorage.getItem(key) ? localStorage.getItem(key) === 'true' : fallback
 const savePref = (key: string, value: string | boolean | number) => localStorage.setItem(key, String(value))
+const loadStringArray = (key: string) => {
+  try {
+    const value = JSON.parse(localStorage.getItem(key) ?? '[]')
+    return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
+  } catch {
+    return []
+  }
+}
 
 interface AppState {
   // Active dataset
@@ -11,6 +20,7 @@ interface AppState {
 
   // All loaded datasets in memory
   datasets: Dataset[]
+  hydrateStorage: () => Promise<void>
   addDataset: (ds: Dataset) => void
   removeDataset: (id: string) => void
   updateDataset: (ds: Dataset) => void
@@ -54,6 +64,16 @@ export const useStore = create<AppState>((set) => ({
   setActiveDataset: (ds) => set({ activeDataset: ds }),
 
   datasets: [],
+  hydrateStorage: async () => {
+    const [datasets, projects] = await Promise.all([loadDatasets(), loadProjects()])
+    const sortedDatasets = [...datasets].sort((a, b) => b.createdAt - a.createdAt)
+    const sortedProjects = [...projects].sort((a, b) => b.updatedAt - a.updatedAt)
+    set((state) => ({
+      datasets: sortedDatasets,
+      activeDataset: state.activeDataset ?? sortedDatasets[0] ?? null,
+      activeProject: state.activeProject ?? sortedProjects[0] ?? null,
+    }))
+  },
   addDataset: (ds) => set((s) => ({ datasets: [...s.datasets.filter((d) => d.id !== ds.id), ds] })),
   removeDataset: (id) => set((s) => ({ datasets: s.datasets.filter((d) => d.id !== id) })),
   updateDataset: (ds) => set((s) => ({ datasets: s.datasets.map((d) => (d.id === ds.id ? ds : d)) })),
@@ -83,12 +103,17 @@ export const useStore = create<AppState>((set) => ({
   toggleDensity: () => set((s) => { const density = s.density === 'comfortable' ? 'compact' : 'comfortable'; savePref('pref-density', density); return { density } }),
   reportPreviewOpen: false,
   setReportPreviewOpen: (value) => set({ reportPreviewOpen: value }),
-  favoriteModules: [],
+  favoriteModules: loadStringArray('pref-favorite-modules'),
   toggleFavoriteModule: (path) => set((s) => ({
-    favoriteModules: s.favoriteModules.includes(path)
+    favoriteModules: persistFavorites(s.favoriteModules.includes(path)
       ? s.favoriteModules.filter((item) => item !== path)
-      : [...s.favoriteModules, path],
+      : [...s.favoriteModules, path]),
   })),
   lastSavedAt: null,
   setLastSavedAt: (value) => set({ lastSavedAt: value }),
 }))
+
+function persistFavorites(value: string[]) {
+  localStorage.setItem('pref-favorite-modules', JSON.stringify(value))
+  return value
+}

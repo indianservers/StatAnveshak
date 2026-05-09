@@ -29,3 +29,28 @@ test('upload page exposes multi-file import queue affordance', async ({ page }) 
   await expect(page.getByText('Drop one or more files here')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Load Sample Data' })).toBeVisible()
 })
+
+test('statistics workbench route is available', async ({ page }) => {
+  await page.goto('/data/workbench')
+  await expect(page.getByText('No dataset loaded', { exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Upload Data' })).toBeVisible()
+})
+
+test('unknown routes show a recovery page', async ({ page }) => {
+  await page.goto('/definitely-not-a-real-route')
+  await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible()
+  await expect(page.getByRole('main').getByRole('link', { name: 'Home' })).toBeVisible()
+})
+
+test('settings exposes storage and preference controls', async ({ page }) => {
+  await page.goto('/settings')
+  await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
+  await expect(page.getByText('Browser Storage (IndexedDB)')).toBeVisible()
+  await expect(page.getByRole('button', { name: /Reset Local Preferences/ })).toBeVisible()
+})
+
+test('query workbench route is available', async ({ page }) => {
+  await page.goto('/data/query')
+  await expect(page.getByText('No dataset loaded', { exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Upload Data' })).toBeVisible()
+})

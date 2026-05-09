@@ -8,6 +8,7 @@ import {
   Calculator,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
   Database,
   FileDown,
   FlaskConical,
@@ -28,6 +29,7 @@ import {
   History,
   TrendingUp,
   Upload,
+  Code2,
 } from 'lucide-react'
 import { useStore } from '../../store/useStore'
 
@@ -46,6 +48,8 @@ const NAV_GROUPS = [
       { to: '/data/preview', icon: ScanSearch, label: 'Preview' },
       { to: '/data/grid', icon: Table2, label: 'Data Grid' },
       { to: '/data/clean', icon: Layers, label: 'Clean & Transform' },
+      { to: '/data/workbench', icon: ClipboardList, label: 'Stats Workbench' },
+      { to: '/data/query', icon: Code2, label: 'Query Workbench' },
     ],
   },
   {
