@@ -102,7 +102,7 @@ export function TopBar() {
   const lastSavedLabel = lastSavedAt ? relativeTime(lastSavedAt) : null
 
   return (
-    <header className="h-12 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center px-4 gap-3 shrink-0">
+    <header className="h-12 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2 pl-14 pr-2 shrink-0 sm:gap-3 sm:pr-4 md:px-4">
       <div className="flex-1 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 min-w-0">
         <nav className="hidden lg:flex items-center gap-1 text-xs min-w-0" aria-label="Breadcrumb">
           {breadcrumb.map((part, index) => (
@@ -151,7 +151,7 @@ export function TopBar() {
             )}
           </div>
         ) : (
-          <span className="text-slate-400 text-xs">No dataset loaded - upload or select one</span>
+          <span className="truncate text-xs text-slate-400">No dataset loaded - upload or select one</span>
         )}
       </div>
 
@@ -259,10 +259,10 @@ export function TopBar() {
       {activeDataset && (
         <button
           onClick={handleSave}
-          className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-md transition-colors"
+          className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 rounded-md transition-colors sm:px-3"
         >
           <Save size={12} />
-          Save
+          <span className="hidden sm:inline">Save</span>
         </button>
       )}
 
@@ -276,7 +276,7 @@ export function TopBar() {
       <button
         onClick={zoomOut}
         disabled={zoomLevel <= 0.8}
-        className="w-8 h-8 flex items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 disabled:opacity-40 dark:hover:bg-slate-700 transition-colors"
+        className="hidden h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 disabled:opacity-40 dark:hover:bg-slate-700 transition-colors sm:flex"
         title="Zoom out"
       >
         <Minus size={16} />
@@ -294,7 +294,7 @@ export function TopBar() {
       <button
         onClick={zoomIn}
         disabled={zoomLevel >= 1.5}
-        className="w-8 h-8 flex items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 disabled:opacity-40 dark:hover:bg-slate-700 transition-colors"
+        className="hidden h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 disabled:opacity-40 dark:hover:bg-slate-700 transition-colors sm:flex"
         title="Zoom in"
       >
         <Plus size={16} />
@@ -302,7 +302,7 @@ export function TopBar() {
 
       <button
         onClick={toggleLargeText}
-        className={`w-8 h-8 flex items-center justify-center rounded-md transition-colors ${largeText ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+        className={`hidden h-8 w-8 items-center justify-center rounded-md transition-colors sm:flex ${largeText ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
         title="Toggle larger base text"
       >
         <Type size={16} />
@@ -310,7 +310,7 @@ export function TopBar() {
 
       <button
         onClick={toggleHighContrast}
-        className={`w-8 h-8 flex items-center justify-center rounded-md transition-colors ${highContrast ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+        className={`hidden h-8 w-8 items-center justify-center rounded-md transition-colors sm:flex ${highContrast ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
         title="Toggle high contrast"
       >
         <Contrast size={16} />

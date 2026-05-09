@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   Activity,
@@ -16,6 +16,7 @@ import {
   GitFork,
   Home,
   Layers,
+  Menu,
   KeyRound,
   PieChart,
   Pin,
@@ -30,6 +31,7 @@ import {
   TrendingUp,
   Upload,
   Code2,
+  X,
 } from 'lucide-react'
 import { useStore } from '../../store/useStore'
 
@@ -98,6 +100,26 @@ export function Sidebar() {
   const navRef = useRef<HTMLElement>(null)
   const navigate = useNavigate()
 
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 768px)')
+    if (media.matches && sidebarOpen) {
+      setSidebarOpen(false)
+    }
+  // Run only once so a user tap can reopen the drawer on mobile.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (!sidebarOpen) return
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSidebarOpen(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [sidebarOpen, setSidebarOpen])
+
   const filteredGroups = useMemo(() => {
     const q = query.trim().toLowerCase()
     const groups = NAV_GROUPS.map((group) => ({
@@ -137,8 +159,34 @@ export function Sidebar() {
     next.focus()
   }
 
+  const closeMobileDrawer = () => {
+    if (window.matchMedia('(max-width: 768px)').matches) {
+      setSidebarOpen(false)
+    }
+  }
+
   return (
-    <aside
+    <Fragment>
+      {!sidebarOpen && (
+        <button
+          type="button"
+          onClick={() => setSidebarOpen(true)}
+          className="fixed left-3 top-3 z-50 flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-lg shadow-slate-900/15 transition-colors hover:bg-slate-50 md:hidden dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+          aria-label="Open menu"
+          title="Open menu"
+        >
+          <Menu size={20} />
+        </button>
+      )}
+      {sidebarOpen && (
+        <button
+          type="button"
+          className="fixed inset-0 z-40 block bg-slate-950/45 backdrop-blur-[1px] md:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Dismiss navigation overlay"
+        />
+      )}
+      <aside
       className={`app-sidebar flex flex-col bg-slate-900 text-slate-100 transition-all duration-200 ${
         sidebarOpen ? 'w-60' : 'w-14'
       } min-h-screen shrink-0`}
@@ -152,10 +200,18 @@ export function Sidebar() {
         )}
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="ml-auto text-slate-400 hover:text-white"
+          className="ml-auto flex h-8 w-8 items-center justify-center rounded-md text-slate-400 hover:bg-slate-800 hover:text-white"
           title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+          aria-label={sidebarOpen ? 'Close menu' : 'Expand sidebar'}
         >
-          {sidebarOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+          {sidebarOpen ? (
+            <>
+              <ChevronLeft size={16} className="hidden md:block" />
+              <X size={18} className="md:hidden" />
+            </>
+          ) : (
+            <ChevronRight size={16} />
+          )}
         </button>
       </div>
 
@@ -193,7 +249,14 @@ export function Sidebar() {
           <div className="mb-1">
             <p className="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-widest text-slate-500">Pinned</p>
             {favoriteItems.map((item) => (
-              <SidebarLink key={item.to} item={item} sidebarOpen={sidebarOpen} pinned onPin={toggleFavoriteModule} />
+              <SidebarLink
+                key={item.to}
+                item={item}
+                sidebarOpen={sidebarOpen}
+                pinned
+                onPin={toggleFavoriteModule}
+                onNavigate={closeMobileDrawer}
+              />
             ))}
           </div>
         )}
@@ -209,6 +272,7 @@ export function Sidebar() {
                   onClick={() => {
                     setActiveDataset(dataset)
                     navigate('/data/preview')
+                    closeMobileDrawer()
                   }}
                   className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-700 bg-slate-800 text-xs font-bold text-slate-300 hover:border-indigo-400 hover:text-white"
                   title={dataset.name}
@@ -230,11 +294,12 @@ export function Sidebar() {
             )}
             {group.items.map((item) => (
               <SidebarLink
-              key={`${group.label}-${item.to}-${item.label}`}
+                key={`${group.label}-${item.to}-${item.label}`}
                 item={item}
                 sidebarOpen={sidebarOpen}
                 pinned={favoriteModules.includes(item.to)}
                 onPin={toggleFavoriteModule}
+                onNavigate={closeMobileDrawer}
               />
             ))}
           </div>
@@ -247,6 +312,7 @@ export function Sidebar() {
         {sidebarOpen ? 'v1.0.0 - Browser Only' : ''}
       </div>
     </aside>
+    </Fragment>
   )
 }
 
@@ -255,11 +321,13 @@ function SidebarLink({
   sidebarOpen,
   pinned,
   onPin,
+  onNavigate,
 }: {
   item: { to: string; icon: typeof Home; label: string }
   sidebarOpen: boolean
   pinned: boolean
   onPin: (path: string) => void
+  onNavigate: () => void
 }) {
   const Icon = item.icon
 
@@ -269,6 +337,7 @@ function SidebarLink({
         data-sidebar-nav
         to={item.to}
         end={item.to === '/'}
+        onClick={onNavigate}
         title={!sidebarOpen ? item.label : undefined}
         className={({ isActive }) =>
           `flex min-w-0 flex-1 items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
