@@ -4,10 +4,12 @@ import {
   BarChart3,
   BookOpen,
   Brain,
+  Calculator,
   CheckCircle,
   ClipboardCheck,
   FlaskConical,
   GraduationCap,
+  HelpCircle,
   Lightbulb,
   Network,
   Play,
@@ -301,6 +303,124 @@ const GLOSSARY = [
   ['Type II error', 'Failing to reject a false null hypothesis.'],
 ]
 
+const CORE_CONCEPT_FAQS = [
+  {
+    topic: 'Mean',
+    questions: [
+      ['What does the mean tell me?', 'It is the balancing point of numeric values. It summarizes center, but extreme values can pull it strongly.'],
+      ['When should I avoid relying only on mean?', 'When data are skewed, have large outliers, or represent ordinal categories. Compare it with median and a plot.'],
+      ['How do I explain mean to a beginner?', 'Add all values, then share the total equally across all observations.'],
+    ],
+  },
+  {
+    topic: 'Median',
+    questions: [
+      ['Why is median robust?', 'It depends on order, not magnitude. One huge outlier usually does not move the middle value much.'],
+      ['When is median better than mean?', 'Income, waiting time, hospital stay length, and other skewed variables often need median plus IQR.'],
+      ['What if there are two middle values?', 'Average the two middle values after sorting the data.'],
+    ],
+  },
+  {
+    topic: 'Standard Deviation',
+    questions: [
+      ['What does SD measure?', 'Typical distance from the mean, in the original units of the variable.'],
+      ['Why square deviations?', 'Squaring prevents positive and negative deviations from canceling and gives more weight to large departures.'],
+      ['Why divide by n - 1 for sample SD?', 'It corrects the sample variance estimate because the sample mean was estimated from the same data.'],
+    ],
+  },
+  {
+    topic: 'Variance',
+    questions: [
+      ['How is variance different from SD?', 'Variance is average squared spread. SD is the square root, so it returns to original units.'],
+      ['Why teach variance if SD is easier?', 'Variance is the algebraic engine behind ANOVA, regression, standard errors, and many proofs.'],
+      ['Can variance be negative?', 'No. It is built from squared deviations, so it is always zero or positive.'],
+    ],
+  },
+  {
+    topic: 'Quartiles and IQR',
+    questions: [
+      ['What is IQR?', 'Q3 minus Q1. It measures the spread of the middle 50 percent of values.'],
+      ['Why use IQR?', 'It is resistant to outliers and gives a stable spread summary for skewed data.'],
+      ['How are outlier fences made?', 'Lower fence = Q1 - 1.5 x IQR; upper fence = Q3 + 1.5 x IQR.'],
+    ],
+  },
+  {
+    topic: 'Correlation',
+    questions: [
+      ['What does correlation measure?', 'Direction and strength of a linear relationship between two numeric variables.'],
+      ['Does correlation prove causation?', 'No. Confounding, reverse causation, and selection effects can create correlation without causation.'],
+      ['What should I check visually?', 'Use a scatter plot to check linearity, outliers, clusters, and curved patterns.'],
+    ],
+  },
+  {
+    topic: 'p-value',
+    questions: [
+      ['What is a p-value?', 'The probability of getting data this extreme or more extreme if the null hypothesis model were true.'],
+      ['Is p-value the probability H0 is true?', 'No. It is computed assuming H0, so it cannot also be the probability of H0.'],
+      ['What else should I report?', 'Effect size, confidence interval, sample size, assumptions, and practical meaning.'],
+    ],
+  },
+  {
+    topic: 'Confidence Interval',
+    questions: [
+      ['What does a 95% CI mean?', 'The method captures the true parameter in about 95% of repeated samples under its assumptions.'],
+      ['Why can a CI be better than only a p-value?', 'It shows plausible effect sizes and uncertainty, not just a yes/no decision.'],
+      ['What makes a CI narrower?', 'Larger sample size, lower variability, or lower confidence level.'],
+    ],
+  },
+]
+
+const THEOREM_FAQS = [
+  {
+    topic: 'Bayes Theorem',
+    questions: [
+      ['Why is the base rate important?', 'A rare condition can still have a modest posterior probability even after a positive test.'],
+      ['What is the evidence term P(B)?', 'It normalizes the result so all posterior probabilities add up correctly.'],
+      ['Best learning activity?', 'Use a 1,000-person grid to show true positives, false positives, and posterior probability.'],
+    ],
+  },
+  {
+    topic: 'Central Limit Theorem',
+    questions: [
+      ['Does CLT say raw data become normal?', 'No. It says sample means become approximately normal under common conditions.'],
+      ['Why does sample size matter?', 'Larger n shrinks standard error and usually improves the normal approximation.'],
+      ['What can break it?', 'Dependence, extreme heavy tails, and infinite variance can make convergence fail or become slow.'],
+    ],
+  },
+  {
+    topic: 'Law of Large Numbers',
+    questions: [
+      ['What does it guarantee?', 'The running average settles near the expected value as independent sample size grows.'],
+      ['Does it predict the next observation?', 'No. It describes long-run averages, not the next trial.'],
+      ['Best beginner demo?', 'Coin flips: early results jump around, but the cumulative proportion calms down.'],
+    ],
+  },
+  {
+    topic: 'Chebyshev and Markov Inequalities',
+    questions: [
+      ['Why are these useful?', 'They give probability bounds with very little information about distribution shape.'],
+      ['Why are the bounds sometimes loose?', 'They are designed to work for many distributions, including ugly worst-case shapes.'],
+      ['How should students compare them?', 'Markov needs nonnegative values and a mean; Chebyshev uses mean and variance.'],
+    ],
+  },
+  {
+    topic: 'Neyman-Pearson Lemma',
+    questions: [
+      ['What is the core idea?', 'For simple hypotheses, likelihood-ratio tests are most powerful at a fixed false-positive rate.'],
+      ['Why teach size and power together?', 'A test must balance false alarms against the ability to detect a real effect.'],
+      ['Best visual?', 'Two overlapping curves with rejection region area under H0 and H1.'],
+    ],
+  },
+  {
+    topic: 'Maximum Likelihood',
+    questions: [
+      ['What is being maximized?', 'The likelihood of the observed data as a function of model parameters.'],
+      ['Why use log-likelihood?', 'Logs turn products into sums and are easier to optimize without changing the maximum.'],
+      ['What is the main warning?', 'A wrong model can give a precise-looking but misleading estimate.'],
+    ],
+  },
+]
+
 const CASE_STUDIES = [
   ['Clinical Trial', 'Compare treatment and control means, check assumptions, compute CI and effect size.'],
   ['Election Polling', 'Use proportions, margins of error, weighting, and sampling bias warnings.'],
@@ -446,6 +566,98 @@ function sd(values: number[]) {
   return Math.sqrt(values.reduce((sum, value) => sum + (value - m) ** 2, 0) / Math.max(values.length - 1, 1))
 }
 
+function median(values: number[]) {
+  const sorted = [...values].sort((a, b) => a - b)
+  const middle = Math.floor(sorted.length / 2)
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2
+}
+
+function quantile(values: number[], q: number) {
+  const sorted = [...values].sort((a, b) => a - b)
+  if (sorted.length === 1) return sorted[0]
+  const pos = (sorted.length - 1) * q
+  const base = Math.floor(pos)
+  const rest = pos - base
+  return sorted[base + 1] === undefined ? sorted[base] : sorted[base] + rest * (sorted[base + 1] - sorted[base])
+}
+
+function mode(values: number[]) {
+  const counts = new Map<number, number>()
+  values.forEach((value) => counts.set(value, (counts.get(value) ?? 0) + 1))
+  return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0]?.[0] ?? values[0]
+}
+
+function fmt(value: number) {
+  return Number.isFinite(value) ? value.toLocaleString(undefined, { maximumFractionDigits: 4 }) : '-'
+}
+
+function buildCalculationLessons(values: number[]) {
+  const cleaned = values.filter(Number.isFinite)
+  if (cleaned.length === 0) return []
+  const sorted = [...cleaned].sort((a, b) => a - b)
+  const total = cleaned.reduce((sum, value) => sum + value, 0)
+  const m = mean(cleaned)
+  const deviations = cleaned.map((value) => value - m)
+  const squared = deviations.map((value) => value ** 2)
+  const sampleVariance = squared.reduce((sum, value) => sum + value, 0) / Math.max(cleaned.length - 1, 1)
+  const sampleSd = Math.sqrt(sampleVariance)
+  const q1 = quantile(cleaned, 0.25)
+  const q3 = quantile(cleaned, 0.75)
+  const iqr = q3 - q1
+  const preview = cleaned.slice(0, 8)
+  const suffix = cleaned.length > preview.length ? ` ... (${cleaned.length} values)` : ''
+  return [
+    {
+      title: 'Mean',
+      formula: 'mean = sum of values / n',
+      answer: fmt(m),
+      substitution: `(${preview.map(fmt).join(' + ')}${suffix}) / ${cleaned.length} = ${fmt(total)} / ${cleaned.length}`,
+      steps: ['Keep only valid numeric values.', `Add them: sum = ${fmt(total)}.`, `Divide by count n = ${cleaned.length}.`, `Mean = ${fmt(m)}.`],
+      why: 'Use mean when you want the balancing point of numeric data and outliers are acceptable or explained.',
+    },
+    {
+      title: 'Median',
+      formula: 'median = middle value after sorting',
+      answer: fmt(median(cleaned)),
+      substitution: `sorted values: ${sorted.slice(0, 10).map(fmt).join(', ')}${sorted.length > 10 ? ' ...' : ''}`,
+      steps: ['Sort values from smallest to largest.', sorted.length % 2 ? `Odd n: take position ${(sorted.length + 1) / 2}.` : `Even n: average positions ${sorted.length / 2} and ${sorted.length / 2 + 1}.`, `Median = ${fmt(median(cleaned))}.`],
+      why: 'Use median when outliers or skew could pull the mean away from the typical case.',
+    },
+    {
+      title: 'Mode',
+      formula: 'mode = most frequent value',
+      answer: fmt(mode(cleaned)),
+      substitution: `count repeated values; most frequent = ${fmt(mode(cleaned))}`,
+      steps: ['Group identical values.', 'Count frequency in each group.', `Pick the value with highest frequency: ${fmt(mode(cleaned))}.`],
+      why: 'Mode is useful for repeated scores, categories coded as numbers, and quick “most common” explanations.',
+    },
+    {
+      title: 'Sample Variance',
+      formula: 's^2 = sum((x - mean)^2) / (n - 1)',
+      answer: fmt(sampleVariance),
+      substitution: `sum squared deviations = ${fmt(squared.reduce((sum, value) => sum + value, 0))}; divide by ${cleaned.length - 1}`,
+      steps: [`Start with mean = ${fmt(m)}.`, `Subtract mean from each value: ${deviations.slice(0, 5).map(fmt).join(', ')}${deviations.length > 5 ? ' ...' : ''}.`, 'Square each deviation so negatives do not cancel positives.', `Divide by n - 1 = ${Math.max(cleaned.length - 1, 1)}.`],
+      why: 'Variance is the core spread measure used in standard deviation, ANOVA, standard errors, and many proofs.',
+    },
+    {
+      title: 'Standard Deviation',
+      formula: 's = sqrt(sample variance)',
+      answer: fmt(sampleSd),
+      substitution: `sqrt(${fmt(sampleVariance)}) = ${fmt(sampleSd)}`,
+      steps: ['Compute sample variance first.', 'Take the square root.', `SD = ${fmt(sampleSd)} in the original data units.`],
+      why: 'SD says roughly how far typical values sit from the mean when the mean is a sensible center.',
+    },
+    {
+      title: 'IQR',
+      formula: 'IQR = Q3 - Q1',
+      answer: fmt(iqr),
+      substitution: `${fmt(q3)} - ${fmt(q1)} = ${fmt(iqr)}`,
+      steps: ['Sort the data.', `Find Q1 = ${fmt(q1)} and Q3 = ${fmt(q3)}.`, `Subtract Q1 from Q3: IQR = ${fmt(iqr)}.`],
+      why: 'IQR describes the middle 50% and stays stable when the extremes are unusual.',
+    },
+  ]
+}
+
 function pct(value: number) {
   return `${(value * 100).toFixed(1)}%`
 }
@@ -500,6 +712,7 @@ export function LearnPage() {
   const [bayesTrials, setBayesTrials] = useState(20)
   const [priorA, setPriorA] = useState(2)
   const [priorB, setPriorB] = useState(2)
+  const [selectedCalcCol, setSelectedCalcCol] = useState('')
 
   const theorem = THEOREMS.find((item) => item.id === selectedTheorem) ?? THEOREMS[0]
   const paths = Array.from(new Set(THEOREMS.map((item) => item.path)))
@@ -525,6 +738,11 @@ export function LearnPage() {
     if (categorical.length >= 2) ideas.push(`Use ${categorical[0].name} and ${categorical[1].name} for chi-square independence practice.`)
     return ideas.length ? ideas : ['This dataset is ready for descriptive statistics and distribution exploration.']
   }, [activeDataset])
+
+  const numericLearningColumns = useMemo(
+    () => activeDataset?.schema.filter((col) => col.type === 'numeric') ?? [],
+    [activeDataset]
+  )
 
   const runSimulation = () => {
     const values = Array.from({ length: reps }, () => {
@@ -572,6 +790,11 @@ export function LearnPage() {
   const drillData = [4, 6, 8, 10, outlierValue]
   const drillMean = mean(drillData)
   const drillMedian = [...drillData].sort((a, b) => a - b)[2]
+  const calcColumn = selectedCalcCol || numericLearningColumns[0]?.name || ''
+  const calcValues = activeDataset && calcColumn
+    ? activeDataset.data.map((row) => Number(row[calcColumn])).filter(Number.isFinite)
+    : drillData
+  const calculationLessons = buildCalculationLessons(calcValues)
   const estimatedPower = Math.min(0.99, Math.max(alphaLevel, alphaLevel + effectSize * 0.55 + Math.sqrt(sampleSize) / 120))
   const typeTwo = 1 - estimatedPower
   const bonferroni = alphaLevel / 5
@@ -983,6 +1206,60 @@ export function LearnPage() {
         </section>
 
         <section className="mt-6 rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Calculator size={16} className="text-indigo-500" />
+              <div>
+                <h2 className="text-lg font-bold text-slate-800 dark:text-white">Calculated Answer Studio</h2>
+                <p className="text-xs text-slate-400">Mean, median, variance, SD, and IQR with real values substituted into every step.</p>
+              </div>
+            </div>
+            {numericLearningColumns.length > 0 && (
+              <select
+                value={calcColumn}
+                onChange={(event) => setSelectedCalcCol(event.target.value)}
+                className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
+              >
+                {numericLearningColumns.map((column) => <option key={column.name} value={column.name}>{column.name}</option>)}
+              </select>
+            )}
+          </div>
+          <div className="mb-4 rounded-lg bg-indigo-50 p-3 text-sm text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300">
+            Using {activeDataset && calcColumn ? `${activeDataset.name} -> ${calcColumn}` : `practice data: ${drillData.join(', ')}`}. Click each card to see how the answer was calculated, not only the formula.
+          </div>
+          <div className="grid gap-3 lg:grid-cols-2">
+            {calculationLessons.map((lesson) => (
+              <details key={lesson.title} className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/60">
+                <summary className="cursor-pointer list-none">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-bold text-slate-800 dark:text-white">{lesson.title}</p>
+                      <p className="mt-1 text-xs text-slate-500">{lesson.formula}</p>
+                    </div>
+                    <span className="rounded-md bg-white px-2 py-1 text-sm font-bold text-indigo-700 dark:bg-slate-800 dark:text-indigo-300">{lesson.answer}</span>
+                  </div>
+                </summary>
+                <div className="mt-3 space-y-3">
+                  <div className="rounded-md bg-white p-3 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    <p className="mb-1 font-semibold text-slate-700 dark:text-slate-200">Substitute values</p>
+                    <p>{lesson.substitution}</p>
+                  </div>
+                  <ol className="space-y-2 text-xs leading-5 text-slate-600 dark:text-slate-300">
+                    {lesson.steps.map((step, index) => (
+                      <li key={step} className="flex gap-2">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[11px] font-bold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">{index + 1}</span>
+                        <span>{step}</span>
+                      </li>
+                    ))}
+                  </ol>
+                  <p className="rounded-md bg-emerald-50 p-3 text-xs text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">{lesson.why}</p>
+                </div>
+              </details>
+            ))}
+          </div>
+        </section>
+
+        <section className="mt-6 rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
           <div className="mb-4 flex items-center gap-2">
             <Target size={16} className="text-indigo-500" />
             <h2 className="text-lg font-bold text-slate-800 dark:text-white">Inference Testing Arena</h2>
@@ -1187,6 +1464,54 @@ export function LearnPage() {
             </div>
           </section>
         </div>
+
+        <section className="mt-6 rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
+          <div className="mb-4 flex items-center gap-2">
+            <HelpCircle size={16} className="text-indigo-500" />
+            <div>
+              <h2 className="text-lg font-bold text-slate-800 dark:text-white">FAQ Library for Concepts and Theorems</h2>
+              <p className="text-xs text-slate-400">Expandable answers for classroom teaching, self-study, and exam revision.</p>
+            </div>
+          </div>
+          <div className="grid gap-4 xl:grid-cols-2">
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Core concepts</p>
+              <div className="space-y-2">
+                {CORE_CONCEPT_FAQS.map((group) => (
+                  <details key={group.topic} className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/60">
+                    <summary className="cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-200">{group.topic}</summary>
+                    <div className="mt-3 space-y-2">
+                      {group.questions.map(([question, answer]) => (
+                        <div key={question} className="rounded-md bg-white p-3 dark:bg-slate-800">
+                          <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">{question}</p>
+                          <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">{answer}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Theorems</p>
+              <div className="space-y-2">
+                {THEOREM_FAQS.map((group) => (
+                  <details key={group.topic} className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/60">
+                    <summary className="cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-200">{group.topic}</summary>
+                    <div className="mt-3 space-y-2">
+                      {group.questions.map(([question, answer]) => (
+                        <div key={question} className="rounded-md bg-white p-3 dark:bg-slate-800">
+                          <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">{question}</p>
+                          <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">{answer}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_1fr]">
           <section className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { AlertTriangle, ChevronRight, Clock, Columns3, Contrast, Database, FileText, HelpCircle, Minus, Moon, Plus, RotateCcw, Save, Search, Sun, Target, Type } from 'lucide-react'
+import { AlertTriangle, ChevronRight, Clock, Columns3, Contrast, Database, FileText, HelpCircle, LogOut, Minus, Moon, Plus, RotateCcw, Save, Search, Sun, Target, Type } from 'lucide-react'
 import { useStore } from '../../store/useStore'
 import { saveDataset } from '../../lib/storage'
 import { useToast } from '../ui/toastContext'
@@ -94,6 +94,12 @@ export function TopBar() {
     await saveDataset(activeDataset)
     setLastSavedAt(Date.now())
     notify('Dataset saved to browser storage.', 'success')
+  }
+
+  const unloadDataset = () => {
+    setActiveDataset(null)
+    setShowHealth(false)
+    notify('Dataset unloaded. Saved datasets are still available from the datasets page.', 'info')
   }
 
   const openCommandPalette = () => {
@@ -268,6 +274,17 @@ export function TopBar() {
         >
           <Save size={12} />
           <span className="hidden sm:inline">Save</span>
+        </button>
+      )}
+
+      {activeDataset && (
+        <button
+          onClick={unloadDataset}
+          className="flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+          title="Unload current dataset without deleting it"
+        >
+          <LogOut size={12} />
+          <span className="hidden sm:inline">Unload</span>
         </button>
       )}
 
