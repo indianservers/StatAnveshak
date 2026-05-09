@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -9,6 +10,10 @@ body {
   font-family: Inter, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.dark {
+  color-scheme: dark;
 }
 
 #root {
@@ -27,8 +32,12 @@ body {
   --ag-font-family: Inter, system-ui, sans-serif;
   --ag-font-size: 12px;
   --ag-background-color: #0f172a;
+  --ag-foreground-color: #e2e8f0;
   --ag-header-background-color: #1e293b;
+  --ag-header-foreground-color: #e2e8f0;
   --ag-odd-row-background-color: #0f172a;
+  --ag-row-border-color: #334155;
+  --ag-border-color: #334155;
   --ag-row-hover-color: #1e293b;
 }
 
@@ -39,6 +48,48 @@ body {
 
 .ag-theme-quartz-dark {
   --ag-row-hover-color: #312e81;
+}
+
+.dark .ag-theme-quartz-dark,
+.dark .ag-theme-quartz-dark .ag-root-wrapper,
+.dark .ag-theme-quartz-dark .ag-root,
+.dark .ag-theme-quartz-dark .ag-header,
+.dark .ag-theme-quartz-dark .ag-header-row,
+.dark .ag-theme-quartz-dark .ag-body,
+.dark .ag-theme-quartz-dark .ag-body-viewport,
+.dark .ag-theme-quartz-dark .ag-center-cols-viewport,
+.dark .ag-theme-quartz-dark .ag-center-cols-container,
+.dark .ag-theme-quartz-dark .ag-row,
+.dark .ag-theme-quartz-dark .ag-cell {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+.dark .ag-theme-quartz-dark .ag-header,
+.dark .ag-theme-quartz-dark .ag-header-cell,
+.dark .ag-theme-quartz-dark .ag-pinned-left-header,
+.dark .ag-theme-quartz-dark .ag-pinned-right-header {
+  background-color: #1e293b;
+  color: #e2e8f0;
+}
+
+.dark .ag-theme-quartz-dark .ag-row-odd {
+  background-color: #111827;
+}
+
+.dark .ag-theme-quartz-dark .ag-row-hover,
+.dark .ag-theme-quartz-dark .ag-row:hover {
+  background-color: #1e293b;
+}
+
+.dark .ag-theme-quartz-dark .ag-picker-field-wrapper,
+.dark .ag-theme-quartz-dark .ag-select-list,
+.dark .ag-theme-quartz-dark .ag-list-item,
+.dark .ag-theme-quartz-dark input,
+.dark .ag-theme-quartz-dark select {
+  border-color: #475569;
+  background-color: #1e293b;
+  color: #e2e8f0;
 }
 
 /* Scrollbar */
