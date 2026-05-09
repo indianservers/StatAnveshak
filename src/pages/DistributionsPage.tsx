@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Plotly from 'plotly.js-dist-min'
-import { BookOpen, Download, FlaskConical, RefreshCw, Upload } from 'lucide-react'
+import { BookOpen, CheckCircle2, Download, FlaskConical, GraduationCap, HelpCircle, RefreshCw, Upload } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useStore } from '../store/useStore'
 import { numericColumn } from '../lib/stats'
@@ -21,6 +21,12 @@ import {
 import { useToast } from '../components/ui/toastContext'
 
 type ViewMode = 'density' | 'cdf'
+type ProbabilityQuestion = 'left' | 'between' | 'quantile'
+type PracticeQuestion = {
+  prompt: string
+  answer: string
+  steps: string[]
+}
 
 const groupLabel = (dist: Distribution) => {
   if (dist.family === 'continuous') return 'Continuous'
@@ -34,6 +40,18 @@ const numberFormat = (value: number | null | undefined) => {
   return Math.abs(value) >= 10000 || Math.abs(value) < 0.0001
     ? value.toExponential(4)
     : value.toLocaleString(undefined, { maximumFractionDigits: 6 })
+}
+
+const zFromAlpha: Record<string, number> = {
+  '0.10': 1.645,
+  '0.05': 1.96,
+  '0.01': 2.576,
+}
+
+const zFromPower: Record<string, number> = {
+  '0.80': 0.842,
+  '0.90': 1.282,
+  '0.95': 1.645,
 }
 
 const downloadText = (filename: string, text: string, mime = 'text/plain') => {
@@ -63,6 +81,17 @@ export function DistributionsPage() {
   const [dataCol, setDataCol] = useState('')
   const [loadedData, setLoadedData] = useState<number[]>([])
   const [comparison, setComparison] = useState<ReturnType<typeof compareFits>>([])
+  const [questionType, setQuestionType] = useState<ProbabilityQuestion>('left')
+  const [xValue2, setXValue2] = useState('1')
+  const [simSampleSize, setSimSampleSize] = useState('30')
+  const [simRepetitions, setSimRepetitions] = useState('200')
+  const [sampleMeans, setSampleMeans] = useState<number[]>([])
+  const [effectSize, setEffectSize] = useState('0.5')
+  const [powerAlpha, setPowerAlpha] = useState('0.05')
+  const [targetPower, setTargetPower] = useState('0.80')
+  const [practice, setPractice] = useState<PracticeQuestion | null>(null)
+  const [showPracticeAnswer, setShowPracticeAnswer] = useState(false)
+  const [practiceScore, setPracticeScore] = useState({ correct: 0, total: 0 })
   const plotRef = useRef<HTMLDivElement>(null)
 
   const numericCols = useMemo(
@@ -79,6 +108,18 @@ export function DistributionsPage() {
   const evalCdf = Number.isFinite(x) ? dist.cdf(x, cleanParams, loadedData) : NaN
   const inv = dist.inv(q, cleanParams, loadedData)
   const gof = loadedData.length > 1 ? goodnessOfFit(dist, cleanParams, loadedData) : null
+  const x2 = Number(xValue2)
+  const betweenLow = Math.min(x, x2)
+  const betweenHigh = Math.max(x, x2)
+  const betweenProbability = Number.isFinite(x) && Number.isFinite(x2) ? dist.cdf(betweenHigh, cleanParams, loadedData) - dist.cdf(betweenLow, cleanParams, loadedData) : NaN
+  const learning = distributionLearning(dist)
+  const assumption = assumptionDashboard(loadedData.length ? loadedData : samples.filter((item): item is number => typeof item === 'number'), dist.family)
+  const powerN = Math.ceil(2 * ((zFromAlpha[powerAlpha] + zFromPower[targetPower]) / Math.max(0.01, Number(effectSize))) ** 2)
+  const sampleMeanAverage = sampleMeans.length ? sampleMeans.reduce((sum, value) => sum + value, 0) / sampleMeans.length : NaN
+  const sampleMeanSd = sampleMeans.length > 1
+    ? Math.sqrt(sampleMeans.reduce((sum, value) => sum + (value - sampleMeanAverage) ** 2, 0) / (sampleMeans.length - 1))
+    : NaN
+  const sampleMeanBins = useMemo(() => histogramBins(sampleMeans, 12), [sampleMeans])
 
   useEffect(() => {
     if (!plotRef.current) return
@@ -102,6 +143,35 @@ export function DistributionsPage() {
         name: 'Loaded data',
       } as Plotly.Data)
     }
+    const [rangeLo, rangeHi] = dist.range(cleanParams, loadedData)
+    const markerX = questionType === 'quantile' ? inv : x
+    const shadeStart = questionType === 'between' ? Math.min(x, x2) : rangeLo
+    const shadeEnd = questionType === 'between' ? Math.max(x, x2) : markerX
+    const shapes: Partial<Plotly.Shape>[] = Number.isFinite(shadeStart) && Number.isFinite(shadeEnd)
+      ? [
+          {
+            type: 'rect',
+            xref: 'x',
+            yref: 'paper',
+            x0: Math.max(rangeLo, shadeStart),
+            x1: Math.min(rangeHi, shadeEnd),
+            y0: 0,
+            y1: 1,
+            fillcolor: 'rgba(16,185,129,0.14)',
+            line: { width: 0 },
+          },
+          {
+            type: 'line',
+            xref: 'x',
+            yref: 'paper',
+            x0: markerX,
+            x1: markerX,
+            y0: 0,
+            y1: 1,
+            line: { color: '#10b981', width: 2, dash: 'dot' },
+          },
+        ]
+      : []
 
     Plotly.react(
       plotRef.current,
@@ -115,10 +185,11 @@ export function DistributionsPage() {
         xaxis: { title: { text: 'x' }, gridcolor: theme === 'dark' ? '#334155' : '#e2e8f0' },
         yaxis: { title: { text: mode === 'cdf' ? 'F(x)' : densityLabel }, gridcolor: theme === 'dark' ? '#334155' : '#e2e8f0' },
         legend: { orientation: 'h' },
+        shapes,
       },
       { responsive: true }
     )
-  }, [cleanParams, densityLabel, dist, loadedData, mode, theme])
+  }, [cleanParams, densityLabel, dist, inv, loadedData, mode, questionType, theme, x, x2])
 
   const loadColumnData = () => {
     if (!activeDataset || !effectiveDataCol) return
@@ -152,6 +223,41 @@ export function DistributionsPage() {
     notify(`Generated ${count.toLocaleString()} random samples.`, 'success')
   }
 
+  const runSamplingSimulator = () => {
+    const size = Math.max(2, Math.min(500, Math.round(Number(simSampleSize) || 30)))
+    const reps = Math.max(10, Math.min(2000, Math.round(Number(simRepetitions) || 200)))
+    const means = Array.from({ length: reps }, () => {
+      const draw = generateSamples(dist, cleanParams, size, loadedData)
+      const numeric = draw.filter((item): item is number => typeof item === 'number' && Number.isFinite(item))
+      return numeric.length ? numeric.reduce((sum, value) => sum + value, 0) / numeric.length : NaN
+    }).filter(Number.isFinite)
+    setSampleMeans(means)
+    notify(`Simulated ${means.length.toLocaleString()} sample means.`, 'success')
+  }
+
+  const newPracticeQuestion = () => {
+    const nextQ = Math.random() > 0.5 ? 0.95 : 0.9
+    const nextX = Number.isFinite(x) ? x : 0
+    const answer = Math.random() > 0.5
+      ? {
+          prompt: `What is P(X <= ${numberFormat(nextX)}) for ${dist.name}?`,
+          answer: numberFormat(dist.cdf(nextX, cleanParams, loadedData)),
+          steps: ['Use the CDF for a left-tail probability.', `Evaluate F(${numberFormat(nextX)}) with the current parameters.`, `The answer is ${numberFormat(dist.cdf(nextX, cleanParams, loadedData))}.`],
+        }
+      : {
+          prompt: `Find the ${Math.round(nextQ * 100)}th percentile for ${dist.name}.`,
+          answer: numberFormat(dist.inv(nextQ, cleanParams, loadedData)),
+          steps: ['Use inverse CDF for percentile questions.', `Set q = ${nextQ}.`, `x = F^-1(${nextQ}) = ${numberFormat(dist.inv(nextQ, cleanParams, loadedData))}.`],
+        }
+    setPractice(answer)
+    setShowPracticeAnswer(false)
+  }
+
+  const markPractice = (correct: boolean) => {
+    setPracticeScore((score) => ({ correct: score.correct + (correct ? 1 : 0), total: score.total + 1 }))
+    newPracticeQuestion()
+  }
+
   const exportCurve = () => {
     downloadText(`${selected}-${mode}.csv`, exportCurveCsv(dist, cleanParams, mode, loadedData), 'text/csv')
   }
@@ -169,16 +275,6 @@ export function DistributionsPage() {
       goodnessOfFit: gof,
       samples: samples.slice(0, 1000),
     }, null, 2), 'application/json')
-  }
-
-  if (!activeDataset) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
-        <Upload size={48} />
-        <p className="text-lg font-medium">No dataset loaded</p>
-        <Link to="/data/upload" className="text-sm bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Upload Data</Link>
-      </div>
-    )
   }
 
   return (
@@ -216,6 +312,19 @@ export function DistributionsPage() {
 
       <main className="flex-1 overflow-y-auto p-6">
         <div className="mx-auto max-w-7xl">
+          {!activeDataset && (
+            <div className="mb-5 flex flex-col gap-3 rounded-xl border border-dashed border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-800 dark:border-indigo-900/60 dark:bg-indigo-950/30 dark:text-indigo-200 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <Upload size={18} className="mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-semibold">Learning tools are ready without a dataset.</p>
+                  <p className="text-xs opacity-80">Upload data only when you want to fit a distribution or compare goodness-of-fit against your own column.</p>
+                </div>
+              </div>
+              <Link to="/data/upload" className="rounded-md bg-indigo-600 px-3 py-2 text-center text-xs font-semibold text-white hover:bg-indigo-700">Upload Data</Link>
+            </div>
+          )}
+
           <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <div className="flex flex-wrap items-center gap-2">
@@ -321,6 +430,76 @@ export function DistributionsPage() {
               </div>
             </section>
 
+            <section className="xl:col-span-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
+              <div className="mb-3 flex items-center gap-2">
+                <GraduationCap size={16} className="text-indigo-500" />
+                <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Distribution Learning Cards</h3>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <LearningCard title="When to use" items={learning.whenToUse} />
+                <LearningCard title="Real-world examples" items={learning.examples} />
+                <LearningCard title="Assumptions" items={learning.assumptions} />
+                <LearningCard title="Parameter meaning" items={learning.parameters} />
+                <LearningCard title="Common mistakes" items={learning.mistakes} />
+                <LearningCard title="Similar distributions" items={learning.similar} />
+              </div>
+            </section>
+
+            <section className="xl:col-span-2 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
+              <div className="mb-3 flex items-center gap-2">
+                <HelpCircle size={16} className="text-indigo-500" />
+                <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Interactive Probability Questions</h3>
+              </div>
+              <div className="grid gap-3 md:grid-cols-4">
+                <label className="text-xs text-slate-500">
+                  Question
+                  <select value={questionType} onChange={(event) => setQuestionType(event.target.value as ProbabilityQuestion)} className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200">
+                    <option value="left">What is P(X &lt;= x)?</option>
+                    <option value="between">What is P(a &lt;= X &lt;= b)?</option>
+                    <option value="quantile">Find percentile</option>
+                  </select>
+                </label>
+                <label className="text-xs text-slate-500">
+                  x or a
+                  <input value={xValue} onChange={(event) => setXValue(event.target.value)} type="number" className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200" />
+                </label>
+                {questionType === 'between' && (
+                  <label className="text-xs text-slate-500">
+                    b
+                    <input value={xValue2} onChange={(event) => setXValue2(event.target.value)} type="number" className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200" />
+                  </label>
+                )}
+                {questionType === 'quantile' && (
+                  <label className="text-xs text-slate-500">
+                    q
+                    <input value={qValue} onChange={(event) => setQValue(event.target.value)} type="number" min="0" max="1" step="0.001" className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200" />
+                  </label>
+                )}
+              </div>
+              <div className="mt-3 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-200">
+                {questionType === 'left' && <>P(X &lt;= {numberFormat(x)}) = F({numberFormat(x)}) = <strong>{numberFormat(evalCdf)}</strong>. The chart shades the left-tail area.</>}
+                {questionType === 'between' && <>P({numberFormat(betweenLow)} &lt;= X &lt;= {numberFormat(betweenHigh)}) = F({numberFormat(betweenHigh)}) - F({numberFormat(betweenLow)}) = <strong>{numberFormat(betweenProbability)}</strong>.</>}
+                {questionType === 'quantile' && <>The {numberFormat(q * 100)}th percentile is F^-1({numberFormat(q)}) = <strong>{numberFormat(inv)}</strong>. The chart marks the percentile.</>}
+              </div>
+              <ol className="mt-3 grid gap-2 text-xs text-slate-600 dark:text-slate-300 md:grid-cols-3">
+                <li>1. Identify whether the question asks for CDF, interval probability, or inverse CDF.</li>
+                <li>2. Substitute the current distribution parameters and input values.</li>
+                <li>3. Read the shaded region or percentile marker on the chart.</li>
+              </ol>
+            </section>
+
+            <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
+              <h3 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">Assumption Dashboard</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <Metric label="Sample size" value={assumption.sampleSize} />
+                <Metric label="Skewness" value={typeof assumption.skewness === 'number' ? numberFormat(assumption.skewness) : assumption.skewness} />
+                <Metric label="Outliers" value={assumption.outliers} />
+                <Metric label="Normality cue" value={assumption.normality} />
+                <Metric label="Equal variance" value={assumption.equalVariance} />
+                <Metric label="Independence" value={assumption.independence} />
+              </div>
+            </section>
+
             <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
               <h3 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">Random Sample Generator</h3>
               <div className="flex gap-2">
@@ -334,6 +513,69 @@ export function DistributionsPage() {
               </div>
             </section>
 
+            <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
+              <h3 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">Sampling Distribution Simulator</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="text-xs text-slate-500">Sample size<input value={simSampleSize} onChange={(event) => setSimSampleSize(event.target.value)} type="number" className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200" /></label>
+                <label className="text-xs text-slate-500">Repetitions<input value={simRepetitions} onChange={(event) => setSimRepetitions(event.target.value)} type="number" className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200" /></label>
+              </div>
+              <button onClick={runSamplingSimulator} className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-2 text-sm text-white hover:bg-indigo-700"><RefreshCw size={14} /> Simulate means</button>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <Metric label="Mean of means" value={numberFormat(sampleMeanAverage)} />
+                <Metric label="SD of means" value={numberFormat(sampleMeanSd)} />
+              </div>
+              {sampleMeanBins.length > 0 && (
+                <div className="mt-3 flex h-24 items-end gap-1 rounded-lg bg-slate-50 p-2 dark:bg-slate-700/50">
+                  {sampleMeanBins.map((bin) => (
+                    <div
+                      key={`${bin.start}-${bin.end}`}
+                      title={`${numberFormat(bin.start)} to ${numberFormat(bin.end)}: ${bin.count}`}
+                      className="flex-1 rounded-t bg-emerald-500/80"
+                      style={{ height: `${Math.max(8, (bin.count / Math.max(...sampleMeanBins.map((item) => item.count))) * 100)}%` }}
+                    />
+                  ))}
+                </div>
+              )}
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">As sample size grows, the sample means usually become more bell-shaped and less variable.</p>
+            </section>
+
+            <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
+              <h3 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">Power and Sample Size</h3>
+              <div className="grid grid-cols-3 gap-2">
+                <label className="text-xs text-slate-500">Effect size<input value={effectSize} onChange={(event) => setEffectSize(event.target.value)} type="number" step="0.05" className="mt-1 w-full rounded-md border border-slate-200 px-2 py-2 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200" /></label>
+                <label className="text-xs text-slate-500">Alpha<select value={powerAlpha} onChange={(event) => setPowerAlpha(event.target.value)} className="mt-1 w-full rounded-md border border-slate-200 bg-white px-2 py-2 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"><option value="0.10">0.10</option><option value="0.05">0.05</option><option value="0.01">0.01</option></select></label>
+                <label className="text-xs text-slate-500">Power<select value={targetPower} onChange={(event) => setTargetPower(event.target.value)} className="mt-1 w-full rounded-md border border-slate-200 bg-white px-2 py-2 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"><option value="0.80">80%</option><option value="0.90">90%</option><option value="0.95">95%</option></select></label>
+              </div>
+              <Metric label="Required n per group" value={powerN.toLocaleString()} />
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Approximation for two independent groups: n = 2((z_alpha + z_power) / effect size)^2.</p>
+            </section>
+
+            <section className="xl:col-span-2 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
+              <h3 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">Practice Mode</h3>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={newPracticeQuestion} className="rounded-md bg-indigo-600 px-3 py-2 text-sm text-white hover:bg-indigo-700">Generate question</button>
+                <span className="rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-600 dark:bg-slate-700 dark:text-slate-200">Score {practiceScore.correct}/{practiceScore.total}</span>
+              </div>
+              {practice && (
+                <div className="mt-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-700/50">
+                  <p className="font-semibold text-slate-800 dark:text-white">{practice.prompt}</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button onClick={() => setShowPracticeAnswer(true)} className="rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-600 dark:border-slate-600 dark:text-slate-200">Show answer</button>
+                    <button onClick={() => markPractice(true)} className="rounded-md bg-green-600 px-3 py-1.5 text-xs text-white">I got it</button>
+                    <button onClick={() => markPractice(false)} className="rounded-md bg-rose-600 px-3 py-1.5 text-xs text-white">Missed it</button>
+                  </div>
+                  {showPracticeAnswer && (
+                    <div className="mt-3 text-sm text-slate-600 dark:text-slate-300">
+                      <p><strong>Answer:</strong> {practice.answer}</p>
+                      <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs">
+                        {practice.steps.map((step) => <li key={step}>{step}</li>)}
+                      </ol>
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
+
             <section className="xl:col-span-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
               <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
@@ -341,10 +583,10 @@ export function DistributionsPage() {
                   <p className="text-xs text-slate-400">Continuous modules use Kolmogorov-Smirnov distance. Discrete modules use chi-square goodness-of-fit.</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <select value={effectiveDataCol} onChange={(event) => setDataCol(event.target.value)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200">
-                    {numericCols.map((col) => <option key={col} value={col}>{col}</option>)}
+                  <select value={effectiveDataCol} onChange={(event) => setDataCol(event.target.value)} disabled={!numericCols.length} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm disabled:opacity-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200">
+                    {numericCols.length ? numericCols.map((col) => <option key={col} value={col}>{col}</option>) : <option value="">No numeric column loaded</option>}
                   </select>
-                  <button onClick={loadColumnData} className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">Load data</button>
+                  <button onClick={loadColumnData} disabled={!activeDataset || !effectiveDataCol} className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">Load data</button>
                   <button onClick={fitCurrent} disabled={loadedData.length < 2} className="rounded-md bg-indigo-600 px-3 py-2 text-sm text-white hover:bg-indigo-700 disabled:opacity-50">Fit current</button>
                   <button onClick={compareAll} disabled={loadedData.length < 2} className="rounded-md bg-slate-800 px-3 py-2 text-sm text-white hover:bg-slate-700 disabled:opacity-50 dark:bg-slate-600">Compare all</button>
                 </div>
@@ -414,6 +656,110 @@ function Metric({ label, value }: { label: string; value: string | number }) {
       <p className="break-words text-sm font-semibold text-slate-700 dark:text-slate-200">{value}</p>
     </div>
   )
+}
+
+function LearningCard({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-700/50">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{title}</p>
+      <ul className="space-y-1 text-xs leading-5 text-slate-600 dark:text-slate-300">
+        {items.map((item) => <li key={item} className="flex gap-2"><CheckCircle2 size={12} className="mt-1 shrink-0 text-green-500" />{item}</li>)}
+      </ul>
+    </div>
+  )
+}
+
+function distributionLearning(dist: Distribution) {
+  const base = {
+    whenToUse: dist.family === 'discrete'
+      ? ['The outcome is a count or whole-number event.', 'You can define trials, arrivals, failures, or categories.']
+      : dist.family === 'continuous'
+        ? ['The outcome is measured on a continuous scale.', 'You need probabilities, percentiles, or fitted curve comparison.']
+        : dist.family === 'multivariate'
+          ? ['One observation has several related components.', 'The components are counts or proportions that move together.']
+          : ['You do not want to assume a named model.', 'The observed data itself should define percentiles and probabilities.'],
+    examples: dist.family === 'discrete'
+      ? ['Defect counts, arrivals, successes, claims, clicks.', 'Exam pass/fail, calls per hour, units sold.']
+      : dist.family === 'continuous'
+        ? ['Heights, scores, waiting time, rainfall, income, measurement error.', 'Quality measurements, delivery time, latency, lifetimes.']
+        : dist.family === 'multivariate'
+          ? ['Market-share vectors, category counts, composition data.', 'Survey category probabilities and portfolio weights.']
+          : ['Bootstrapped observed values.', 'Percentiles from a real sample without smoothing.'],
+    assumptions: ['Support must match possible values: ' + dist.support + '.', 'Parameters should be meaningful for the process.', 'Observations should be representative and measured consistently.'],
+    parameters: dist.params.length ? dist.params.map((param) => `${param.label}: allowed ${param.min} to ${param.max}, default ${param.default}.`) : ['No editable parameters; it is fixed or data-driven.'],
+    mistakes: ['Using a continuous model for impossible negative or fractional values.', 'Trusting a good-looking curve without checking assumptions.', 'Ignoring tails when decisions depend on rare events.'],
+    similar: similarDistributions(dist.id),
+  }
+
+  if (dist.id === 'normal' || dist.id === 'standard_normal') {
+    base.whenToUse = ['Measurement errors or averages from many small effects.', 'Symmetric data where tails are not extremely heavy.']
+    base.mistakes = ['Assuming every bell-shaped histogram is normal.', 'Using mean and SD when outliers dominate.']
+  }
+  if (dist.id === 'poisson' || dist.id === 'exponential') {
+    base.examples = ['Queue arrivals, calls per minute, defects per sheet.', 'Waiting time between independent events.']
+    base.assumptions.push('Events happen independently at a roughly constant rate.')
+  }
+  return base
+}
+
+function similarDistributions(id: string) {
+  if (['bernoulli', 'binomial'].includes(id)) return ['Bernoulli is one trial; Binomial is many trials.', 'Hypergeometric is similar but without replacement.']
+  if (['poisson', 'exponential'].includes(id)) return ['Poisson counts events; Exponential measures waiting time between events.', 'Gamma generalizes waiting time for multiple events.']
+  if (['normal', 'standard_normal', 'student_t'].includes(id)) return ['Student t is normal-like with heavier tails.', 'Logistic is also symmetric with a different tail shape.']
+  if (['gamma', 'weibull', 'lognormal', 'exponential'].includes(id)) return ['All model positive right-skewed values.', 'Weibull is common for reliability; Lognormal for multiplicative growth.']
+  if (['beta', 'dirichlet'].includes(id)) return ['Beta models one proportion; Dirichlet models several proportions.', 'Binomial links to Beta through Bayesian updating.']
+  if (['multinomial', 'dirichlet'].includes(id)) return ['Multinomial models category counts.', 'Dirichlet models category probabilities.']
+  return ['Compare with Normal, Empirical, and a domain-specific distribution.', 'Use Compare all after loading data.']
+}
+
+function assumptionDashboard(values: number[], family: string) {
+  if (values.length < 2) {
+    return { sampleSize: values.length, skewness: '-', outliers: '-', normality: 'Need data', equalVariance: 'Need groups', independence: 'Check design' }
+  }
+  const outlierResult = detectOutliers(values)
+  const skewness = values.length > 2 ? sampleSkewness(values) : 0
+  return {
+    sampleSize: values.length,
+    skewness,
+    outliers: outlierResult.length,
+    normality: family === 'continuous' ? (values.length >= 30 && Math.abs(skewness) < 1 ? 'reasonable' : 'check QQ/histogram') : 'not required',
+    equalVariance: 'compare groups',
+    independence: 'verify sampling',
+  }
+}
+
+function sampleSkewness(values: number[]) {
+  const mean = values.reduce((sum, value) => sum + value, 0) / values.length
+  const sd = Math.sqrt(values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / Math.max(values.length - 1, 1))
+  return sd === 0 ? 0 : values.reduce((sum, value) => sum + ((value - mean) / sd) ** 3, 0) / values.length
+}
+
+function detectOutliers(values: number[]) {
+  const sorted = [...values].sort((a, b) => a - b)
+  const q1 = sorted[Math.floor(sorted.length * 0.25)]
+  const q3 = sorted[Math.floor(sorted.length * 0.75)]
+  const iqr = q3 - q1
+  const lo = q1 - 1.5 * iqr
+  const hi = q3 + 1.5 * iqr
+  return values.filter((value) => value < lo || value > hi)
+}
+
+function histogramBins(values: number[], targetBins: number) {
+  const clean = values.filter(Number.isFinite)
+  if (!clean.length) return []
+  const min = Math.min(...clean)
+  const max = Math.max(...clean)
+  const width = max === min ? 1 : (max - min) / targetBins
+  const bins = Array.from({ length: targetBins }, (_, index) => ({
+    start: min + index * width,
+    end: min + (index + 1) * width,
+    count: 0,
+  }))
+  clean.forEach((value) => {
+    const index = Math.min(targetBins - 1, Math.max(0, Math.floor((value - min) / width)))
+    bins[index].count += 1
+  })
+  return bins
 }
 
 function Formula({ label, value }: { label: string; value: string }) {

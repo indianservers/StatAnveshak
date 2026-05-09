@@ -37,6 +37,7 @@ const NAV_GROUPS = [
   {
     label: 'Workspace',
     items: [
+      { to: '/solver', icon: Calculator, label: 'Solver' },
       { to: '/', icon: Home, label: 'Home' },
       { to: '/projects', icon: FolderOpen, label: 'Projects' },
     ],
@@ -84,7 +85,6 @@ const NAV_GROUPS = [
     label: 'Learn',
     items: [
       { to: '/learn', icon: BookOpen, label: 'Core Statistics' },
-      { to: '/solver', icon: Calculator, label: 'Solver' },
       { to: '/settings', icon: Settings, label: 'Settings' },
     ],
   },

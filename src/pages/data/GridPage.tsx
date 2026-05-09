@@ -3,18 +3,20 @@ import { AgGridReact } from 'ag-grid-react'
 import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community'
 import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-quartz.css'
-import type { ColDef, GridApi } from 'ag-grid-community'
+import type { CellValueChangedEvent, ColDef, GridApi } from 'ag-grid-community'
 import { useStore } from '../../store/useStore'
 import { Link } from 'react-router-dom'
-import { BarChart2, Calendar, Copy, Download, Hash, Lock, Search, TextCursorInput, Unlock, Upload, X } from 'lucide-react'
+import { BarChart2, Calendar, Copy, Download, Edit3, Hash, Lock, Search, TextCursorInput, Unlock, Upload, X } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '../../components/ui/toastContext'
+import { detectSchema } from '../../lib/schema'
+import { saveDataset } from '../../lib/storage'
 
 ModuleRegistry.registerModules([AllCommunityModule])
 
 export function GridPage() {
-  const { activeDataset, theme } = useStore()
+  const { activeDataset, theme, setActiveDataset, updateDataset, setLastSavedAt } = useStore()
   const gridRef = useRef<AgGridReact>(null)
   const [quickFilter, setQuickFilter] = useState('')
   const [denseMode, setDenseMode] = useState(false)
@@ -31,9 +33,11 @@ export function GridPage() {
       filter: col.type === 'numeric' ? 'agNumberColumnFilter' : 'agTextColumnFilter',
       sortable: true,
       resizable: true,
+      editable: true,
       minWidth: 100,
       pinned: freezeFirstColumn && index === 0 ? 'left' : undefined,
       cellDataType: col.type === 'numeric' ? 'number' : col.type === 'date' ? 'dateString' : 'text',
+      valueParser: (params) => parseEditedValue(params.newValue, col.type),
       valueFormatter: col.type === 'numeric'
         ? (params) => typeof params.value === 'number' ? params.value.toLocaleString(undefined, { maximumFractionDigits: 2 }) : params.value
         : undefined,
@@ -43,6 +47,31 @@ export function GridPage() {
   const onGridReady = useCallback((params: { api: GridApi }) => {
     params.api.sizeColumnsToFit()
   }, [])
+
+  const applyCellEdit = useCallback((event: CellValueChangedEvent) => {
+    if (!activeDataset || !event.colDef.field || Object.is(event.oldValue, event.newValue)) return
+    const rowIndex = activeDataset.data.indexOf(event.data)
+    if (rowIndex < 0) return
+
+    const nextData = activeDataset.data.map((row, index) => (
+      index === rowIndex ? { ...row, [event.colDef.field as string]: event.newValue } : row
+    ))
+    const schema = detectSchema(nextData)
+    const nextDataset = {
+      ...activeDataset,
+      data: nextData,
+      schema,
+      rows: nextData.length,
+      cols: schema.length,
+      parseDetails: 'Edited in Data Grid',
+    }
+    setActiveDataset(nextDataset)
+    updateDataset(nextDataset)
+    saveDataset(nextDataset).then(() => setLastSavedAt(Date.now())).catch(() => {
+      notify('Cell updated, but browser storage save failed.', 'info')
+    })
+    notify(`Updated ${event.colDef.field} in row ${rowIndex + 1}.`, 'success')
+  }, [activeDataset, notify, setActiveDataset, setLastSavedAt, updateDataset])
 
   const exportCSV = () => {
     gridRef.current?.api.exportDataAsCsv({ fileName: `${activeDataset?.name ?? 'data'}.csv` })
@@ -122,6 +151,10 @@ export function GridPage() {
         </div>
         <span className="text-xs text-slate-400 ml-2">
           {activeDataset.rows.toLocaleString()} rows
+        </span>
+        <span className="hidden items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 md:inline-flex">
+          <Edit3 size={11} />
+          Editable
         </span>
         {freezeFirstColumn && (
           <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 dark:border-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300">
@@ -219,14 +252,36 @@ export function GridPage() {
             const column = event.column
             if (column && 'getColId' in column) showHeaderStats(column.getColId())
           }}
+          onCellValueChanged={applyCellEdit}
           defaultColDef={{
             filter: true,
             sortable: true,
             resizable: true,
+            editable: true,
           }}
           rowSelection={{ mode: 'multiRow' }}
+          undoRedoCellEditing
+          undoRedoCellEditingLimit={20}
+          singleClickEdit
+          stopEditingWhenCellsLoseFocus
         />
       </div>
     </div>
   )
+}
+
+function parseEditedValue(value: unknown, type: string) {
+  if (value === null || value === undefined) return ''
+  const text = String(value).trim()
+  if (text === '') return ''
+  if (type === 'numeric') {
+    const number = Number(text.replace(/,/g, ''))
+    return Number.isFinite(number) ? number : value
+  }
+  if (type === 'boolean') {
+    const normalized = text.toLowerCase()
+    if (['true', '1', 'yes', 'y'].includes(normalized)) return true
+    if (['false', '0', 'no', 'n'].includes(normalized)) return false
+  }
+  return value
 }

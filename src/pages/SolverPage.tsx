@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { BookOpenCheck, Calculator, CheckCircle2, ClipboardList, Grid3X3, RotateCcw, Sigma } from 'lucide-react'
+import { BookOpenCheck, Calculator, CheckCircle2, ChevronDown, ChevronRight, ClipboardList, Grid3X3, RotateCcw, Sigma } from 'lucide-react'
 
 type SolverMode =
   | 'pearson'
@@ -115,14 +115,144 @@ const presets: Preset[] = [
   { id: 'index-simple-aggregative-extra-2', title: 'Simple aggregative index: fuel items', mode: 'index-simple-aggregative', labels: ['Base Price', 'Current Price'], rows: pairRows([95, 110, 125, 140], [120, 132, 150, 168]) },
 ]
 
-type PresetCategory = 'Correlation & Regression' | 'Standard Deviation & Averages' | 'Index Numbers'
+type SolverCategory = {
+  id: string
+  title: string
+  description: string
+  examples: Preset[]
+}
 
-const CATEGORY_ORDER: PresetCategory[] = ['Correlation & Regression', 'Standard Deviation & Averages', 'Index Numbers']
+const CATEGORY_BLUEPRINTS: Array<{ id: string; title: string; description: string; mode: SolverMode }> = [
+  { id: 'pearson-correlation', title: 'Pearson Correlation', description: 'Paired X-Y problems for product moment correlation.', mode: 'pearson' },
+  { id: 'rank-correlation', title: 'Rank Correlation', description: 'Spearman rank problems with paired ranks or marks.', mode: 'spearman-rank' },
+  { id: 'concurrent-deviation', title: 'Concurrent Deviation', description: 'Same-direction movement problems for two time series.', mode: 'concurrent' },
+  { id: 'regression-equations', title: 'Regression Equations', description: 'Y on X, X on Y, and two-equation regression practice.', mode: 'regression-both' },
+  { id: 'trend-analysis', title: 'Trend Analysis', description: 'Least-squares straight-line trend fitting.', mode: 'trend' },
+  { id: 'correlation-summary', title: 'Correlation Summary Values', description: 'Correlation from supplied deviation totals.', mode: 'correlation-summary' },
+  { id: 'raw-standard-deviation', title: 'Raw Standard Deviation', description: 'Ungrouped one-column standard deviation problems.', mode: 'sd-raw' },
+  { id: 'frequency-standard-deviation', title: 'Frequency Standard Deviation', description: 'Value-frequency mean and standard deviation problems.', mode: 'sd-frequency' },
+  { id: 'grouped-standard-deviation', title: 'Grouped Standard Deviation', description: 'Class interval problems using midpoints and frequencies.', mode: 'sd-class-frequency' },
+  { id: 'cumulative-standard-deviation', title: 'Cumulative Frequency SD', description: 'Less-than and more-than cumulative frequency conversion practice.', mode: 'sd-less-than-cumulative' },
+  { id: 'geometric-mean', title: 'Geometric Mean', description: 'Frequency-weighted geometric mean examples.', mode: 'geometric-mean-frequency' },
+  { id: 'grouped-mode', title: 'Grouped Mode', description: 'Modal class and grouped mode formula practice.', mode: 'mode-grouped' },
+  { id: 'simple-index-numbers', title: 'Simple Index Numbers', description: 'Simple aggregative and simple relative index examples.', mode: 'index-simple-aggregative' },
+  { id: 'weighted-index-numbers', title: 'Weighted Index Numbers', description: 'Weighted aggregative and weighted relative price index examples.', mode: 'index-weighted-aggregative' },
+  { id: 'ideal-quantity-indexes', title: 'Ideal and Quantity Indexes', description: 'Laspeyres, Paasche, Fisher, Edgeworth-Marshall, and quantity index examples.', mode: 'index-fisher' },
+]
 
-function categoryForMode(mode: SolverMode): PresetCategory {
-  if (mode.startsWith('index-') || mode === 'quantity-index-fisher') return 'Index Numbers'
-  if (mode.startsWith('sd-') || mode === 'mode-grouped' || mode === 'geometric-mean-frequency') return 'Standard Deviation & Averages'
-  return 'Correlation & Regression'
+const solverCategories: SolverCategory[] = CATEGORY_BLUEPRINTS.map((category) => ({
+  ...category,
+  examples: Array.from({ length: 25 }, (_, index) => generatedPreset(category.id, category.title, category.mode, index + 1)),
+}))
+
+const allSolverExamples = solverCategories.flatMap((category) => category.examples)
+
+function generatedPreset(categoryId: string, categoryTitle: string, mode: SolverMode, serial: number): Preset {
+  const suffix = serial.toString().padStart(2, '0')
+  const title = `${categoryTitle} Example ${suffix}`
+  if (categoryId === 'grouped-and-cumulative-standard-deviation') {
+    const sdMode = (['sd-class-frequency', 'sd-less-than-cumulative', 'sd-more-than-cumulative'] as SolverMode[])[serial % 3]
+    if (sdMode === 'sd-less-than-cumulative') {
+      const upper = Array.from({ length: 6 }, (_, index) => 10 + serial + index * 10)
+      let total = 0
+      const cumulative = upper.map((_, index) => {
+        total += 4 + ((serial + index * 3) % 11)
+        return total
+      })
+      return { id: `${categoryId}-${suffix}`, title, mode: sdMode, labels: ['Less than upper', 'Cumulative frequency'], rows: pairRows(upper, cumulative) }
+    }
+    if (sdMode === 'sd-more-than-cumulative') {
+      const lower = Array.from({ length: 6 }, (_, index) => serial + index * 10)
+      let remaining = 70 + serial
+      const cumulative = lower.map((_, index) => {
+        const value = remaining
+        remaining -= 5 + ((serial + index * 2) % 10)
+        return Math.max(value, 0)
+      })
+      return { id: `${categoryId}-${suffix}`, title, mode: sdMode, labels: ['More than lower', 'Cumulative frequency'], rows: pairRows(lower, cumulative) }
+    }
+  }
+  if (categoryId === 'cumulative-standard-deviation') {
+    const cumulativeMode: SolverMode = serial % 2 ? 'sd-less-than-cumulative' : 'sd-more-than-cumulative'
+    if (cumulativeMode === 'sd-more-than-cumulative') {
+      const lower = Array.from({ length: 6 }, (_, index) => serial + index * 10)
+      let remaining = 70 + serial
+      const cumulative = lower.map((_, index) => {
+        const value = remaining
+        remaining -= 5 + ((serial + index * 2) % 10)
+        return Math.max(value, 0)
+      })
+      return { id: `${categoryId}-${suffix}`, title, mode: cumulativeMode, labels: ['More than lower', 'Cumulative frequency'], rows: pairRows(lower, cumulative) }
+    }
+  }
+  if (mode === 'sd-raw') {
+    const start = 18 + serial
+    return { id: `${categoryId}-${suffix}`, title, mode, labels: ['Value', ''], rows: Array.from({ length: 8 }, (_, index) => [start + index * 3 + ((serial + index) % 4)]) }
+  }
+  if (mode === 'sd-frequency' || mode === 'geometric-mean-frequency') {
+    const start = mode === 'geometric-mean-frequency' ? 20 + serial : 40 + serial * 2
+    const x = Array.from({ length: 6 }, (_, index) => start + index * (mode === 'geometric-mean-frequency' ? 10 : 5))
+    const f = Array.from({ length: 6 }, (_, index) => 3 + ((serial + index * 2) % 12))
+    return { id: `${categoryId}-${suffix}`, title, mode, labels: [mode === 'geometric-mean-frequency' ? 'X' : 'Value', 'Frequency'], rows: pairRows(x, f) }
+  }
+  if (mode === 'sd-class-frequency' || mode === 'mode-grouped') {
+    const lower = Array.from({ length: 6 }, (_, index) => serial * 2 + index * 10)
+    const upper = lower.map((value) => value + 10)
+    const frequency = lower.map((_, index) => mode === 'mode-grouped' ? [5, 11, 18 + serial % 7, 14, 9, 4][index] : 4 + ((serial + index * 3) % 18))
+    return { id: `${categoryId}-${suffix}`, title, mode, labels: ['Class lower', 'Class upper', 'Frequency'], rows: tripleRows(lower, upper, frequency) }
+  }
+  if (mode === 'sd-less-than-cumulative') {
+    const upper = Array.from({ length: 6 }, (_, index) => 10 + serial + index * 10)
+    let total = 0
+    const cumulative = upper.map((_, index) => {
+      total += 4 + ((serial + index * 3) % 11)
+      return total
+    })
+    return { id: `${categoryId}-${suffix}`, title, mode, labels: ['Less than upper', 'Cumulative frequency'], rows: pairRows(upper, cumulative) }
+  }
+  if (mode === 'correlation-summary') {
+    const sumX2 = 90 + serial * 7
+    const sumY2 = 110 + serial * 6
+    const sumXY = Math.round(Math.sqrt(sumX2 * sumY2) * (0.35 + (serial % 10) / 25))
+    return { id: `${categoryId}-${suffix}`, title, mode, labels: ['sum dx^2', 'sum dy^2', 'sum dxdy', 'N'], rows: [[sumX2, sumY2, sumXY, 8 + (serial % 12)]] }
+  }
+  if (mode.startsWith('index-') || mode === 'quantity-index-fisher') {
+    const p0 = Array.from({ length: 5 }, (_, index) => 12 + serial + index * 8)
+    const p1 = p0.map((value, index) => Math.round(value * (1.08 + ((serial + index) % 5) / 20)))
+    if (categoryId === 'index-numbers') {
+      const indexMode = (['index-simple-aggregative', 'index-simple-relative', 'index-weighted-aggregative', 'index-weighted-relative', 'index-laspeyres', 'index-paasche', 'index-fisher', 'index-edgeworth-marshall', 'quantity-index-fisher'] as SolverMode[])[serial % 9]
+      const q0 = Array.from({ length: 5 }, (_, index) => 4 + ((serial + index * 2) % 10))
+      const q1 = q0.map((value, index) => value + ((serial + index) % 4) - 1)
+      if (indexMode === 'index-simple-aggregative' || indexMode === 'index-simple-relative') return { id: `${categoryId}-${suffix}`, title, mode: indexMode, labels: ['Base Price', 'Current Price'], rows: pairRows(p0, p1) }
+      if (indexMode === 'index-weighted-aggregative' || indexMode === 'index-weighted-relative') return { id: `${categoryId}-${suffix}`, title, mode: indexMode, labels: ['Base Price', 'Current Price', 'Weight'], rows: tripleRows(p0, p1, q0) }
+      return { id: `${categoryId}-${suffix}`, title, mode: indexMode, labels: ['Base Price', 'Current Price', 'Base Quantity', 'Current Quantity'], rows: quadRows(p0, p1, q0, q1) }
+    }
+    if (mode === 'index-simple-aggregative') return { id: `${categoryId}-${suffix}`, title, mode: serial % 2 ? mode : 'index-simple-relative', labels: ['Base Price', 'Current Price'], rows: pairRows(p0, p1) }
+    const q0 = Array.from({ length: 5 }, (_, index) => 4 + ((serial + index * 2) % 10))
+    const q1 = q0.map((value, index) => value + ((serial + index) % 4) - 1)
+    if (mode === 'index-weighted-aggregative') return { id: `${categoryId}-${suffix}`, title, mode: serial % 2 ? mode : 'index-weighted-relative', labels: ['Base Price', 'Current Price', 'Weight'], rows: tripleRows(p0, p1, q0) }
+    const idealMode: SolverMode = (['index-laspeyres', 'index-paasche', 'index-fisher', 'index-edgeworth-marshall', 'quantity-index-fisher'] as SolverMode[])[serial % 5]
+    return { id: `${categoryId}-${suffix}`, title, mode: idealMode, labels: ['Base Price', 'Current Price', 'Base Quantity', 'Current Quantity'], rows: quadRows(p0, p1, q0, q1) }
+  }
+  if (mode === 'trend') {
+    const years = Array.from({ length: 7 }, (_, index) => 2017 + index)
+    const values = years.map((_, index) => 60 + serial * 2 + index * (2 + serial % 4) + ((index + serial) % 3) * 2)
+    return { id: `${categoryId}-${suffix}`, title, mode, labels: ['Year', 'Production'], rows: pairRows(years, values) }
+  }
+  if (mode === 'spearman-rank') {
+    const x = Array.from({ length: 8 }, (_, index) => 8 - index)
+    const shift = serial % x.length
+    const y = x.map((_, index) => x[(index + shift) % x.length])
+    return { id: `${categoryId}-${suffix}`, title, mode, labels: ['Rank X', 'Rank Y'], rows: pairRows(x, y) }
+  }
+  if (mode === 'concurrent') {
+    const x = Array.from({ length: 9 }, (_, index) => 100 + serial * 2 + index * 4 + ((index + serial) % 3) * 5)
+    const y = x.map((value, index) => Math.round(value * 0.8 + 12 + ((serial + index * 2) % 9)))
+    return { id: `${categoryId}-${suffix}`, title, mode, labels: ['Series X', 'Series Y'], rows: pairRows(x, y) }
+  }
+  const x = Array.from({ length: 8 }, (_, index) => 10 + serial + index * 5)
+  const y = x.map((value, index) => Math.round(value * (1.1 + (serial % 4) / 10) + 8 + ((index + serial) % 5) * 3))
+  return { id: `${categoryId}-${suffix}`, title, mode, labels: ['X', 'Y'], rows: pairRows(x, y) }
 }
 
 const modeCopy: Record<SolverMode, { label: string; formula: string; guide: string[] }> = {
@@ -259,14 +389,18 @@ const modeCopy: Record<SolverMode, { label: string; formula: string; guide: stri
 }
 
 const fmt = (value: number, digits = 4) => Number.isFinite(value) ? value.toLocaleString(undefined, { maximumFractionDigits: digits }) : '-'
+const fmtList = (values: number[], digits = 4) => values.map((value) => fmt(value, digits)).join(' + ')
+const fmtPairs = (a: number[], b: number[], operator = 'x') => a.map((value, index) => `${fmt(value)} ${operator} ${fmt(b[index] ?? 0)}`).join(' + ')
 const emptyRow = (): SolverRow => ({ x: '', y: '', z: '', q: '' })
 const rowsFromPreset = (preset: Preset): SolverRow[] => preset.rows.map((row) => ({ x: String(row[0] ?? ''), y: String(row[1] ?? ''), z: String(row[2] ?? ''), q: String(row[3] ?? '') }))
 
 export function SolverPage() {
-  const first = presets[2]
+  const first = allSolverExamples[0] ?? presets[0]
   const [mode, setMode] = useState<SolverMode>(first.mode)
   const [labels, setLabels] = useState<[string, string, string, string]>([first.labels[0], first.labels[1], first.labels[2] ?? '', first.labels[3] ?? ''])
   const [rows, setRows] = useState(rowsFromPreset(first))
+  const [activeTab, setActiveTab] = useState<'solve' | 'steps'>('solve')
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>(() => ({ [solverCategories[0]?.id ?? '']: true }))
 
   const parsed = useMemo(() => {
     const pairs = rows
@@ -282,15 +416,12 @@ export function SolverPage() {
 
   const result = useMemo(() => solve(mode, parsed.x, parsed.y, parsed.z, parsed.q), [mode, parsed])
   const copy = modeCopy[mode]
-  const groupedPresets = useMemo(() => CATEGORY_ORDER.map((category) => ({
-    category,
-    items: presets.filter((preset) => categoryForMode(preset.mode) === category),
-  })), [])
 
   const loadPreset = (preset: Preset) => {
     setMode(preset.mode)
     setLabels([preset.labels[0], preset.labels[1], preset.labels[2] ?? '', preset.labels[3] ?? ''])
     setRows(rowsFromPreset(preset))
+    setActiveTab('solve')
   }
 
   const columns = getColumns(mode, labels)
@@ -310,7 +441,7 @@ export function SolverPage() {
               </p>
             </div>
             <div className="grid grid-cols-3 gap-2 text-center">
-              <Metric label="Presets" value={presets.length} />
+              <Metric label="Examples" value={allSolverExamples.length} />
               <Metric label="Rows" value={parsed.x.length} />
               <Metric label="Mode" value={copy.label} />
             </div>
@@ -348,74 +479,112 @@ export function SolverPage() {
                 <h2 className="font-bold text-slate-800 dark:text-white">Categorized Examples</h2>
               </div>
               <div className="space-y-4">
-                {groupedPresets.map(({ category, items }) => (
-                  <div key={category}>
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{category}</p>
-                      <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">{items.length} examples</span>
+                {solverCategories.map((category) => {
+                  const isOpen = openCategories[category.id]
+                  return (
+                    <div key={category.id} className="rounded-lg border border-slate-200 dark:border-slate-700">
+                      <button
+                        type="button"
+                        onClick={() => setOpenCategories((state) => ({ ...state, [category.id]: !state[category.id] }))}
+                        className="flex w-full items-start justify-between gap-3 px-3 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700/60"
+                      >
+                        <span className="flex min-w-0 gap-2">
+                          {isOpen ? <ChevronDown size={16} className="mt-0.5 shrink-0 text-slate-400" /> : <ChevronRight size={16} className="mt-0.5 shrink-0 text-slate-400" />}
+                          <span>
+                            <span className="block text-sm font-semibold text-slate-700 dark:text-slate-100">{category.title}</span>
+                            <span className="block text-xs text-slate-400">{category.description}</span>
+                          </span>
+                        </span>
+                        <span className="shrink-0 rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">{category.examples.length} examples</span>
+                      </button>
+                      {isOpen && (
+                        <div className="max-h-80 space-y-2 overflow-auto border-t border-slate-100 p-3 pr-2 dark:border-slate-700">
+                          {category.examples.map((preset) => (
+                            <button key={preset.id} onClick={() => loadPreset(preset)} className="w-full rounded-md border border-slate-200 px-3 py-2 text-left text-sm text-slate-600 hover:border-indigo-300 hover:bg-indigo-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700">
+                              <span className="block font-medium">{preset.title}</span>
+                              <span className="text-xs text-slate-400">{modeCopy[preset.mode].label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <div className="max-h-72 space-y-2 overflow-auto pr-1">
-                      {items.map((preset) => (
-                        <button key={preset.id} onClick={() => loadPreset(preset)} className="w-full rounded-md border border-slate-200 px-3 py-2 text-left text-sm text-slate-600 hover:border-indigo-300 hover:bg-indigo-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700">
-                          <span className="block font-medium">{preset.title}</span>
-                          <span className="text-xs text-slate-400">{modeCopy[preset.mode].label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           </section>
 
           <main className="space-y-5">
-            <section className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <Grid3X3 size={17} className="text-indigo-500" />
-                  <h2 className="font-bold text-slate-800 dark:text-white">Input Grid</h2>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => setRows((items) => [...items, emptyRow()])} className="rounded-md bg-indigo-600 px-3 py-2 text-xs text-white hover:bg-indigo-700">Add row</button>
-                  <button onClick={() => setRows(rows.slice(0, -1))} disabled={rows.length <= 2} className="rounded-md border border-slate-200 px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700">Remove row</button>
-                  <button onClick={() => setRows([emptyRow(), emptyRow(), emptyRow(), emptyRow()])} className="rounded-md border border-slate-200 px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700"><RotateCcw size={13} /></button>
-                </div>
-              </div>
-
-              <div className="mb-3 grid gap-3 sm:grid-cols-2">
-                {columns.map((column) => (
-                  <label key={column.key} className="text-xs text-slate-500">
-                    {column.name} label
-                    <input value={labels[column.index]} onChange={(event) => setLabels(updateLabel(labels, column.index, event.target.value))} className="input-select mt-1" />
-                  </label>
+            <div className="rounded-lg border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-800">
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  ['solve', 'Solve'],
+                  ['steps', 'Steps'],
+                ] as const).map(([tab, label]) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`rounded-md px-4 py-2 text-sm font-semibold transition ${activeTab === tab ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700'}`}
+                  >
+                    {label}
+                  </button>
                 ))}
               </div>
+            </div>
 
-              <div className="overflow-auto rounded-lg border border-slate-200 dark:border-slate-700">
-                <table className="w-full min-w-[640px] text-sm">
-                  <thead className="bg-slate-50 dark:bg-slate-900">
-                    <tr>
-                      <th className="w-16 px-3 py-2 text-left text-slate-500">No.</th>
-                      {columns.map((column) => <th key={column.key} className="px-3 py-2 text-left text-slate-500">{column.name}</th>)}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                    {rows.map((row, index) => (
-                      <tr key={index}>
-                        <td className="px-3 py-2 text-slate-400">{index + 1}</td>
-                        {columns.map((column) => (
-                          <td key={column.key} className="px-3 py-2">
-                            <input value={row[column.key]} onChange={(event) => setRows(updateRow(rows, index, column.key, event.target.value))} className="w-full rounded border border-slate-200 bg-white px-2 py-1.5 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" />
-                          </td>
-                        ))}
-                      </tr>
+            {activeTab === 'solve' ? (
+              <>
+                <section className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <Grid3X3 size={17} className="text-indigo-500" />
+                      <h2 className="font-bold text-slate-800 dark:text-white">Input Grid</h2>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => setRows((items) => [...items, emptyRow()])} className="rounded-md bg-indigo-600 px-3 py-2 text-xs text-white hover:bg-indigo-700">Add row</button>
+                      <button onClick={() => setRows(rows.slice(0, -1))} disabled={rows.length <= 2} className="rounded-md border border-slate-200 px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700">Remove row</button>
+                      <button onClick={() => setRows([emptyRow(), emptyRow(), emptyRow(), emptyRow()])} className="rounded-md border border-slate-200 px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700"><RotateCcw size={13} /></button>
+                    </div>
+                  </div>
+
+                  <div className="mb-3 grid gap-3 sm:grid-cols-2">
+                    {columns.map((column) => (
+                      <label key={column.key} className="text-xs text-slate-500">
+                        {column.name} label
+                        <input value={labels[column.index]} onChange={(event) => setLabels(updateLabel(labels, column.index, event.target.value))} className="input-select mt-1" />
+                      </label>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
+                  </div>
 
-            <ResultPanel result={result} mode={mode} labels={labels} />
+                  <div className="overflow-auto rounded-lg border border-slate-200 dark:border-slate-700">
+                    <table className="w-full min-w-[640px] text-sm">
+                      <thead className="bg-slate-50 dark:bg-slate-900">
+                        <tr>
+                          <th className="w-16 px-3 py-2 text-left text-slate-500">No.</th>
+                          {columns.map((column) => <th key={column.key} className="px-3 py-2 text-left text-slate-500">{column.name}</th>)}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                        {rows.map((row, index) => (
+                          <tr key={index}>
+                            <td className="px-3 py-2 text-slate-400">{index + 1}</td>
+                            {columns.map((column) => (
+                              <td key={column.key} className="px-3 py-2">
+                                <input value={row[column.key]} onChange={(event) => setRows(updateRow(rows, index, column.key, event.target.value))} className="w-full rounded border border-slate-200 bg-white px-2 py-1.5 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" />
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+
+                <ResultPanel result={result} mode={mode} labels={labels} />
+              </>
+            ) : (
+              <StepsPanel result={result} mode={mode} labels={labels} />
+            )}
           </main>
         </div>
       </div>
@@ -496,39 +665,55 @@ function solve(mode: SolverMode, x: number[], y: number[], z: number[], q: numbe
 
 function pairedStats(x: number[], y: number[]) {
   const n = x.length
-  const meanX = x.reduce((sum, value) => sum + value, 0) / n
-  const meanY = y.reduce((sum, value) => sum + value, 0) / n
+  const sumX = x.reduce((sum, value) => sum + value, 0)
+  const sumY = y.reduce((sum, value) => sum + value, 0)
+  const meanX = sumX / n
+  const meanY = sumY / n
   let sumXY = 0
   let sumX2 = 0
   let sumY2 = 0
+  const dx: number[] = []
+  const dy: number[] = []
+  const dxdy: number[] = []
+  const dx2: number[] = []
+  const dy2: number[] = []
   x.forEach((value, index) => {
-    const dx = value - meanX
-    const dy = y[index] - meanY
-    sumXY += dx * dy
-    sumX2 += dx * dx
-    sumY2 += dy * dy
+    const currentDx = value - meanX
+    const currentDy = y[index] - meanY
+    dx.push(currentDx)
+    dy.push(currentDy)
+    dxdy.push(currentDx * currentDy)
+    dx2.push(currentDx * currentDx)
+    dy2.push(currentDy * currentDy)
+    sumXY += currentDx * currentDy
+    sumX2 += currentDx * currentDx
+    sumY2 += currentDy * currentDy
   })
   const r = sumXY / Math.sqrt(sumX2 * sumY2)
-  return { n, meanX, meanY, sumXY, sumX2, sumY2, r }
+  return { n, x, y, sumX, sumY, meanX, meanY, dx, dy, dxdy, dx2, dy2, sumXY, sumX2, sumY2, r }
 }
 
 function solveSdRaw(x: number[]) {
   if (x.length < 2) return { error: 'Enter at least two values.' }
   const n = x.length
-  const mean = x.reduce((sum, value) => sum + value, 0) / n
-  const sumD2 = x.reduce((sum, value) => sum + (value - mean) ** 2, 0)
+  const sumX = x.reduce((sum, value) => sum + value, 0)
+  const mean = sumX / n
+  const d2 = x.map((value) => (value - mean) ** 2)
+  const sumD2 = d2.reduce((sum, value) => sum + value, 0)
   const variance = sumD2 / n
-  return { kind: 'sd' as const, n, mean, sumD2, variance, sd: Math.sqrt(variance) }
+  return { kind: 'sd' as const, x, n, sumX, mean, d2, sumD2, variance, sd: Math.sqrt(variance) }
 }
 
 function solveSdFrequency(x: number[], f: number[]) {
   if (x.length !== f.length || x.length < 2) return { error: 'Enter valid value-frequency pairs.' }
   const n = f.reduce((sum, value) => sum + value, 0)
-  const sumFx = x.reduce((sum, value, index) => sum + value * f[index], 0)
+  const fx = x.map((value, index) => value * f[index])
+  const sumFx = fx.reduce((sum, value) => sum + value, 0)
   const mean = sumFx / n
-  const sumFd2 = x.reduce((sum, value, index) => sum + f[index] * (value - mean) ** 2, 0)
+  const fd2 = x.map((value, index) => f[index] * (value - mean) ** 2)
+  const sumFd2 = fd2.reduce((sum, value) => sum + value, 0)
   const variance = sumFd2 / n
-  return { kind: 'sd-frequency' as const, n, mean, sumFx, sumD2: sumFd2, variance, sd: Math.sqrt(variance) }
+  return { kind: 'sd-frequency' as const, x, f, n, fx, mean, sumFx, fd2, sumD2: sumFd2, variance, sd: Math.sqrt(variance) }
 }
 
 function solveSdFromSums(sumX: number[], sumX2: number[], nValues: number[]) {
@@ -537,7 +722,7 @@ function solveSdFromSums(sumX: number[], sumX2: number[], nValues: number[]) {
     const n = nValues[index]
     const mean = sx / n
     const variance = sumX2[index] / n - mean ** 2
-    return { n, mean, variance, sd: Math.sqrt(Math.max(0, variance)) }
+    return { sumX: sx, sumX2: sumX2[index], n, mean, variance, sd: Math.sqrt(Math.max(0, variance)) }
   })
   return { kind: 'sd-sums' as const, rows }
 }
@@ -569,13 +754,15 @@ function solveMoreThanCumulativeSd(lower: number[], cumulative: number[]) {
 
 function groupedStats(x: number[], f: number[]) {
   const n = f.reduce((sum, value) => sum + value, 0)
-  const sumFx = x.reduce((sum, value, index) => sum + value * f[index], 0)
+  const fx = x.map((value, index) => value * f[index])
+  const sumFx = fx.reduce((sum, value) => sum + value, 0)
   const mean = sumFx / n
-  const sumD2 = x.reduce((sum, value, index) => sum + f[index] * (value - mean) ** 2, 0)
+  const fd2 = x.map((value, index) => f[index] * (value - mean) ** 2)
+  const sumD2 = fd2.reduce((sum, value) => sum + value, 0)
   const variance = sumD2 / n
   const sd = Math.sqrt(variance)
   const cv = mean ? sd / mean * 100 : NaN
-  return { n, mean, sumFx, sumD2, variance, sd, cv }
+  return { n, mean, fx, sumFx, fd2, sumD2, variance, sd, cv }
 }
 
 function solveIndex(mode: SolverMode, p0: number[], p1: number[], w: number[], q1: number[]) {
@@ -606,7 +793,7 @@ function solveIndex(mode: SolverMode, p0: number[], p1: number[], w: number[], q
               : mode === 'index-edgeworth-marshall' ? edgeworthMarshall
                 : mode === 'quantity-index-fisher' ? quantityFisher
                   : fisher
-  return { kind: 'index' as const, n: p0.length, sumP0, sumP1, simpleAggregative, simpleRelative, weightedAggregative, weightedRelative: weighted, laspeyres, paasche, fisher, edgeworthMarshall, quantityLaspeyres, quantityPaasche, quantityFisher, value, relatives }
+  return { kind: 'index' as const, n: p0.length, p0, p1, w, q1, sumP0, sumP1, simpleAggregative, simpleRelative, weightedAggregative, weightedRelative: weighted, laspeyres, paasche, fisher, edgeworthMarshall, quantityLaspeyres, quantityPaasche, quantityFisher, value, relatives }
 }
 
 function solveGroupedMode(lower: number[], upper: number[], frequency: number[]) {
@@ -618,7 +805,7 @@ function solveGroupedMode(lower: number[], upper: number[], frequency: number[])
   const f1 = frequency[modalIndex - 1] ?? 0
   const f2 = frequency[modalIndex + 1] ?? 0
   const mode = l + ((fm - f1) / (2 * fm - f1 - f2)) * h
-  return { kind: 'mode' as const, modalIndex, l, h, fm, f1, f2, mode }
+  return { kind: 'mode' as const, lower, upper, frequency, modalIndex, l, h, fm, f1, f2, mode }
 }
 
 function solveSpearmanRank(x: number[], y: number[]) {
@@ -629,7 +816,7 @@ function solveSpearmanRank(x: number[], y: number[]) {
   const sumD2 = d2.reduce((sum, value) => sum + value, 0)
   const n = x.length
   const rho = 1 - (6 * sumD2) / (n * (n ** 2 - 1))
-  return { kind: 'spearman' as const, n, rankX, rankY, d2, sumD2, rho }
+  return { kind: 'spearman' as const, x, y, n, rankX, rankY, d2, sumD2, rho }
 }
 
 function ranksDescending(values: number[]) {
@@ -664,11 +851,152 @@ function solveGeometricMeanFrequency(x: number[], f: number[]) {
   const n = f.reduce((sum, value) => sum + value, 0)
   const sumFLog = x.reduce((sum, value, index) => sum + f[index] * Math.log10(value), 0)
   const gm = 10 ** (sumFLog / n)
-  return { kind: 'gm-frequency' as const, n, sumFLog, gm }
+  const fLogX = x.map((value, index) => f[index] * Math.log10(value))
+  return { kind: 'gm-frequency' as const, x, f, n, fLogX, sumFLog, gm }
 }
 
 function sumProduct(a: number[], b: number[]) {
   return a.reduce((sum, value, index) => sum + value * (b[index] ?? 0), 0)
+}
+
+function StepsPanel({ result, mode, labels }: { result: ReturnType<typeof solve>; mode: SolverMode; labels: [string, string, string, string] }) {
+  const steps = getWorkedSteps(result, mode, labels)
+
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
+      <div className="mb-4 flex items-center gap-2">
+        <Sigma size={17} className="text-indigo-500" />
+        <h2 className="font-bold text-slate-800 dark:text-white">Steps</h2>
+      </div>
+      <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-900/60">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{modeCopy[mode].label}</p>
+        <p className="mt-2 font-mono text-sm text-slate-700 dark:text-slate-200">{modeCopy[mode].formula}</p>
+      </div>
+      <div className="mt-5 grid gap-4">
+        {steps.map((step, index) => (
+          <div key={`${index}-${step.title}`} className="rounded-lg border border-slate-200 p-4 dark:border-slate-700">
+            <div className="mb-2 flex items-center gap-3">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white">{index + 1}</span>
+              <h3 className="font-semibold text-slate-800 dark:text-white">{step.title}</h3>
+            </div>
+            <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">{step.detail}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function getWorkedSteps(result: ReturnType<typeof solve>, mode: SolverMode, labels: [string, string, string, string]) {
+  const baseSteps = modeCopy[mode].guide.map((detail, index) => ({ title: `Method step ${index + 1}`, detail }))
+
+  if ('error' in result) {
+    return [
+      ...baseSteps,
+      { title: 'Enter complete data', detail: result.error },
+    ]
+  }
+
+  if ('kind' in result) {
+    if (result.kind === 'sd' || result.kind === 'sd-frequency') {
+      return [
+        { title: 'Count observations', detail: `N = ${fmt(result.n)}.` },
+        { title: 'Find the mean', detail: `Mean = ${fmt(result.mean)}.` },
+        { title: 'Add squared deviations', detail: `sum d^2 = ${fmt(result.sumD2)}.` },
+        { title: 'Calculate variance and SD', detail: `Variance = ${fmt(result.variance)}; standard deviation = sqrt(${fmt(result.variance)}) = ${fmt(result.sd)}.` },
+      ]
+    }
+    if (result.kind === 'sd-sums') {
+      return result.rows.flatMap((row, index) => [
+        { title: `Variable ${index + 1}: find mean`, detail: `Mean = sum X / N = ${fmt(row.mean)}.` },
+        { title: `Variable ${index + 1}: find SD`, detail: `Variance = sum X^2 / N - mean^2 = ${fmt(row.variance)}; SD = ${fmt(row.sd)}.` },
+      ])
+    }
+    if (result.kind === 'grouped-sd') {
+      return [
+        { title: 'Convert classes to midpoints', detail: `Use each class midpoint with its frequency. Total frequency N = ${fmt(result.n)}.` },
+        { title: 'Find grouped mean', detail: `Mean = sum(fm) / N = ${fmt(result.sumFx)} / ${fmt(result.n)} = ${fmt(result.mean)}.` },
+        { title: 'Find grouped SD', detail: `sum f(m - mean)^2 = ${fmt(result.sumD2)}; SD = ${fmt(result.sd)}.` },
+        { title: 'Find coefficient', detail: `Coefficient of variation = SD / Mean x 100 = ${fmt(result.cv)}%.` },
+      ]
+    }
+    if (result.kind === 'index') {
+      return [
+        { title: 'Calculate price relatives and totals', detail: `Simple aggregative index = sum(P1) / sum(P0) x 100 = ${fmt(result.simpleAggregative)}.` },
+        { title: 'Apply weights if given', detail: `Weighted aggregative or Laspeyres value = ${fmt(result.weightedAggregative)}; weighted average relative = ${fmt(result.weightedRelative)}.` },
+        { title: 'Use current quantities if required', detail: `Paasche = ${fmt(result.paasche)}; Edgeworth-Marshall = ${fmt(result.edgeworthMarshall)}.` },
+        { title: 'Pick the selected answer', detail: `${modeCopy[mode].label} = ${fmt(result.value)}.` },
+      ]
+    }
+    if (result.kind === 'mode') {
+      return [
+        { title: 'Find modal class', detail: `Highest frequency is fm = ${fmt(result.fm)}. Its lower limit L = ${fmt(result.l)} and class width h = ${fmt(result.h)}.` },
+        { title: 'Find neighboring frequencies', detail: `Previous frequency f1 = ${fmt(result.f1)} and next frequency f2 = ${fmt(result.f2)}.` },
+        { title: 'Substitute in formula', detail: `Mode = L + [(fm - f1) / (2fm - f1 - f2)]h = ${fmt(result.mode)}.` },
+      ]
+    }
+    if (result.kind === 'spearman') {
+      return [
+        { title: 'Rank both series', detail: `Assign ranks to both columns and find d = rank X - rank Y for each pair.` },
+        { title: 'Square rank differences', detail: `sum d^2 = ${fmt(result.sumD2)} for n = ${result.n}.` },
+        { title: 'Apply Spearman formula', detail: `rho = 1 - [6 x ${fmt(result.sumD2)}] / [${result.n}(${result.n}^2 - 1)] = ${fmt(result.rho)}.` },
+      ]
+    }
+    if (result.kind === 'correlation-summary') {
+      return [
+        { title: 'Use the given summary totals', detail: `sum dx^2 = ${fmt(result.sumX2)}, sum dy^2 = ${fmt(result.sumY2)}, sum dxdy = ${fmt(result.sumXY)}.` },
+        { title: 'Calculate correlation', detail: `r = ${fmt(result.sumXY)} / sqrt(${fmt(result.sumX2)} x ${fmt(result.sumY2)}) = ${fmt(result.r)}.` },
+        { title: 'Calculate probable error', detail: `PE = 0.6745(1 - r^2) / sqrt(N) = ${fmt(result.probableError)}.` },
+      ]
+    }
+    if (result.kind === 'regression-correlation') {
+      return [
+        { title: 'Multiply regression coefficients', detail: `bxy x byx = ${fmt(result.bxy)} x ${fmt(result.byx)} = ${fmt(result.product)}.` },
+        { title: 'Take square root', detail: `r = +/- sqrt(${fmt(result.product)}) = ${fmt(result.r)}. The sign follows the common sign of the coefficients.` },
+      ]
+    }
+    if (result.kind === 'gm-frequency') {
+      return [
+        { title: 'Take logs', detail: `Multiply each log(X) by its frequency and add: sum(f log X) = ${fmt(result.sumFLog)}.` },
+        { title: 'Divide by total frequency', detail: `N = ${fmt(result.n)}; mean log = ${fmt(result.sumFLog / result.n)}.` },
+        { title: 'Take antilog', detail: `Geometric mean = ${fmt(result.gm)}.` },
+      ]
+    }
+  }
+
+  if (mode === 'concurrent' && 'coefficient' in result) {
+    return [
+      { title: 'Compare movement row by row', detail: `Ignore the first row, then mark each later row as increase or decrease for both series.` },
+      { title: 'Count concurrent deviations', detail: `C = ${result.concurrent}; comparisons N = ${result.comparisons}.` },
+      { title: 'Apply formula', detail: `Coefficient = +/- sqrt(|2C - N| / N) = ${fmt(result.coefficient)}.` },
+    ]
+  }
+
+  if (mode === 'trend' && 'trendValues' in result) {
+    return [
+      { title: 'Code the time series', detail: `Use ${labels[0] || 'X'} around center ${fmt(result.center)} and keep ${labels[1] || 'Y'} as the observed values.` },
+      { title: 'Find slope and intercept', detail: `Slope b = ${fmt(result.slope)}; intercept a = ${fmt(result.intercept)}.` },
+      { title: 'Write trend equation', detail: `Yc = ${fmt(result.intercept)} + ${fmt(result.slope)}X.` },
+      { title: 'Calculate trend values', detail: `Substitute each X value into the equation to get the fitted trend values.` },
+    ]
+  }
+
+  if ((mode === 'regression-yx' || mode === 'regression-coeff-yx' || mode === 'regression-both') && 'slope' in result && 'slopeXOnY' in result && 'interceptXOnY' in result) {
+    const steps = [
+      { title: 'Find means', detail: `Mean ${labels[0] || 'X'} = ${fmt(result.meanX)}; Mean ${labels[1] || 'Y'} = ${fmt(result.meanY)}.` },
+      { title: 'Calculate deviation sums', detail: `sum dxdy = ${fmt(result.sumXY)}; sum dx^2 = ${fmt(result.sumX2)}; sum dy^2 = ${fmt(result.sumY2)}.` },
+      { title: 'Find Y on X equation', detail: `b_yx = ${fmt(result.slope)} and a = ${fmt(result.intercept)}; equation: Y = ${fmt(result.intercept)} + ${fmt(result.slope)}X.` },
+    ]
+    if (mode === 'regression-both' && 'slopeXOnY' in result && 'interceptXOnY' in result) steps.push({ title: 'Find X on Y equation', detail: `b_xy = ${fmt(result.slopeXOnY)} and a = ${fmt(result.interceptXOnY)}; equation: X = ${fmt(result.interceptXOnY)} + ${fmt(result.slopeXOnY)}Y.` })
+    return steps
+  }
+
+  return [
+    { title: 'Find means', detail: `Mean ${labels[0] || 'X'} = ${fmt(result.meanX)}; Mean ${labels[1] || 'Y'} = ${fmt(result.meanY)}.` },
+    { title: 'Calculate deviation totals', detail: `sum dxdy = ${fmt(result.sumXY)}, sum dx^2 = ${fmt(result.sumX2)}, sum dy^2 = ${fmt(result.sumY2)}.` },
+    { title: 'Apply Pearson formula', detail: `r = ${fmt(result.sumXY)} / sqrt(${fmt(result.sumX2)} x ${fmt(result.sumY2)}) = ${fmt(result.r)}.` },
+    { title: 'Interpret answer', detail: interpret(mode, result.r) },
+  ]
 }
 
 function ResultPanel({ result, mode, labels }: { result: ReturnType<typeof solve>; mode: SolverMode; labels: [string, string, string, string] }) {
@@ -698,14 +1026,14 @@ function ResultPanel({ result, mode, labels }: { result: ReturnType<typeof solve
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Metric label="n" value={result.n} />
-        <Metric label={`Mean ${labels[0] || 'X'}`} value={fmt(result.meanX)} />
-        <Metric label={`Mean ${labels[1] || 'Y'}`} value={fmt(result.meanY)} />
-        {!concurrentResult && !trendResult && <Metric label="Pearson r" value={fmt(result.r)} />}
-        {concurrentResult && <Metric label="Concurrent coefficient" value={fmt(concurrentResult.coefficient)} />}
-        {trendResult && <Metric label="Trend equation" value={`Yc = ${fmt(trendResult.intercept)} + ${fmt(trendResult.slope)}X`} />}
-        {regressionResult && <Metric label="Regression equation" value={`Y = ${fmt(regressionResult.intercept)} + ${fmt(regressionResult.slope)}X`} />}
-        {mode === 'regression-both' && regressionResult && <Metric label="X on Y equation" value={`X = ${fmt(regressionResult.interceptXOnY)} + ${fmt(regressionResult.slopeXOnY)}Y`} />}
+        <Metric label="n" value={result.n} detail={`${labels[0] || 'X'} values: ${fmtList(result.x)}. ${labels[1] || 'Y'} values: ${fmtList(result.y)}. Valid paired rows = ${result.n}.`} />
+        <Metric label={`Mean ${labels[0] || 'X'}`} value={fmt(result.meanX)} detail={`sum ${labels[0] || 'X'} = ${fmtList(result.x)} = ${fmt(result.sumX)}; mean = ${fmt(result.sumX)} / ${result.n} = ${fmt(result.meanX)}.`} />
+        <Metric label={`Mean ${labels[1] || 'Y'}`} value={fmt(result.meanY)} detail={`sum ${labels[1] || 'Y'} = ${fmtList(result.y)} = ${fmt(result.sumY)}; mean = ${fmt(result.sumY)} / ${result.n} = ${fmt(result.meanY)}.`} />
+        {!concurrentResult && !trendResult && <Metric label="Pearson r" value={fmt(result.r)} detail={`dxdy values: ${fmtList(result.dxdy)} = ${fmt(result.sumXY)}. dx^2 values: ${fmtList(result.dx2)} = ${fmt(result.sumX2)}. dy^2 values: ${fmtList(result.dy2)} = ${fmt(result.sumY2)}. r = ${fmt(result.sumXY)} / sqrt(${fmt(result.sumX2)} x ${fmt(result.sumY2)}) = ${fmt(result.r)}.`} />}
+        {concurrentResult && <Metric label="Concurrent coefficient" value={fmt(concurrentResult.coefficient)} detail={`Input pairs: ${result.x.map((value, index) => `(${fmt(value)}, ${fmt(result.y[index])})`).join(', ')}. Same-direction changes C = ${concurrentResult.concurrent}; usable comparisons N = ${concurrentResult.comparisons}; coefficient = +/- sqrt(|2C - N| / N) = ${fmt(concurrentResult.coefficient)}.`} />}
+        {trendResult && <Metric label="Trend equation" value={`Yc = ${fmt(trendResult.intercept)} + ${fmt(trendResult.slope)}X`} detail={`Using years ${fmtList(result.x)} and values ${fmtList(result.y)}. Center = ${fmt(trendResult.center)}; slope b = ${fmt(trendResult.slope)}; intercept a = ${fmt(result.meanY)} - ${fmt(trendResult.slope)} x ${fmt(trendResult.center)} = ${fmt(trendResult.intercept)}.`} />}
+        {regressionResult && <Metric label="Regression equation" value={`Y = ${fmt(regressionResult.intercept)} + ${fmt(regressionResult.slope)}X`} detail={`From input X: ${fmtList(result.x)} and Y: ${fmtList(result.y)}. b_yx = sum(dxdy) / sum(dx^2) = ${fmt(result.sumXY)} / ${fmt(result.sumX2)} = ${fmt(regressionResult.slope)}; a = ${fmt(result.meanY)} - ${fmt(regressionResult.slope)} x ${fmt(result.meanX)} = ${fmt(regressionResult.intercept)}.`} />}
+        {mode === 'regression-both' && regressionResult && <Metric label="X on Y equation" value={`X = ${fmt(regressionResult.interceptXOnY)} + ${fmt(regressionResult.slopeXOnY)}Y`} detail={`b_xy = sum(dxdy) / sum(dy^2) = ${fmt(result.sumXY)} / ${fmt(result.sumY2)} = ${fmt(regressionResult.slopeXOnY)}; a = ${fmt(result.meanX)} - ${fmt(regressionResult.slopeXOnY)} x ${fmt(result.meanY)} = ${fmt(regressionResult.interceptXOnY)}.`} />}
       </div>
 
       <div className="mt-4 rounded-lg bg-slate-50 p-4 dark:bg-slate-900/60">
@@ -748,10 +1076,10 @@ function SdResult({ result }: { result: ReturnType<typeof solveSdRaw> | ReturnTy
     <section className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
       <div className="mb-4 flex items-center gap-2"><CheckCircle2 size={17} className="text-emerald-500" /><h2 className="font-bold text-slate-800 dark:text-white">Calculated Answer</h2></div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Metric label="N" value={fmt(result.n)} />
-        <Metric label="Mean" value={fmt(result.mean)} />
-        <Metric label="Variance" value={fmt(result.variance)} />
-        <Metric label="Standard deviation" value={fmt(result.sd)} />
+        <Metric label="N" value={fmt(result.n)} detail={result.kind === 'sd-frequency' ? `Frequencies: ${fmtList(result.f)}; N = ${fmtList(result.f)} = ${fmt(result.n)}.` : `Values: ${fmtList(result.x)}; N = ${result.x.length}.`} />
+        <Metric label="Mean" value={fmt(result.mean)} detail={result.kind === 'sd-frequency' ? `fx values: ${fmtList(result.fx)} = ${fmt(result.sumFx)}; mean = ${fmt(result.sumFx)} / ${fmt(result.n)} = ${fmt(result.mean)}.` : `sum X = ${fmtList(result.x)} = ${fmt(result.sumX)}; mean = ${fmt(result.sumX)} / ${fmt(result.n)} = ${fmt(result.mean)}.`} />
+        <Metric label="Variance" value={fmt(result.variance)} detail={result.kind === 'sd-frequency' ? `f(x - mean)^2 values: ${fmtList(result.fd2)} = ${fmt(result.sumD2)}; variance = ${fmt(result.sumD2)} / ${fmt(result.n)} = ${fmt(result.variance)}.` : `(x - mean)^2 values: ${fmtList(result.d2)} = ${fmt(result.sumD2)}; variance = ${fmt(result.sumD2)} / ${fmt(result.n)} = ${fmt(result.variance)}.`} />
+        <Metric label="Standard deviation" value={fmt(result.sd)} detail={`Standard deviation = sqrt(${fmt(result.variance)}) = ${fmt(result.sd)}.`} />
       </div>
       <div className="mt-4 rounded-lg bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-900/60 dark:text-slate-300">
         sum of squared deviations = {fmt(result.sumD2)}; standard deviation = sqrt({fmt(result.variance)}) = {fmt(result.sd)}.
@@ -770,9 +1098,9 @@ function SdSumsResult({ result }: { result: ReturnType<typeof solveSdFromSums> }
           <div key={index} className="rounded-lg bg-slate-50 p-4 dark:bg-slate-900/60">
             <p className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200">Variable {index + 1}</p>
             <div className="grid gap-2 sm:grid-cols-3">
-              <Metric label="Mean" value={fmt(row.mean)} />
-              <Metric label="Variance" value={fmt(row.variance)} />
-              <Metric label="SD" value={fmt(row.sd)} />
+              <Metric label="Mean" value={fmt(row.mean)} detail={`Input sum X = ${fmt(row.sumX)}, N = ${fmt(row.n)}; mean = ${fmt(row.sumX)} / ${fmt(row.n)} = ${fmt(row.mean)}.`} />
+              <Metric label="Variance" value={fmt(row.variance)} detail={`Input sum X^2 = ${fmt(row.sumX2)}; variance = (${fmt(row.sumX2)} / ${fmt(row.n)}) - ${fmt(row.mean)}^2 = ${fmt(row.variance)}.`} />
+              <Metric label="SD" value={fmt(row.sd)} detail={`SD = sqrt(${fmt(row.variance)}) = ${fmt(row.sd)}.`} />
             </div>
           </div>
         ))}
@@ -787,11 +1115,11 @@ function GroupedSdResult({ result }: { result: ReturnType<typeof solveClassFrequ
     <section className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
       <div className="mb-4 flex items-center gap-2"><CheckCircle2 size={17} className="text-emerald-500" /><h2 className="font-bold text-slate-800 dark:text-white">Calculated Answer</h2></div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <Metric label="N" value={fmt(result.n)} />
-        <Metric label="Mean" value={fmt(result.mean)} />
-        <Metric label="Variance" value={fmt(result.variance)} />
-        <Metric label="SD" value={fmt(result.sd)} />
-        <Metric label="Coefficient" value={`${fmt(result.cv)}%`} />
+        <Metric label="N" value={fmt(result.n)} detail={`Frequencies used: ${fmtList(result.frequency)}; N = ${fmtList(result.frequency)} = ${fmt(result.n)}.`} />
+        <Metric label="Mean" value={fmt(result.mean)} detail={`Midpoints: ${fmtList(result.midpoints)}. f x midpoint values: ${fmtList(result.fx)} = ${fmt(result.sumFx)}; mean = ${fmt(result.sumFx)} / ${fmt(result.n)} = ${fmt(result.mean)}.`} />
+        <Metric label="Variance" value={fmt(result.variance)} detail={`f(midpoint - mean)^2 values: ${fmtList(result.fd2)} = ${fmt(result.sumD2)}; variance = ${fmt(result.sumD2)} / ${fmt(result.n)} = ${fmt(result.variance)}.`} />
+        <Metric label="SD" value={fmt(result.sd)} detail={`SD = sqrt(${fmt(result.variance)}) = ${fmt(result.sd)}.`} />
+        <Metric label="Coefficient" value={`${fmt(result.cv)}%`} detail={`Coefficient of variation = SD / Mean x 100 = ${fmt(result.cv)}%.`} />
       </div>
       <div className="mt-4 rounded-lg bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-900/60 dark:text-slate-300">
         Uses class midpoints and frequencies. Coefficient means coefficient of variation: SD / Mean x 100.
@@ -806,21 +1134,21 @@ function IndexResult({ result, mode }: { result: ReturnType<typeof solveIndex>; 
     <section className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
       <div className="mb-4 flex items-center gap-2"><CheckCircle2 size={17} className="text-emerald-500" /><h2 className="font-bold text-slate-800 dark:text-white">Calculated Answer</h2></div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Metric label="Index number" value={fmt(result.value)} />
-        <Metric label="Simple aggregative" value={fmt(result.simpleAggregative)} />
-        <Metric label="Simple avg relatives" value={fmt(result.simpleRelative)} />
-        <Metric label="Fisher" value={fmt(result.fisher)} />
+        <Metric label="Index number" value={fmt(result.value)} detail={`Selected method is ${modeCopy[mode].label}. Base prices: ${fmtList(result.p0)}; current prices: ${fmtList(result.p1)}; calculated value = ${fmt(result.value)}.`} />
+        <Metric label="Simple aggregative" value={fmt(result.simpleAggregative)} detail={`sum P0 = ${fmtList(result.p0)} = ${fmt(result.sumP0)}. sum P1 = ${fmtList(result.p1)} = ${fmt(result.sumP1)}. Index = ${fmt(result.sumP1)} / ${fmt(result.sumP0)} x 100 = ${fmt(result.simpleAggregative)}.`} />
+        <Metric label="Simple avg relatives" value={fmt(result.simpleRelative)} detail={`Price relatives P1/P0 x 100: ${fmtList(result.relatives)}. Average = ${fmt(result.simpleRelative)}.`} />
+        <Metric label="Fisher" value={fmt(result.fisher)} detail={`Using base quantities ${fmtList(result.w)} and current quantities ${fmtList(result.q1)}. Fisher = sqrt(Laspeyres x Paasche) = sqrt(${fmt(result.laspeyres)} x ${fmt(result.paasche)}) = ${fmt(result.fisher)}.`} />
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <Metric label="Weighted aggregative / Laspeyres" value={fmt(result.weightedAggregative)} />
-        <Metric label="Weighted avg relatives" value={fmt(result.weightedRelative)} />
-        <Metric label="Paasche" value={fmt(result.paasche)} />
+        <Metric label="Weighted aggregative / Laspeyres" value={fmt(result.weightedAggregative)} detail={`Weights/base quantities W: ${fmtList(result.w)}. P1W = ${fmtPairs(result.p1, result.w)} = ${fmt(sumProduct(result.p1, result.w))}; P0W = ${fmtPairs(result.p0, result.w)} = ${fmt(sumProduct(result.p0, result.w))}; index = ${fmt(result.weightedAggregative)}.`} />
+        <Metric label="Weighted avg relatives" value={fmt(result.weightedRelative)} detail={`Relatives: ${fmtList(result.relatives)}; weights: ${fmtList(result.w)}. sum(RW) = ${fmt(sumProduct(result.relatives, result.w))}; sum(W) = ${fmt(result.w.reduce((sum, value) => sum + value, 0))}; weighted relative = ${fmt(result.weightedRelative)}.`} />
+        <Metric label="Paasche" value={fmt(result.paasche)} detail={`Current quantities Q1: ${fmtList(result.q1)}. P1Q1 = ${fmtPairs(result.p1, result.q1)} = ${fmt(sumProduct(result.p1, result.q1))}; P0Q1 = ${fmtPairs(result.p0, result.q1)} = ${fmt(sumProduct(result.p0, result.q1))}; Paasche = ${fmt(result.paasche)}.`} />
       </div>
       <div className="mt-3 grid gap-3 sm:grid-cols-4">
-        <Metric label="Edgeworth-Marshall" value={fmt(result.edgeworthMarshall)} />
-        <Metric label="Quantity Laspeyres" value={fmt(result.quantityLaspeyres)} />
-        <Metric label="Quantity Paasche" value={fmt(result.quantityPaasche)} />
-        <Metric label="Quantity Fisher" value={fmt(result.quantityFisher)} />
+        <Metric label="Edgeworth-Marshall" value={fmt(result.edgeworthMarshall)} detail={`Use P0 ${fmtList(result.p0)}, P1 ${fmtList(result.p1)}, Q0 ${fmtList(result.w)}, Q1 ${fmtList(result.q1)}. sum[P1(Q0 + Q1)] / sum[P0(Q0 + Q1)] x 100 = ${fmt(result.edgeworthMarshall)}.`} />
+        <Metric label="Quantity Laspeyres" value={fmt(result.quantityLaspeyres)} detail={`Q1P0 = ${fmtPairs(result.q1, result.p0)} = ${fmt(sumProduct(result.q1, result.p0))}; Q0P0 = ${fmtPairs(result.w, result.p0)} = ${fmt(sumProduct(result.w, result.p0))}; index = ${fmt(result.quantityLaspeyres)}.`} />
+        <Metric label="Quantity Paasche" value={fmt(result.quantityPaasche)} detail={`Q1P1 = ${fmtPairs(result.q1, result.p1)} = ${fmt(sumProduct(result.q1, result.p1))}; Q0P1 = ${fmtPairs(result.w, result.p1)} = ${fmt(sumProduct(result.w, result.p1))}; index = ${fmt(result.quantityPaasche)}.`} />
+        <Metric label="Quantity Fisher" value={fmt(result.quantityFisher)} detail={`sqrt(quantity Laspeyres x quantity Paasche) = sqrt(${fmt(result.quantityLaspeyres)} x ${fmt(result.quantityPaasche)}) = ${fmt(result.quantityFisher)}.`} />
       </div>
       <div className="mt-4 rounded-lg bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-900/60 dark:text-slate-300">
         Selected method: {modeCopy[mode].label}. Index above 100 means the current price level is higher than the base level; below 100 means lower.
@@ -835,10 +1163,10 @@ function ModeResult({ result }: { result: ReturnType<typeof solveGroupedMode> })
     <section className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
       <div className="mb-4 flex items-center gap-2"><CheckCircle2 size={17} className="text-emerald-500" /><h2 className="font-bold text-slate-800 dark:text-white">Calculated Answer</h2></div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Metric label="Modal class lower L" value={fmt(result.l)} />
-        <Metric label="Class width h" value={fmt(result.h)} />
-        <Metric label="fm, f1, f2" value={`${fmt(result.fm)}, ${fmt(result.f1)}, ${fmt(result.f2)}`} />
-        <Metric label="Mode" value={fmt(result.mode)} />
+        <Metric label="Modal class lower L" value={fmt(result.l)} detail={`Classes: ${result.lower.map((value, index) => `${fmt(value)}-${fmt(result.upper[index])}`).join(', ')}. Frequencies: ${fmtList(result.frequency)}. Highest frequency is at class ${fmt(result.lower[result.modalIndex])}-${fmt(result.upper[result.modalIndex])}, so L = ${fmt(result.l)}.`} />
+        <Metric label="Class width h" value={fmt(result.h)} detail={`Modal class upper - lower = ${fmt(result.upper[result.modalIndex])} - ${fmt(result.lower[result.modalIndex])} = ${fmt(result.h)}.`} />
+        <Metric label="fm, f1, f2" value={`${fmt(result.fm)}, ${fmt(result.f1)}, ${fmt(result.f2)}`} detail={`From frequencies ${fmtList(result.frequency)}: modal frequency fm = ${fmt(result.fm)}, previous f1 = ${fmt(result.f1)}, next f2 = ${fmt(result.f2)}.`} />
+        <Metric label="Mode" value={fmt(result.mode)} detail={`Mode = ${fmt(result.l)} + [(${fmt(result.fm)} - ${fmt(result.f1)}) / (2 x ${fmt(result.fm)} - ${fmt(result.f1)} - ${fmt(result.f2)})] x ${fmt(result.h)} = ${fmt(result.mode)}.`} />
       </div>
     </section>
   )
@@ -850,9 +1178,9 @@ function SpearmanResult({ result }: { result: ReturnType<typeof solveSpearmanRan
     <section className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
       <div className="mb-4 flex items-center gap-2"><CheckCircle2 size={17} className="text-emerald-500" /><h2 className="font-bold text-slate-800 dark:text-white">Calculated Answer</h2></div>
       <div className="grid gap-3 sm:grid-cols-3">
-        <Metric label="n" value={result.n} />
-        <Metric label="sum d^2" value={fmt(result.sumD2)} />
-        <Metric label="Spearman rho" value={fmt(result.rho)} />
+        <Metric label="n" value={result.n} detail={`Input X: ${fmtList(result.x)}. Input Y: ${fmtList(result.y)}. Paired ranks count = ${result.n}.`} />
+        <Metric label="sum d^2" value={fmt(result.sumD2)} detail={`Rank X: ${fmtList(result.rankX)}. Rank Y: ${fmtList(result.rankY)}. d^2 values: ${fmtList(result.d2)} = ${fmt(result.sumD2)}.`} />
+        <Metric label="Spearman rho" value={fmt(result.rho)} detail={`Using sum d^2 = ${fmt(result.sumD2)} and n = ${result.n}: rho = 1 - [6 x ${fmt(result.sumD2)}] / [${result.n}(${result.n}^2 - 1)] = ${fmt(result.rho)}.`} />
       </div>
       <div className="mt-4 rounded-lg bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-900/60 dark:text-slate-300">
         rho = 1 - [6 x {fmt(result.sumD2)}] / [{result.n}({result.n}^2 - 1)] = {fmt(result.rho)}.
@@ -867,10 +1195,10 @@ function RegressionCorrelationResult({ result }: { result: ReturnType<typeof sol
     <section className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
       <div className="mb-4 flex items-center gap-2"><CheckCircle2 size={17} className="text-emerald-500" /><h2 className="font-bold text-slate-800 dark:text-white">Calculated Answer</h2></div>
       <div className="grid gap-3 sm:grid-cols-4">
-        <Metric label="bxy" value={fmt(result.bxy)} />
-        <Metric label="byx" value={fmt(result.byx)} />
-        <Metric label="bxy x byx" value={fmt(result.product)} />
-        <Metric label="Correlation r" value={fmt(result.r)} />
+        <Metric label="bxy" value={fmt(result.bxy)} detail={`Input first row bxy = ${fmt(result.bxy)}.`} />
+        <Metric label="byx" value={fmt(result.byx)} detail={`Input first row byx = ${fmt(result.byx)}.`} />
+        <Metric label="bxy x byx" value={fmt(result.product)} detail={`${fmt(result.bxy)} x ${fmt(result.byx)} = ${fmt(result.product)}.`} />
+        <Metric label="Correlation r" value={fmt(result.r)} detail={`r = +/- sqrt(${fmt(result.product)}) = ${fmt(result.r)}.`} />
       </div>
     </section>
   )
@@ -882,14 +1210,14 @@ function CorrelationSummaryResult({ result }: { result: ReturnType<typeof solveC
     <section className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
       <div className="mb-4 flex items-center gap-2"><CheckCircle2 size={17} className="text-emerald-500" /><h2 className="font-bold text-slate-800 dark:text-white">Calculated Answer</h2></div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Metric label="sum dxdy" value={fmt(result.sumXY)} />
-        <Metric label="sum dx^2" value={fmt(result.sumX2)} />
-        <Metric label="sum dy^2" value={fmt(result.sumY2)} />
-        <Metric label="Correlation r" value={fmt(result.r)} />
+        <Metric label="sum dxdy" value={fmt(result.sumXY)} detail={`Input summary value sum dxdy = ${fmt(result.sumXY)}.`} />
+        <Metric label="sum dx^2" value={fmt(result.sumX2)} detail={`Input summary value sum dx^2 = ${fmt(result.sumX2)}.`} />
+        <Metric label="sum dy^2" value={fmt(result.sumY2)} detail={`Input summary value sum dy^2 = ${fmt(result.sumY2)}.`} />
+        <Metric label="Correlation r" value={fmt(result.r)} detail={`r = ${fmt(result.sumXY)} / sqrt(${fmt(result.sumX2)} x ${fmt(result.sumY2)}) = ${fmt(result.r)}.`} />
       </div>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <Metric label="N" value={fmt(result.n)} />
-        <Metric label="Probable error" value={fmt(result.probableError)} />
+        <Metric label="N" value={fmt(result.n)} detail={`Input summary N = ${fmt(result.n)}.`} />
+        <Metric label="Probable error" value={fmt(result.probableError)} detail={`Using r = ${fmt(result.r)} and N = ${fmt(result.n)}: PE = 0.6745(1 - r^2) / sqrt(N) = ${fmt(result.probableError)}.`} />
       </div>
       <div className="mt-4 rounded-lg bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-900/60 dark:text-slate-300">
         r = {fmt(result.sumXY)} / sqrt({fmt(result.sumX2)} x {fmt(result.sumY2)}) = {fmt(result.r)}.
@@ -904,19 +1232,38 @@ function GeometricMeanResult({ result }: { result: ReturnType<typeof solveGeomet
     <section className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
       <div className="mb-4 flex items-center gap-2"><CheckCircle2 size={17} className="text-emerald-500" /><h2 className="font-bold text-slate-800 dark:text-white">Calculated Answer</h2></div>
       <div className="grid gap-3 sm:grid-cols-3">
-        <Metric label="N" value={fmt(result.n)} />
-        <Metric label="sum(f log X)" value={fmt(result.sumFLog)} />
-        <Metric label="Geometric mean" value={fmt(result.gm)} />
+        <Metric label="N" value={fmt(result.n)} detail={`Frequencies: ${fmtList(result.f)}; N = ${fmtList(result.f)} = ${fmt(result.n)}.`} />
+        <Metric label="sum(f log X)" value={fmt(result.sumFLog)} detail={`X values: ${fmtList(result.x)}. f log X values: ${fmtList(result.fLogX)} = ${fmt(result.sumFLog)}.`} />
+        <Metric label="Geometric mean" value={fmt(result.gm)} detail={`GM = antilog(${fmt(result.sumFLog)} / ${fmt(result.n)}) = ${fmt(result.gm)}.`} />
       </div>
     </section>
   )
 }
 
-function Metric({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+function Metric({ label, value, detail }: { label: string; value: string | number; detail?: string }) {
+  const [open, setOpen] = useState(false)
+  const content = (
+    <>
       <p className="text-xs text-slate-400">{label}</p>
       <p className="break-words text-sm font-bold text-slate-800 dark:text-white">{value}</p>
+      {open && detail && <p className="mt-2 border-t border-slate-200 pt-2 text-xs leading-relaxed text-slate-500 dark:border-slate-700 dark:text-slate-300">{detail}</p>}
+    </>
+  )
+  if (detail) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen((state) => !state)}
+        className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left transition hover:border-indigo-300 hover:bg-indigo-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
+        title="Click to show how this value was calculated"
+      >
+        {content}
+      </button>
+    )
+  }
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+      {content}
     </div>
   )
 }

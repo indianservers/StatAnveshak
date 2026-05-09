@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Binary, Braces, GitBranch, KeyRound, ListOrdered, Network, Search, ShieldCheck } from 'lucide-react'
+import { Binary, Braces, KeyRound, ListOrdered, Network, Search, ShieldCheck } from 'lucide-react'
 import { COMPUTING_MODULE_BY_KEY, COMPUTING_MODULES, type ComputingModuleKey } from '../lib/computingModules'
 
 const ICONS: Record<ComputingModuleKey, typeof KeyRound> = {
@@ -9,7 +9,6 @@ const ICONS: Record<ComputingModuleKey, typeof KeyRound> = {
   searching: Search,
   hashing: Binary,
   data_structures: Braces,
-  graphs: GitBranch,
   dynamic_programming: Network,
   complexity: ShieldCheck,
 }
@@ -79,6 +78,12 @@ export function ComputingModulesPage() {
   const initialKey = COMPUTING_MODULE_BY_KEY[moduleKey as ComputingModuleKey] ? moduleKey as ComputingModuleKey : 'cryptography'
   const [activeKey, setActiveKey] = useState<ComputingModuleKey>(initialKey)
   const module = COMPUTING_MODULE_BY_KEY[activeKey]
+
+  useEffect(() => {
+    if (moduleKey && !COMPUTING_MODULE_BY_KEY[moduleKey as ComputingModuleKey]) {
+      navigate('/modules', { replace: true })
+    }
+  }, [moduleKey, navigate])
 
   const select = (key: ComputingModuleKey) => {
     setActiveKey(key)

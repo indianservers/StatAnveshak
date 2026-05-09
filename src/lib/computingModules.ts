@@ -4,7 +4,6 @@ export type ComputingModuleKey =
   | 'searching'
   | 'hashing'
   | 'data_structures'
-  | 'graphs'
   | 'dynamic_programming'
   | 'complexity'
 
@@ -57,14 +56,6 @@ export const COMPUTING_MODULES: ComputingModule[] = [
     purpose: 'Teach how arrays, stacks, queues, maps, and sets organize data for different operations.',
     concepts: ['Array', 'Stack', 'Queue', 'Set', 'Map', 'Operation cost'],
     steps: ['Choose a structure.', 'Add values.', 'Run push/pop/enqueue/dequeue/lookup.', 'Watch state change.', 'Compare operation complexity.'],
-  },
-  {
-    key: 'graphs',
-    title: 'Graph Algorithms',
-    category: 'Algorithms',
-    purpose: 'Teach nodes, edges, traversal, shortest paths, and network-style reasoning.',
-    concepts: ['Node', 'Edge', 'BFS', 'DFS', 'Shortest path', 'Connected components'],
-    steps: ['Use the sample graph.', 'Pick a start node.', 'Run BFS and DFS.', 'Compare visit order.', 'Use the order to reason about reachability.'],
   },
   {
     key: 'dynamic_programming',
