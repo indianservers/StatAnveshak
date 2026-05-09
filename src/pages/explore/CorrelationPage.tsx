@@ -2,8 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import Plotly from 'plotly.js-dist-min'
 import { useStore } from '../../store/useStore'
 import { correlationMatrix } from '../../lib/stats'
-import { Link } from 'react-router-dom'
-import { Upload } from 'lucide-react'
+import { DatasetEmptyState } from '../../components/ui/DatasetEmptyState'
 
 export function CorrelationPage() {
   const { activeDataset, theme } = useStore()
@@ -46,13 +45,7 @@ export function CorrelationPage() {
   }, [activeDataset, numCols, theme])
 
   if (!activeDataset) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
-        <Upload size={48} />
-        <p className="text-lg font-medium">No dataset loaded</p>
-        <Link to="/data/upload" className="text-sm bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Upload Data</Link>
-      </div>
-    )
+    return <DatasetEmptyState preferredPath="/explore/correlation" description="Load a dataset with numeric columns to view correlation heatmaps and relationship strength." />
   }
 
   if (numCols.length < 2) {

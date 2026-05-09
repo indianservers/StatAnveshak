@@ -5,8 +5,8 @@ import {
   oneSampleTTest, twoSampleTTest, chiSquareGoodnessOfFit, confidenceIntervalMean
 } from '../lib/inference'
 import type { HypothesisTestResult } from '../types'
-import { Link } from 'react-router-dom'
-import { Upload, CheckCircle, XCircle, AlertTriangle, Copy } from 'lucide-react'
+import { CheckCircle, XCircle, AlertTriangle, Copy } from 'lucide-react'
+import { DatasetEmptyState } from '../components/ui/DatasetEmptyState'
 
 type TestType = 'one_sample_t' | 'two_sample_t' | 'chi2_gof' | 'ci_mean'
 
@@ -77,13 +77,7 @@ export function InferencePage() {
   }
 
   if (!activeDataset) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
-        <Upload size={48} />
-        <p className="text-lg font-medium">No dataset loaded</p>
-        <Link to="/data/upload" className="text-sm bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Upload Data</Link>
-      </div>
-    )
+    return <DatasetEmptyState preferredPath="/inference" description="Load a dataset to run t-tests, confidence intervals, chi-square checks, and guided inference." />
   }
 
   const TESTS: { id: TestType; label: string; desc: string }[] = [

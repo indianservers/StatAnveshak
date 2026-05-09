@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useStore } from '../../store/useStore'
 import { frequencyTable } from '../../lib/stats'
-import { Link } from 'react-router-dom'
-import { Upload, Download } from 'lucide-react'
+import { Download } from 'lucide-react'
 import * as XLSX from 'xlsx'
+import { DatasetEmptyState } from '../../components/ui/DatasetEmptyState'
 
 export function FrequencyPage() {
   const { activeDataset } = useStore()
@@ -11,13 +11,7 @@ export function FrequencyPage() {
   const [selectedCol, setSelectedCol] = useState(allCols[0] ?? '')
 
   if (!activeDataset) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
-        <Upload size={48} />
-        <p className="text-lg font-medium">No dataset loaded</p>
-        <Link to="/data/upload" className="text-sm bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Upload Data</Link>
-      </div>
-    )
+    return <DatasetEmptyState preferredPath="/explore/frequency" description="Load a dataset to create frequency tables for categorical, text, and coded variables." />
   }
 
   const col = selectedCol || allCols[0]

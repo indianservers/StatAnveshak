@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Plotly from 'plotly.js-dist-min'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Activity, AlertTriangle, BarChart3, BrainCircuit, Calculator, Clipboard, Download, Expand, Hash, Search, Star, TableProperties, Upload } from 'lucide-react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { Activity, AlertTriangle, BarChart3, BrainCircuit, Calculator, Clipboard, Download, Expand, Hash, Search, Star, TableProperties } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import { defaultSelection, runStatModule, STAT_MODULES, type StatModuleGroup, type StatModuleSelection } from '../lib/statModules'
 import { useToast } from '../components/ui/toastContext'
+import { DatasetEmptyState } from '../components/ui/DatasetEmptyState'
 
 const GROUP_ICONS: Record<StatModuleGroup, typeof Calculator> = {
   Inferential: Calculator,
@@ -141,13 +142,7 @@ export function StatModulesPage() {
   }, [moduleKey, selectModule])
 
   if (!activeDataset) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
-        <Upload size={48} />
-        <p className="text-lg font-medium">No dataset loaded</p>
-        <Link to="/data/upload" className="text-sm bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Upload Data</Link>
-      </div>
-    )
+    return <DatasetEmptyState preferredPath="/stat-modules" description="Load a dataset to run statistical modules with guided inputs, charts, and exportable results." />
   }
 
   return (

@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useRef } from 'react'
 import Plotly from 'plotly.js-dist-min'
+import { Link } from 'react-router-dom'
 import { useStore } from '../store/useStore'
 import { datasetKpis, numericColumn, numericDescriptiveRows, summaryStats } from '../lib/stats'
-import { Link } from 'react-router-dom'
-import { BarChart3, Database, Gauge, Upload } from 'lucide-react'
-import { SAMPLE_DATASETS } from '../lib/sampleData'
-import { sampleToDataset } from '../lib/dataset'
-import { saveDataset } from '../lib/storage'
+import { BarChart3, Gauge } from 'lucide-react'
+import { DatasetEmptyState } from '../components/ui/DatasetEmptyState'
 
 function formatBytes(value?: number) {
   if (!value) return '-'
@@ -28,19 +26,11 @@ function formatCell(value: number | string) {
 }
 
 export function DashboardPage() {
-  const { activeDataset, theme, addDataset, setActiveDataset } = useStore()
+  const { activeDataset, theme } = useStore()
   const loadingView = false
   const chart1Ref = useRef<HTMLDivElement>(null)
   const chart2Ref = useRef<HTMLDivElement>(null)
   const chart3Ref = useRef<HTMLDivElement>(null)
-
-  const loadDefaultSample = async () => {
-    const sample = SAMPLE_DATASETS[0]
-    const ds = sampleToDataset(sample)
-    addDataset(ds)
-    setActiveDataset(ds)
-    await saveDataset(ds)
-  }
 
   const numCols = useMemo(
     () => activeDataset?.schema.filter((c) => c.type === 'numeric').map((c) => c.name) ?? [],
@@ -95,31 +85,7 @@ export function DashboardPage() {
   }, [activeDataset, layoutBase, numCols, catCols, loadingView])
 
   if (!activeDataset) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400 p-6 text-center">
-        <div className="rounded-lg border border-indigo-100 bg-indigo-50 p-5 dark:border-indigo-800 dark:bg-indigo-900/20">
-          <div className="mb-3 flex h-16 items-end gap-2">
-            <span className="h-8 w-8 rounded bg-indigo-500" />
-            <span className="h-12 w-8 rounded bg-emerald-500" />
-            <span className="h-6 w-8 rounded bg-amber-500" />
-            <span className="h-14 w-8 rounded bg-rose-500" />
-          </div>
-          <Upload size={20} className="mx-auto text-indigo-500" />
-        </div>
-        <p className="text-lg font-medium">No dataset loaded</p>
-        <div className="flex flex-wrap justify-center gap-2">
-          <Link to="/data/upload" className="text-sm bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Upload Data</Link>
-          <button
-            type="button"
-            onClick={loadDefaultSample}
-            className="inline-flex items-center gap-2 text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 px-4 py-2 rounded-md hover:border-indigo-300"
-          >
-            <Database size={16} />
-            Load Sample Data
-          </button>
-        </div>
-      </div>
-    )
+    return <DatasetEmptyState preferredPath="/dashboard" description="Load a dataset to open the dashboard with automatic charts, KPIs, and data-quality cards." />
   }
 
   const stats = numCols.slice(0, 4).map((col) => {

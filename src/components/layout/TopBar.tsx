@@ -151,7 +151,12 @@ export function TopBar() {
             )}
           </div>
         ) : (
-          <span className="truncate text-xs text-slate-400">No dataset loaded - upload or select one</span>
+          <Link
+            to="/data/upload"
+            className="truncate rounded-md border border-dashed border-indigo-200 bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-300"
+          >
+            No dataset loaded - go to datasets
+          </Link>
         )}
       </div>
 

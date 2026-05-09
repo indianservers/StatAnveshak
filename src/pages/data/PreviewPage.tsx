@@ -1,6 +1,7 @@
 import { useStore } from '../../store/useStore'
 import { Link } from 'react-router-dom'
-import { Upload, CheckCircle, AlertTriangle } from 'lucide-react'
+import { CheckCircle, AlertTriangle } from 'lucide-react'
+import { DatasetEmptyState } from '../../components/ui/DatasetEmptyState'
 
 const TYPE_COLORS: Record<string, string> = {
   numeric: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
@@ -22,15 +23,7 @@ export function PreviewPage() {
   const { activeDataset } = useStore()
 
   if (!activeDataset) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
-        <Upload size={48} />
-        <p className="text-lg font-medium">No dataset loaded</p>
-        <Link to="/data/upload" className="text-sm bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">
-          Upload Data
-        </Link>
-      </div>
-    )
+    return <DatasetEmptyState preferredPath="/data/preview" description="Load a dataset to preview rows, inspect schema, and choose the next analysis view." />
   }
 
   const preview = activeDataset.data.slice(0, 10)
@@ -50,12 +43,12 @@ export function PreviewPage() {
             {activeDataset.rows.toLocaleString()} rows · {activeDataset.cols} columns · {activeDataset.sourceType}
           </p>
         </div>
-        <Link
-          to="/data/grid"
-          className="text-sm bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700"
-        >
-          Open in Grid
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link to="/explore/charts" className="text-sm bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Visualize</Link>
+          <Link to="/dashboard" className="text-sm border border-slate-200 px-4 py-2 rounded-md text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">Dashboard</Link>
+          <Link to="/explore/summary" className="text-sm border border-slate-200 px-4 py-2 rounded-md text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">Statistics</Link>
+          <Link to="/data/grid" className="text-sm border border-slate-200 px-4 py-2 rounded-md text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">Grid</Link>
+        </div>
       </div>
 
       <div className="mb-6 grid gap-3 md:grid-cols-3">

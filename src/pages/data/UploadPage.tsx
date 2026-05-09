@@ -66,7 +66,7 @@ export function UploadPage() {
   const [loading, setLoading] = useState(false)
   const [pending, setPending] = useState<PendingImport[]>([])
   const [expandedSamples, setExpandedSamples] = useState<string[]>([])
-  const { addDataset, setActiveDataset } = useStore()
+  const { addDataset, setActiveDataset, datasets } = useStore()
   const navigate = useNavigate()
 
   const parseFile = useCallback(async (file: File): Promise<PendingImport> => {
@@ -196,6 +196,13 @@ export function UploadPage() {
     return acc
   }, {} as Record<string, typeof SAMPLE_DATASETS>), [])
 
+  const recentDatasets = useMemo(() => [...datasets].sort((a, b) => b.createdAt - a.createdAt), [datasets])
+
+  const openExistingDataset = (dataset: Dataset, path = '/data/preview') => {
+    setActiveDataset(dataset)
+    navigate(path)
+  }
+
   const loadSampleDataset = async (sampleId: string) => {
     const sample = SAMPLE_DATASETS.find((item) => item.id === sampleId)
     if (!sample) return
@@ -218,6 +225,43 @@ export function UploadPage() {
     <div className="p-6 max-w-6xl mx-auto">
       <h1 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Upload Data</h1>
       <p className="text-slate-500 dark:text-slate-400 mb-8">Your data is processed entirely in the browser. Nothing is uploaded to any server.</p>
+
+      {recentDatasets.length > 0 && (
+        <section className="mb-6 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Your Datasets</h2>
+              <p className="text-xs text-slate-400">Tap a dataset to load it immediately, or jump straight to charts.</p>
+            </div>
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500 dark:bg-slate-700">{recentDatasets.length} saved</span>
+          </div>
+          <div className="grid gap-2 md:grid-cols-2">
+            {recentDatasets.slice(0, 6).map((dataset) => (
+              <div
+                key={dataset.id}
+                className="flex items-center gap-3 rounded-lg border border-slate-200 p-3 text-left transition-colors hover:border-indigo-300 hover:bg-indigo-50/50 dark:border-slate-700 dark:hover:border-indigo-700 dark:hover:bg-indigo-900/20"
+              >
+                <button type="button" onClick={() => openExistingDataset(dataset)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300">
+                    <Table2 size={16} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-slate-700 dark:text-slate-200">{dataset.name}</p>
+                    <p className="text-xs text-slate-400">{dataset.rows.toLocaleString()} rows x {dataset.cols} columns</p>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openExistingDataset(dataset, '/explore/charts')}
+                  className="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-white dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                >
+                  Visualize
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <div
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}

@@ -22,12 +22,12 @@ import {
   Sigma,
   SlidersHorizontal,
   Table,
-  Upload,
 } from 'lucide-react'
 import * as ss from 'simple-statistics'
 import { useStore } from '../store/useStore'
 import { detectOutliersIQR, numericColumn, pearsonCorrelation, correlationMatrix } from '../lib/stats'
 import { chiSquareCDF, normalCDF, chiSquareIndependence } from '../lib/inference'
+import { DatasetEmptyState } from '../components/ui/DatasetEmptyState'
 
 type FeatureGroup = 'Data Prep' | 'EDA' | 'Inference' | 'Modeling' | 'Teaching' | 'Output'
 type Goal = 'describe' | 'compare_means' | 'association' | 'predict_numeric' | 'predict_category' | 'time_series' | 'quality'
@@ -784,13 +784,7 @@ ${firstNum && secondNum ? `lm_fit <- lm(${secondNum} ~ ${firstNum}, data=df)\nsu
   }, [simSigma, simMargin, theme, layoutBase])
 
   if (!activeDataset) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
-        <Upload size={48} />
-        <p className="text-lg font-medium">No dataset loaded</p>
-        <Link to="/data/upload" className="text-sm bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Upload Data</Link>
-      </div>
-    )
+    return <DatasetEmptyState preferredPath="/advanced" description="Load a dataset to unlock advanced analysis, assumptions, model diagnostics, and exportable study notes." />
   }
 
   return (

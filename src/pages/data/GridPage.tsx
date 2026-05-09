@@ -5,13 +5,13 @@ import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-quartz.css'
 import type { CellValueChangedEvent, ColDef, GridApi } from 'ag-grid-community'
 import { useStore } from '../../store/useStore'
-import { Link } from 'react-router-dom'
-import { BarChart2, Calendar, Copy, Download, Edit3, Hash, Lock, Search, TextCursorInput, Unlock, Upload, X } from 'lucide-react'
+import { BarChart2, Calendar, Copy, Download, Edit3, Hash, Lock, Search, TextCursorInput, Unlock, X } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '../../components/ui/toastContext'
 import { detectSchema } from '../../lib/schema'
 import { saveDataset } from '../../lib/storage'
+import { DatasetEmptyState } from '../../components/ui/DatasetEmptyState'
 
 ModuleRegistry.registerModules([AllCommunityModule])
 
@@ -123,15 +123,7 @@ export function GridPage() {
   }
 
   if (!activeDataset) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
-        <Upload size={48} />
-        <p className="text-lg font-medium">No dataset loaded</p>
-        <Link to="/data/upload" className="text-sm bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">
-          Upload Data
-        </Link>
-      </div>
-    )
+    return <DatasetEmptyState preferredPath="/data/grid" description="Load a dataset to inspect, edit, filter, and export the full table." />
   }
 
   return (

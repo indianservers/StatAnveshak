@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useMemo, useState } from 'react'
 import { Upload, BarChart2, Activity, Calculator, BookOpen, Database, Sigma, Star, Clock, Layers3 } from 'lucide-react'
 import { useStore } from '../store/useStore'
@@ -9,6 +9,7 @@ import { saveDataset } from '../lib/storage'
 export function HomePage() {
   const { datasets, setActiveDataset, addDataset, favoriteModules } = useStore()
   const [selectedCategory, setSelectedCategory] = useState('All')
+  const navigate = useNavigate()
   const recentPages = JSON.parse(localStorage.getItem('anveshak-recent-pages') ?? '[]') as Array<{ path: string; label: string }>
   const sampleCategories = Object.values(SAMPLE_DATASET_CATEGORIES)
 
@@ -35,6 +36,12 @@ export function HomePage() {
     addDataset(ds)
     setActiveDataset(ds)
     await saveDataset(ds)
+    navigate('/data/preview')
+  }
+
+  const openDataset = (dataset: typeof datasets[number], path = '/data/preview') => {
+    setActiveDataset(dataset)
+    navigate(path)
   }
 
   const QUICK_ACTIONS = [
@@ -189,7 +196,7 @@ export function HomePage() {
                 <div
                   key={ds.id}
                   className="flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer"
-                  onClick={() => setActiveDataset(ds)}
+                  onClick={() => openDataset(ds)}
                 >
                   <div className="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
                     <Database size={14} className="text-green-600" />
@@ -203,6 +210,16 @@ export function HomePage() {
                   <span className="text-xs text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded">
                     {ds.sourceType}
                   </span>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      openDataset(ds, '/explore/charts')
+                    }}
+                    className="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                  >
+                    Visualize
+                  </button>
                 </div>
               ))}
             </div>

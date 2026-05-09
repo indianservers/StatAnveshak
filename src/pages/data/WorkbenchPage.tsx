@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
 import {
   AlertTriangle,
   ArrowRight,
@@ -20,7 +19,6 @@ import {
   Sigma,
   Table2,
   Undo2,
-  Upload,
 } from 'lucide-react'
 import { useStore } from '../../store/useStore'
 import { useToast } from '../../components/ui/toastContext'
@@ -43,6 +41,7 @@ import {
 } from '../../lib/workbench'
 import { numericColumn } from '../../lib/stats'
 import type { Dataset } from '../../types'
+import { DatasetEmptyState } from '../../components/ui/DatasetEmptyState'
 
 type Tab = 'wizard' | 'variables' | 'dictionary' | 'quality' | 'transform' | 'statistics' | 'log'
 
@@ -131,13 +130,7 @@ export function WorkbenchPage() {
   }
 
   if (!activeDataset) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center text-slate-400">
-        <Upload size={48} />
-        <p className="text-lg font-medium">No dataset loaded</p>
-        <Link to="/data/upload" className="rounded-md bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700">Upload Data</Link>
-      </div>
-    )
+    return <DatasetEmptyState preferredPath="/data/workbench" description="Load a dataset to use variable view, data dictionary, quality checks, transforms, and the analysis wizard." />
   }
 
   return (

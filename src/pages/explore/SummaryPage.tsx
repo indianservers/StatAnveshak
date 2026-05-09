@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useStore } from '../../store/useStore'
 import { categoricalDescriptiveRows, datasetKpis, numericDescriptiveRows, summaryStats } from '../../lib/stats'
-import { Link } from 'react-router-dom'
-import { Copy, Gauge, HelpCircle, Upload } from 'lucide-react'
+import { Copy, Gauge, HelpCircle } from 'lucide-react'
 import { useToast } from '../../components/ui/toastContext'
+import { DatasetEmptyState } from '../../components/ui/DatasetEmptyState'
 
 const STAT_HELP: Record<string, string> = {
   Count: 'Number of valid numeric observations.',
@@ -38,13 +38,7 @@ export function SummaryPage() {
   const [selectedCol, setSelectedCol] = useState<string>(numericCols[0] ?? '')
 
   if (!activeDataset) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
-        <Upload size={48} />
-        <p className="text-lg font-medium">No dataset loaded</p>
-        <Link to="/data/upload" className="text-sm bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Upload Data</Link>
-      </div>
-    )
+    return <DatasetEmptyState preferredPath="/explore/summary" description="Load a dataset to see KPIs, numeric summaries, categorical frequencies, and copy-ready tables." />
   }
 
   const col = selectedCol || numericCols[0]

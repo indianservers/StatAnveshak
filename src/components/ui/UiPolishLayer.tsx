@@ -106,7 +106,13 @@ export function UiPolishLayer() {
                 <Link to="/reports" onClick={() => setReportPreviewOpen(false)} className="inline-flex rounded-md bg-indigo-600 px-3 py-2 text-xs text-white hover:bg-indigo-700">Open Export & Reports</Link>
               </>
             ) : (
-              <p>No dataset loaded. Upload or load sample data to preview a report.</p>
+              <div className="rounded-lg border border-dashed border-indigo-200 bg-indigo-50 p-3 text-indigo-700 dark:border-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-300">
+                <p className="text-sm font-semibold">No dataset loaded</p>
+                <p className="mt-1 text-xs">Go to the datasets page to load saved data, upload a file, or pick a sample dataset.</p>
+                <Link to="/data/upload" onClick={() => setReportPreviewOpen(false)} className="mt-3 inline-flex rounded-md bg-indigo-600 px-3 py-2 text-xs font-medium text-white hover:bg-indigo-700">
+                  Go to datasets page
+                </Link>
+              </div>
             )}
             {recent.length > 0 && (
               <div>

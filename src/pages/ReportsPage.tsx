@@ -3,21 +3,14 @@ import { summaryStats } from '../lib/stats'
 import { correlationMatrix } from '../lib/stats'
 import { Download, FileCode, FileText, Printer, Table2 } from 'lucide-react'
 import * as XLSX from 'xlsx'
-import { Link } from 'react-router-dom'
-import { Upload } from 'lucide-react'
 import { escapeHtml } from '../lib/validation'
+import { DatasetEmptyState } from '../components/ui/DatasetEmptyState'
 
 export function ReportsPage() {
   const { activeDataset } = useStore()
 
   if (!activeDataset) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
-        <Upload size={48} />
-        <p className="text-lg font-medium">No dataset loaded</p>
-        <Link to="/data/upload" className="text-sm bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Upload Data</Link>
-      </div>
-    )
+    return <DatasetEmptyState preferredPath="/reports" description="Load a dataset to export reports, tables, markdown, HTML, and reproducible scripts." />
   }
 
   const numCols = activeDataset.schema.filter((c) => c.type === 'numeric').map((c) => c.name)
