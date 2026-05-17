@@ -50,6 +50,20 @@ export interface ChartConfig {
   datasetId: string
 }
 
+export interface AnalysisLogEntry {
+  id: string
+  createdAt: number
+  title: string
+  datasetName?: string
+  workflow: string
+  variables: string[]
+  method: string
+  resultSummary: string
+  assumptions: string[]
+  interpretation: string
+  reportText: string
+}
+
 export interface StatResult {
   label: string
   value: number | string

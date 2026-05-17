@@ -8,6 +8,7 @@ import { CommandPalette } from '../ui/CommandPalette'
 import { UiPolishLayer } from '../ui/UiPolishLayer'
 import { OnboardingTour } from '../ui/OnboardingTour'
 import { TestRecommenderDrawer } from '../ui/TestRecommenderDrawer'
+import { SeoMetadata } from '../ui/SeoMetadata'
 
 export function AppShell() {
   const { theme, highContrast, largeText, zoomLevel, density, hydrateStorage } = useStore()
@@ -29,13 +30,14 @@ export function AppShell() {
   return (
     <div className={theme === 'dark' || highContrast ? 'dark' : ''}>
       <ToastProvider>
+        <SeoMetadata />
         <div className={`flex h-screen overflow-hidden ${density === 'compact' ? 'ui-compact' : ''} ${highContrast ? 'bg-black' : 'bg-slate-50 dark:bg-slate-900'}`}>
           <Sidebar />
           <div className="flex flex-col flex-1 overflow-hidden">
             <TopBar />
-            <main className="flex-1 overflow-auto page-fade">
-              <div className="flex min-h-full flex-col">
-                <div className="flex-1">
+            <main className="min-h-0 flex-1 overflow-auto page-fade">
+              <div className="flex h-full flex-col">
+                <div className="min-h-0 flex-1">
                   <Outlet />
                 </div>
                 <AimerFooter />

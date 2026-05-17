@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Dataset, Project, ChartConfig } from '../types'
+import type { AnalysisLogEntry, Dataset, Project, ChartConfig } from '../types'
 import { loadDatasets, loadProjects } from '../lib/storage'
 
 const loadBool = (key: string, fallback: boolean) => localStorage.getItem(key) ? localStorage.getItem(key) === 'true' : fallback
@@ -11,6 +11,18 @@ const loadStringArray = (key: string) => {
   } catch {
     return []
   }
+}
+const loadAnalysisHistory = () => {
+  try {
+    const value = JSON.parse(localStorage.getItem('analysis-history') ?? '[]')
+    return Array.isArray(value) ? value.filter((item): item is AnalysisLogEntry => Boolean(item?.id && item?.title)) : []
+  } catch {
+    return []
+  }
+}
+const persistAnalysisHistory = (value: AnalysisLogEntry[]) => {
+  localStorage.setItem('analysis-history', JSON.stringify(value.slice(0, 80)))
+  return value.slice(0, 80)
 }
 
 interface AppState {
@@ -26,8 +38,10 @@ interface AppState {
   updateDataset: (ds: Dataset) => void
 
   // Projects
+  projects: Project[]
   activeProject: Project | null
   setActiveProject: (p: Project | null) => void
+  addProject: (p: Project) => void
 
   // Charts
   charts: ChartConfig[]
@@ -57,6 +71,10 @@ interface AppState {
   toggleFavoriteModule: (path: string) => void
   lastSavedAt: number | null
   setLastSavedAt: (value: number | null) => void
+  analysisHistory: AnalysisLogEntry[]
+  addAnalysisLog: (entry: AnalysisLogEntry) => void
+  removeAnalysisLog: (id: string) => void
+  clearAnalysisHistory: () => void
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -70,6 +88,7 @@ export const useStore = create<AppState>((set) => ({
     const sortedProjects = [...projects].sort((a, b) => b.updatedAt - a.updatedAt)
     set((state) => ({
       datasets: sortedDatasets,
+      projects: sortedProjects,
       activeDataset: state.activeDataset ?? sortedDatasets[0] ?? null,
       activeProject: state.activeProject ?? sortedProjects[0] ?? null,
     }))
@@ -78,8 +97,10 @@ export const useStore = create<AppState>((set) => ({
   removeDataset: (id) => set((s) => ({ datasets: s.datasets.filter((d) => d.id !== id) })),
   updateDataset: (ds) => set((s) => ({ datasets: s.datasets.map((d) => (d.id === ds.id ? ds : d)) })),
 
+  projects: [],
   activeProject: null,
   setActiveProject: (p) => set({ activeProject: p }),
+  addProject: (p) => set((s) => ({ projects: [...s.projects.filter((item) => item.id !== p.id), p] })),
 
   charts: [],
   addChart: (c) => set((s) => ({ charts: [...s.charts, c] })),
@@ -111,6 +132,17 @@ export const useStore = create<AppState>((set) => ({
   })),
   lastSavedAt: null,
   setLastSavedAt: (value) => set({ lastSavedAt: value }),
+  analysisHistory: loadAnalysisHistory(),
+  addAnalysisLog: (entry) => set((s) => ({
+    analysisHistory: persistAnalysisHistory([entry, ...s.analysisHistory.filter((item) => item.id !== entry.id)]),
+  })),
+  removeAnalysisLog: (id) => set((s) => ({
+    analysisHistory: persistAnalysisHistory(s.analysisHistory.filter((item) => item.id !== id)),
+  })),
+  clearAnalysisHistory: () => {
+    localStorage.removeItem('analysis-history')
+    set({ analysisHistory: [] })
+  },
 }))
 
 function persistFavorites(value: string[]) {

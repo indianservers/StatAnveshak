@@ -25,8 +25,11 @@ const SyllabusModulesPage = lazy(() => import('./pages/SyllabusModulesPage').the
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })))
 const ReportsPage = lazy(() => import('./pages/ReportsPage').then((m) => ({ default: m.ReportsPage })))
 const LearnPage = lazy(() => import('./pages/LearnPage').then((m) => ({ default: m.LearnPage })))
+const ProfessionalLearningPage = lazy(() => import('./pages/ProfessionalLearningPage').then((m) => ({ default: m.ProfessionalLearningPage })))
 const SolverPage = lazy(() => import('./pages/SolverPage').then((m) => ({ default: m.SolverPage })))
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })))
+const DocumentationPage = lazy(() => import('./pages/DocumentationPage').then((m) => ({ default: m.DocumentationPage })))
+const SitemapPage = lazy(() => import('./pages/SitemapPage').then((m) => ({ default: m.SitemapPage })))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })))
 
 function PageLoader() {
@@ -71,8 +74,12 @@ function App() {
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="reports" element={<ReportsPage />} />
               <Route path="learn" element={<LearnPage />} />
+              <Route path="professional-learning" element={<ProfessionalLearningPage />} />
               <Route path="solver" element={<SolverPage />} />
+              <Route path="documentation" element={<DocumentationPage />} />
               <Route path="settings" element={<SettingsPage />} />
+              <Route path="docs" element={<DocumentationPage />} />
+              <Route path="sitemap" element={<SitemapPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>
           </Routes>

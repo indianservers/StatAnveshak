@@ -1,0 +1,176 @@
+import type { AnalysisLogEntry, Dataset, Project } from '../types'
+
+export type ProjectBundle = {
+  app: 'StatAnveshak'
+  version: 1
+  createdAt: string
+  activeDatasetId?: string
+  activeProjectId?: string
+  datasets: Dataset[]
+  projects: Project[]
+  analysisHistory: AnalysisLogEntry[]
+}
+
+export type ClassroomSubmission = {
+  app: 'StatAnveshak'
+  type: 'classroom-submission'
+  version: 1
+  createdAt: string
+  studentName: string
+  course: string
+  assignment: string
+  datasetName?: string
+  datasetSummary?: string
+  notebookEntries: AnalysisLogEntry[]
+}
+
+export function createProjectBundle(input: {
+  datasets: Dataset[]
+  projects: Project[]
+  activeDatasetId?: string
+  activeProjectId?: string
+  analysisHistory: AnalysisLogEntry[]
+}): ProjectBundle {
+  return {
+    app: 'StatAnveshak',
+    version: 1,
+    createdAt: new Date().toISOString(),
+    activeDatasetId: input.activeDatasetId,
+    activeProjectId: input.activeProjectId,
+    datasets: input.datasets,
+    projects: input.projects,
+    analysisHistory: input.analysisHistory,
+  }
+}
+
+export function parseProjectBundle(value: unknown): ProjectBundle {
+  if (!value || typeof value !== 'object') throw new Error('Bundle is not a valid JSON object.')
+  const bundle = value as Partial<ProjectBundle>
+  if (bundle.app !== 'StatAnveshak' || bundle.version !== 1) {
+    throw new Error('This file is not a supported StatAnveshak project bundle.')
+  }
+  if (!Array.isArray(bundle.datasets) || !Array.isArray(bundle.projects) || !Array.isArray(bundle.analysisHistory)) {
+    throw new Error('Bundle is missing datasets, projects, or analysis history arrays.')
+  }
+  return bundle as ProjectBundle
+}
+
+export function createClassroomSubmission(input: {
+  studentName: string
+  course: string
+  assignment: string
+  dataset?: Dataset | null
+  notebookEntries: AnalysisLogEntry[]
+}): ClassroomSubmission {
+  return {
+    app: 'StatAnveshak',
+    type: 'classroom-submission',
+    version: 1,
+    createdAt: new Date().toISOString(),
+    studentName: input.studentName.trim() || 'Unnamed student',
+    course: input.course.trim() || 'Statistics',
+    assignment: input.assignment.trim() || 'Analysis submission',
+    datasetName: input.dataset?.name,
+    datasetSummary: input.dataset ? `${input.dataset.rows} rows x ${input.dataset.cols} columns` : undefined,
+    notebookEntries: input.notebookEntries,
+  }
+}
+
+export function classroomSubmissionMarkdown(submission: ClassroomSubmission) {
+  return [
+    `# ${submission.assignment}`,
+    '',
+    `Student: ${submission.studentName}`,
+    `Course: ${submission.course}`,
+    `Submitted: ${new Date(submission.createdAt).toLocaleString()}`,
+    `Dataset: ${submission.datasetName ?? 'No dataset attached'}${submission.datasetSummary ? ` (${submission.datasetSummary})` : ''}`,
+    '',
+    '## Notebook Entries',
+    submission.notebookEntries.length
+      ? submission.notebookEntries.map((entry, index) => [
+        `### ${index + 1}. ${entry.title}`,
+        `Method: ${entry.method}`,
+        `Variables: ${entry.variables.join(', ') || '-'}`,
+        '',
+        entry.interpretation,
+        '',
+        entry.reportText,
+      ].join('\n')).join('\n\n')
+      : 'No notebook entries recorded.',
+  ].join('\n')
+}
+
+export function shareableReportHtml(input: {
+  title: string
+  dataset?: Dataset | null
+  analysisHistory: AnalysisLogEntry[]
+}) {
+  const datasetRows = input.dataset?.schema.map((col) => `
+    <tr>
+      <td>${escapeHtml(col.name)}</td>
+      <td>${escapeHtml(col.type)}</td>
+      <td>${col.unique}</td>
+      <td>${col.missing}</td>
+      <td>${col.missingPct.toFixed(1)}%</td>
+    </tr>
+  `).join('') ?? ''
+  const notebook = input.analysisHistory.map((entry) => `
+    <section class="entry">
+      <h2>${escapeHtml(entry.title)}</h2>
+      <p class="meta">${new Date(entry.createdAt).toLocaleString()} - ${escapeHtml(entry.method)}</p>
+      <p>${escapeHtml(entry.interpretation)}</p>
+      <h3>Report wording</h3>
+      <p>${escapeHtml(entry.reportText)}</p>
+    </section>
+  `).join('')
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${escapeHtml(input.title)}</title>
+  <style>
+    body { font-family: Inter, system-ui, sans-serif; color: #1f2937; margin: 32px; line-height: 1.55; }
+    h1 { color: #312e81; margin-bottom: 4px; }
+    h2 { margin-top: 28px; color: #334155; }
+    table { border-collapse: collapse; width: 100%; margin-top: 12px; font-size: 13px; }
+    th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
+    th { background: #f8fafc; }
+    .meta { color: #64748b; font-size: 13px; }
+    .entry { border-top: 1px solid #e5e7eb; margin-top: 20px; padding-top: 12px; }
+    .privacy { background: #ecfdf5; border: 1px solid #bbf7d0; color: #166534; padding: 12px; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <h1>${escapeHtml(input.title)}</h1>
+  <p class="meta">Generated by StatAnveshak on ${new Date().toLocaleString()}</p>
+  <p class="privacy">Browser-only export: this report was generated locally from data stored in the user's browser.</p>
+  <h2>Dataset</h2>
+  <p>${input.dataset ? `${escapeHtml(input.dataset.name)} - ${input.dataset.rows} rows x ${input.dataset.cols} columns` : 'No dataset attached.'}</p>
+  ${input.dataset ? `<table><thead><tr><th>Column</th><th>Type</th><th>Unique</th><th>Missing</th><th>Missing %</th></tr></thead><tbody>${datasetRows}</tbody></table>` : ''}
+  <h2>Analysis Notebook</h2>
+  ${notebook || '<p>No notebook entries recorded.</p>'}
+</body>
+</html>`
+}
+
+export function downloadFile(filename: string, content: string, type = 'application/json;charset=utf-8') {
+  const blob = new Blob([content], { type })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+function escapeHtml(value: unknown) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[char] ?? char))
+}

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://statanveshak.app/#/</loc><priority>1.0</priority></url>
+  <url><loc>https://statanveshak.app/#/data/upload</loc><priority>0.9</priority></url>
+  <url><loc>https://statanveshak.app/#/data/preview</loc><priority>0.7</priority></url>
+  <url><loc>https://statanveshak.app/#/data/grid</loc><priority>0.7</priority></url>
+  <url><loc>https://statanveshak.app/#/data/clean</loc><priority>0.8</priority></url>
+  <url><loc>https://statanveshak.app/#/data/workbench</loc><priority>0.8</priority></url>
+  <url><loc>https://statanveshak.app/#/explore/summary</loc><priority>0.8</priority></url>
+  <url><loc>https://statanveshak.app/#/explore/charts</loc><priority>0.8</priority></url>
+  <url><loc>https://statanveshak.app/#/explore/correlation</loc><priority>0.8</priority></url>
+  <url><loc>https://statanveshak.app/#/explore/frequency</loc><priority>0.7</priority></url>
+  <url><loc>https://statanveshak.app/#/distributions</loc><priority>0.9</priority></url>
+  <url><loc>https://statanveshak.app/#/inference</loc><priority>0.9</priority></url>
+  <url><loc>https://statanveshak.app/#/regression</loc><priority>0.8</priority></url>
+  <url><loc>https://statanveshak.app/#/advanced</loc><priority>0.7</priority></url>
+  <url><loc>https://statanveshak.app/#/stat-modules</loc><priority>0.9</priority></url>
+  <url><loc>https://statanveshak.app/#/syllabus</loc><priority>0.9</priority></url>
+  <url><loc>https://statanveshak.app/#/modules</loc><priority>0.6</priority></url>
+  <url><loc>https://statanveshak.app/#/learn</loc><priority>1.0</priority></url>
+  <url><loc>https://statanveshak.app/#/professional-learning</loc><priority>1.0</priority></url>
+  <url><loc>https://statanveshak.app/#/solver</loc><priority>0.9</priority></url>
+  <url><loc>https://statanveshak.app/#/dashboard</loc><priority>0.7</priority></url>
+  <url><loc>https://statanveshak.app/#/reports</loc><priority>0.8</priority></url>
+  <url><loc>https://statanveshak.app/#/documentation</loc><priority>0.8</priority></url>
+  <url><loc>https://statanveshak.app/#/sitemap</loc><priority>0.6</priority></url>
+</urlset>

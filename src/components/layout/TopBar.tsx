@@ -29,7 +29,11 @@ const PAGE_NAMES: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/reports': 'Reports',
   '/learn': 'Core Statistics',
+  '/professional-learning': 'Professional Learning',
   '/solver': 'Solver',
+  '/documentation': 'Documentation',
+  '/docs': 'Documentation',
+  '/sitemap': 'Sitemap',
   '/settings': 'Settings',
 }
 

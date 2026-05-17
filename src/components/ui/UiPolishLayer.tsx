@@ -17,6 +17,9 @@ const PAGE_LABELS: Record<string, string> = {
   '/modules': 'CS Modules',
   '/dashboard': 'Dashboard',
   '/reports': 'Reports',
+  '/professional-learning': 'Professional Learning',
+  '/docs': 'Documentation',
+  '/sitemap': 'Sitemap',
 }
 
 export function UiPolishLayer() {

@@ -27,11 +27,46 @@ test('opens global test recommender', async ({ page }) => {
   await expect(page.getByText('Recommended analysis')).toBeVisible()
 })
 
+test('professional learning workspace exposes practice and decision tools', async ({ page }) => {
+  await gotoApp(page, '/#/professional-learning')
+  await expect(page.getByRole('heading', { name: /Statistics Learning Paths/ })).toBeVisible()
+  await page.getByRole('button', { name: 'Practice' }).click()
+  await expect(page.getByText('Categorized Practice Engine')).toBeVisible()
+  await page.getByRole('button', { name: 'Decision Wizard' }).click()
+  await expect(page.getByText('Which Test Should I Use?')).toBeVisible()
+  await page.getByRole('button', { name: 'Share' }).click()
+  await expect(page.getByText('Project Bundle')).toBeVisible()
+  await expect(page.getByText('Classroom Submission')).toBeVisible()
+})
+
+test('documentation and sitemap pages expose SEO metadata', async ({ page }) => {
+  await gotoApp(page, '/#/documentation')
+  await expect(page.getByRole('heading', { level: 1, name: 'Documentation' })).toBeVisible()
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /documentation/i)
+
+  await gotoApp(page, '/#/sitemap')
+  await expect(page.getByRole('heading', { level: 1, name: 'Sitemap' })).toBeVisible()
+  await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(1)
+})
+
 test('upload page exposes multi-file import queue affordance', async ({ page }) => {
   await gotoApp(page, '/#/data/upload')
   await expect(page.getByRole('heading', { name: 'Upload Data' })).toBeVisible()
   await expect(page.getByText('Drop one or more files here')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Load Sample Data' })).toBeVisible()
+})
+
+test('sample dataset renders rows in the data grid', async ({ page }) => {
+  await gotoApp(page, '/#/data/upload')
+  await page.getByRole('button', { name: /Student Marks/ }).click()
+  await expect(page).toHaveURL(/#\/data\/preview/)
+
+  await gotoApp(page, '/#/data/grid')
+  await expect(page.locator('.ag-header-cell-text', { hasText: 'student_id' })).toBeVisible()
+  await expect(page.locator('.ag-center-cols-container .ag-row').first()).toBeVisible()
+
+  const renderedRows = await page.locator('.ag-center-cols-container .ag-row').count()
+  expect(renderedRows).toBeGreaterThan(0)
 })
 
 test('statistics workbench route is available', async ({ page }) => {

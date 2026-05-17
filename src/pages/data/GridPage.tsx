@@ -127,7 +127,7 @@ export function GridPage() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex h-full min-h-0 flex-col">
       {/* Toolbar */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shrink-0">
         <h2 className="font-semibold text-slate-700 dark:text-slate-200 mr-2">{activeDataset.name}</h2>
@@ -228,9 +228,10 @@ export function GridPage() {
       )}
 
       {/* Grid */}
-      <div className={`flex-1 ${theme === 'dark' ? 'ag-theme-quartz-dark' : 'ag-theme-quartz'}`}>
+      <div className={`min-h-0 flex-1 ${theme === 'dark' ? 'ag-theme-quartz-dark' : 'ag-theme-quartz'}`}>
         <AgGridReact
           ref={gridRef}
+          theme="legacy"
           rowData={activeDataset.data}
           columnDefs={colDefs}
           quickFilterText={quickFilter}
