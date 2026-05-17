@@ -25,6 +25,13 @@ const persistAnalysisHistory = (value: AnalysisLogEntry[]) => {
   return value.slice(0, 80)
 }
 
+export type AppTheme = 'light' | 'dark' | 'midnight' | 'forest' | 'rose' | 'sepia'
+const THEMES: AppTheme[] = ['light', 'dark', 'midnight', 'forest', 'rose', 'sepia']
+const loadTheme = (): AppTheme => {
+  const value = localStorage.getItem('pref-theme')
+  return THEMES.includes(value as AppTheme) ? value as AppTheme : 'light'
+}
+
 interface AppState {
   // Active dataset
   activeDataset: Dataset | null
@@ -53,7 +60,8 @@ interface AppState {
   setSidebarOpen: (v: boolean) => void
   activeModule: string
   setActiveModule: (m: string) => void
-  theme: 'light' | 'dark'
+  theme: AppTheme
+  setTheme: (theme: AppTheme) => void
   toggleTheme: () => void
   highContrast: boolean
   toggleHighContrast: () => void
@@ -110,8 +118,13 @@ export const useStore = create<AppState>((set) => ({
   setSidebarOpen: (v) => { savePref('pref-sidebar-open', v); set({ sidebarOpen: v }) },
   activeModule: 'home',
   setActiveModule: (m) => set({ activeModule: m }),
-  theme: localStorage.getItem('pref-theme') === 'dark' ? 'dark' : 'light',
-  toggleTheme: () => set((s) => { const theme = s.theme === 'light' ? 'dark' : 'light'; savePref('pref-theme', theme); return { theme } }),
+  theme: loadTheme(),
+  setTheme: (theme) => { savePref('pref-theme', theme); set({ theme }) },
+  toggleTheme: () => set((s) => {
+    const theme: AppTheme = s.theme === 'light' ? 'dark' : 'light'
+    savePref('pref-theme', theme)
+    return { theme }
+  }),
   highContrast: loadBool('pref-high-contrast', false),
   toggleHighContrast: () => set((s) => { const highContrast = !s.highContrast; savePref('pref-high-contrast', highContrast); return { highContrast } }),
   largeText: loadBool('pref-large-text', false),

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { AlertTriangle, ChevronRight, Clock, Columns3, Contrast, Database, FileText, HelpCircle, LogOut, Minus, Moon, Plus, RotateCcw, Save, Search, Sun, Target, Type } from 'lucide-react'
+import { AlertTriangle, ChevronRight, Clock, Columns3, Contrast, Database, FileText, HelpCircle, LogOut, Minus, Moon, Palette, Plus, RotateCcw, Save, Search, Sun, Target, Type } from 'lucide-react'
 import { useStore } from '../../store/useStore'
 import { saveDataset } from '../../lib/storage'
 import { useToast } from '../ui/toastContext'
@@ -345,9 +345,9 @@ export function TopBar() {
       <button
         onClick={toggleTheme}
         className="w-8 h-8 flex items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-        title="Toggle theme"
+        title={`Toggle theme (${theme})`}
       >
-        {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+        {theme === 'light' ? <Moon size={16} /> : theme === 'dark' ? <Sun size={16} /> : <Palette size={16} />}
       </button>
 
       <div className="relative">

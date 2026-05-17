@@ -1,10 +1,20 @@
 import { useState, useEffect } from 'react'
 import { useStore } from '../store/useStore'
+import type { AppTheme } from '../store/useStore'
 import { loadDatasets, deleteDataset, loadProjects, deleteProject } from '../lib/storage'
-import { Trash2, Database, RefreshCw } from 'lucide-react'
+import { Trash2, Database, RefreshCw, Check } from 'lucide-react'
+
+const THEMES: Array<{ key: AppTheme; label: string; swatches: string[] }> = [
+  { key: 'light', label: 'Light', swatches: ['#f8fafc', '#ffffff', '#4f46e5'] },
+  { key: 'dark', label: 'Dark', swatches: ['#0f172a', '#1e293b', '#818cf8'] },
+  { key: 'midnight', label: 'Midnight', swatches: ['#020617', '#172554', '#38bdf8'] },
+  { key: 'forest', label: 'Forest', swatches: ['#052e1b', '#14532d', '#34d399'] },
+  { key: 'rose', label: 'Rose', swatches: ['#fff1f2', '#ffffff', '#e11d48'] },
+  { key: 'sepia', label: 'Sepia', swatches: ['#f8f1e3', '#fffaf0', '#b45309'] },
+]
 
 export function SettingsPage() {
-  const { theme, toggleTheme, highContrast, toggleHighContrast, largeText, toggleLargeText, density, toggleDensity, resetZoom, setActiveDataset, setActiveProject } = useStore()
+  const { theme, setTheme, highContrast, toggleHighContrast, largeText, toggleLargeText, density, toggleDensity, resetZoom, setActiveDataset, setActiveProject } = useStore()
   const [storageInfo, setStorageInfo] = useState<{ datasets: number; projects: number }>({ datasets: 0, projects: 0 })
   const [status, setStatus] = useState<string | null>(null)
 
@@ -54,17 +64,33 @@ export function SettingsPage() {
         {/* Theme */}
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
           <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-3">Appearance</h3>
-          <div className="flex items-center justify-between">
+          <div>
             <div>
               <p className="text-sm text-slate-600 dark:text-slate-300">Theme</p>
-              <p className="text-xs text-slate-400">Currently: {theme === 'light' ? 'Light' : 'Dark'} mode</p>
+              <p className="text-xs text-slate-400">Currently: {THEMES.find((item) => item.key === theme)?.label ?? 'Light'} mode</p>
             </div>
-            <button
-              onClick={toggleTheme}
-              className="text-sm border border-slate-200 dark:border-slate-600 px-4 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-slate-600 dark:text-slate-300"
-            >
-              Toggle {theme === 'light' ? 'Dark' : 'Light'} Mode
-            </button>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {THEMES.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => setTheme(item.key)}
+                  className={`flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+                    theme === item.key
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-400 dark:bg-indigo-900/30 dark:text-indigo-200'
+                      : 'border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="flex overflow-hidden rounded-full border border-slate-200 dark:border-slate-600">
+                      {item.swatches.map((color) => <span key={color} className="h-4 w-4" style={{ backgroundColor: color }} />)}
+                    </span>
+                    {item.label}
+                  </span>
+                  {theme === item.key && <Check size={14} />}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="mt-4 grid gap-2 sm:grid-cols-3">
             <button onClick={toggleHighContrast} className="rounded-md border border-slate-200 px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">

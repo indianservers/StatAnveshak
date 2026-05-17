@@ -3,6 +3,7 @@ import Plotly from 'plotly.js-dist-min'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Activity, AlertTriangle, BarChart3, BrainCircuit, Calculator, Clipboard, Download, Expand, Hash, Search, Star, TableProperties } from 'lucide-react'
 import { useStore } from '../store/useStore'
+import type { AppTheme } from '../store/useStore'
 import { defaultSelection, runStatModule, STAT_MODULES, type StatModuleGroup, type StatModuleSelection } from '../lib/statModules'
 import { useToast } from '../components/ui/toastContext'
 import { DatasetEmptyState } from '../components/ui/DatasetEmptyState'
@@ -355,7 +356,7 @@ function ModuleShortcutList({ title, keys, active, onSelect }: { title: string; 
   )
 }
 
-function PlotPanel({ chart, theme, moduleKey, notify, height = '420px' }: { chart: { data: unknown[]; layout?: Record<string, unknown> }; theme: 'light' | 'dark'; moduleKey: string; notify: (message: string, tone?: 'success' | 'info') => void; height?: string }) {
+function PlotPanel({ chart, theme, moduleKey, notify, height = '420px' }: { chart: { data: unknown[]; layout?: Record<string, unknown> }; theme: AppTheme; moduleKey: string; notify: (message: string, tone?: 'success' | 'info') => void; height?: string }) {
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {

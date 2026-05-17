@@ -16,6 +16,108 @@ body {
   color-scheme: dark;
 }
 
+.theme-light {
+  --theme-accent: #4f46e5;
+  --theme-sidebar: #0f172a;
+}
+
+.theme-dark {
+  --theme-accent: #818cf8;
+  --theme-sidebar: #0f172a;
+}
+
+.theme-midnight {
+  --theme-accent: #38bdf8;
+  --theme-sidebar: #020617;
+}
+
+.theme-forest {
+  --theme-accent: #34d399;
+  --theme-sidebar: #052e1b;
+}
+
+.theme-rose {
+  --theme-accent: #e11d48;
+  --theme-sidebar: #4c0519;
+}
+
+.theme-sepia {
+  --theme-accent: #b45309;
+  --theme-sidebar: #3f2a18;
+}
+
+.theme-midnight,
+.theme-forest,
+.theme-rose,
+.theme-sepia {
+  accent-color: var(--theme-accent);
+}
+
+.theme-midnight .app-sidebar,
+.theme-forest .app-sidebar,
+.theme-rose .app-sidebar,
+.theme-sepia .app-sidebar {
+  background-color: var(--theme-sidebar);
+}
+
+.theme-midnight .bg-indigo-600,
+.theme-forest .bg-indigo-600,
+.theme-rose .bg-indigo-600,
+.theme-sepia .bg-indigo-600,
+.theme-midnight .bg-indigo-500,
+.theme-forest .bg-indigo-500,
+.theme-rose .bg-indigo-500,
+.theme-sepia .bg-indigo-500 {
+  background-color: var(--theme-accent) !important;
+}
+
+.theme-midnight .text-indigo-600,
+.theme-forest .text-indigo-600,
+.theme-rose .text-indigo-600,
+.theme-sepia .text-indigo-600,
+.theme-midnight .text-indigo-500,
+.theme-forest .text-indigo-500,
+.theme-rose .text-indigo-500,
+.theme-sepia .text-indigo-500 {
+  color: var(--theme-accent) !important;
+}
+
+.theme-midnight .border-indigo-500,
+.theme-forest .border-indigo-500,
+.theme-rose .border-indigo-500,
+.theme-sepia .border-indigo-500,
+.theme-midnight .focus\:border-indigo-500:focus,
+.theme-forest .focus\:border-indigo-500:focus,
+.theme-rose .focus\:border-indigo-500:focus,
+.theme-sepia .focus\:border-indigo-500:focus {
+  border-color: var(--theme-accent) !important;
+}
+
+.theme-midnight .bg-slate-50 {
+  background-color: #020617 !important;
+}
+
+.theme-midnight .dark\:bg-slate-900:is(.dark *) {
+  background-color: #020617 !important;
+}
+
+.theme-forest .dark\:bg-slate-900:is(.dark *) {
+  background-color: #031b11 !important;
+}
+
+.theme-rose .bg-slate-50 {
+  background-color: #fff1f2 !important;
+}
+
+.theme-sepia .bg-slate-50 {
+  background-color: #f8f1e3 !important;
+}
+
+.theme-sepia .bg-white,
+.theme-sepia .dark\:bg-slate-800:is(.dark *) {
+  background-color: #fffaf0 !important;
+}
+
 #root {
   height: 100vh;
   width: 100vw;

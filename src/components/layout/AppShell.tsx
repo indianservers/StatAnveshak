@@ -12,6 +12,7 @@ import { SeoMetadata } from '../ui/SeoMetadata'
 
 export function AppShell() {
   const { theme, highContrast, largeText, zoomLevel, density, hydrateStorage } = useStore()
+  const darkSurface = theme === 'dark' || theme === 'midnight' || theme === 'forest'
 
   useEffect(() => {
     hydrateStorage().catch((error) => {
@@ -28,7 +29,7 @@ export function AppShell() {
   }, [largeText, zoomLevel])
 
   return (
-    <div className={theme === 'dark' || highContrast ? 'dark' : ''}>
+    <div className={`${darkSurface || highContrast ? 'dark' : ''} theme-${theme}`}>
       <ToastProvider>
         <SeoMetadata />
         <div className={`flex h-screen overflow-hidden ${density === 'compact' ? 'ui-compact' : ''} ${highContrast ? 'bg-black' : 'bg-slate-50 dark:bg-slate-900'}`}>

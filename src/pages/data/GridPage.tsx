@@ -17,6 +17,7 @@ ModuleRegistry.registerModules([AllCommunityModule])
 
 export function GridPage() {
   const { activeDataset, theme, setActiveDataset, updateDataset, setLastSavedAt } = useStore()
+  const darkGrid = theme === 'dark' || theme === 'midnight' || theme === 'forest'
   const gridRef = useRef<AgGridReact>(null)
   const [quickFilter, setQuickFilter] = useState('')
   const [denseMode, setDenseMode] = useState(false)
@@ -228,7 +229,7 @@ export function GridPage() {
       )}
 
       {/* Grid */}
-      <div className={`min-h-0 flex-1 ${theme === 'dark' ? 'ag-theme-quartz-dark' : 'ag-theme-quartz'}`}>
+      <div className={`min-h-0 flex-1 ${darkGrid ? 'ag-theme-quartz-dark' : 'ag-theme-quartz'}`}>
         <AgGridReact
           ref={gridRef}
           theme="legacy"
