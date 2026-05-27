@@ -37,8 +37,8 @@ export function AppShell() {
           <div className="flex flex-col flex-1 overflow-hidden">
             <TopBar />
             <main className="min-h-0 flex-1 overflow-auto page-fade">
-              <div className="flex h-full flex-col">
-                <div className="min-h-0 flex-1">
+              <div className="flex min-h-full flex-col">
+                <div className="flex-1">
                   <Outlet />
                 </div>
                 <AimerFooter />
