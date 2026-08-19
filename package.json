@@ -8,6 +8,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "test:stat-modules": "node scripts/stat-modules-qa.mjs",
     "test:e2e": "playwright test",
     "test:ci": "npm run lint && npm run build && npm run test:e2e -- --project=chromium",
     "preview": "vite preview"

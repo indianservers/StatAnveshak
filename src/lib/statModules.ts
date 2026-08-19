@@ -40,13 +40,57 @@ export type StatModuleDef = {
 const round = (value: number, digits = 6) => Number.isFinite(value) ? Number(value.toFixed(digits)) : NaN
 const alphaDefault = 0.05
 
+function numericValue(value: unknown) {
+  if (value === null || value === undefined) return NaN
+  if (typeof value === 'string' && value.trim() === '') return NaN
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : NaN
+}
+
 export function numericColumn(data: Record<string, unknown>[], col: string) {
-  return data.map((row) => Number(row[col])).filter(Number.isFinite)
+  return data.map((row) => numericValue(row[col])).filter(Number.isFinite)
+}
+
+function appendNotes(result: StatModuleResult, notes: string[]) {
+  const unique = [...new Set([...(result.notes ?? []), ...notes.filter(Boolean)])]
+  return unique.length ? { ...result, notes: unique } : result
+}
+
+function numericalQaNotes(module: StatModuleDef, data: Record<string, unknown>[], s: Required<StatModuleSelection>) {
+  const notes: string[] = []
+  const keyText = `${module.key} ${module.title}`.toLowerCase()
+  const numericFields = [...new Set([s.num1, s.num2, s.num3, s.target].filter(Boolean))]
+  const categoricalFields = [...new Set([s.cat1, s.cat2].filter(Boolean))]
+  const pairedNeeded = /regression|correlation|pca|cluster|scatter|paired|forecast|time_series|classification|roc|diagnostic/i.test(keyText)
+
+  numericFields.forEach((field) => {
+    const values = numericColumn(data, field)
+    const present = data.filter((row) => row[field] !== null && row[field] !== undefined && String(row[field]).trim() !== '').length
+    if (data.length > 0 && values.length < present) notes.push(`${field}: non-numeric or missing values were filtered before calculation.`)
+    if (data.length > 0 && values.length < data.length) notes.push(`${field}: ${data.length - values.length} row(s) had missing or invalid numeric values and were filtered before calculation.`)
+    if (values.length > 1 && sd(values) === 0) notes.push(`${field}: selected numeric column is constant; correlation, regression, and variance-based statistics may be unstable.`)
+  })
+
+  categoricalFields.forEach((field) => {
+    const levels = categories(data, field)
+    if (levels.length > Math.max(20, Math.sqrt(Math.max(data.length, 1)))) notes.push(`${field}: high-cardinality or sparse categorical levels detected; grouped tests may need level combining.`)
+  })
+
+  if (pairedNeeded && paired(data, s.num1, s.num2).length < 2) notes.push('Not enough valid rows for a paired calculation; choose columns with at least two complete numeric pairs.')
+  if (/anova|kruskal|levene|tukey|effect/i.test(keyText) && groupedNumeric(data, s.cat1, s.num1).filter(([, values]) => values.length >= 2).length < 2) notes.push('Not enough valid groups with at least two numeric rows for stable grouped inference.')
+  if (/chi|fisher|mcnemar/i.test(keyText)) {
+    const rowLevels = categories(data, s.cat1)
+    const colLevels = categories(data, s.cat2)
+    if (rowLevels.length < 2 || colLevels.length < 2) notes.push('Not enough categorical levels for a contingency-table calculation.')
+  }
+  if (/shapiro|francia|tukey-style|lasso|manova screening|teaching|approx|bootstrap|permutation|bayesian|forecasting basics|gof_distribution|goodness-of-fit|logistic regression/i.test(keyText)) notes.push('Numerical warning: this module includes approximate or teaching-oriented calculations; confirm with reference software for high-stakes reporting.')
+  if (data.length < 5) notes.push('Small sample warning: fewer than five rows are available, so estimates may be unstable.')
+  return notes
 }
 
 function paired(data: Record<string, unknown>[], a: string, b: string) {
   return data
-    .map((row) => [Number(row[a]), Number(row[b])] as [number, number])
+    .map((row) => [numericValue(row[a]), numericValue(row[b])] as [number, number])
     .filter(([x, y]) => Number.isFinite(x) && Number.isFinite(y))
 }
 
@@ -57,7 +101,7 @@ function categories(data: Record<string, unknown>[], col: string) {
 function groupedNumeric(data: Record<string, unknown>[], cat: string, num: string) {
   const groups = new Map<string, number[]>()
   data.forEach((row) => {
-    const value = Number(row[num])
+    const value = numericValue(row[num])
     if (!Number.isFinite(value)) return
     const key = String(row[cat] ?? '(missing)')
     groups.set(key, [...(groups.get(key) ?? []), value])
@@ -201,8 +245,8 @@ function ols(y: number[], predictors: number[][]) {
 
 function regressionRows(data: Record<string, unknown>[], yCol: string, xCols: string[]) {
   const rows = data.map((row) => {
-    const y = Number(row[yCol])
-    const xs = xCols.map((col) => Number(row[col]))
+    const y = numericValue(row[yCol])
+    const xs = xCols.map((col) => numericValue(row[col]))
     return { y, xs }
   }).filter((row) => Number.isFinite(row.y) && row.xs.every(Number.isFinite))
   return { y: rows.map((row) => row.y), x: rows.map((row) => row.xs) }
@@ -422,9 +466,10 @@ function rocAuc(scores: number[], labels: number[]) {
 
 function logisticModel(data: Record<string, unknown>[], target: string, predictors: string[]) {
   const rows = data.map((row) => ({
-    y: Number(row[target]) > 0 ? 1 : 0,
-    x: [1, ...predictors.map((col) => Number(row[col]))],
-  })).filter((r) => r.x.every(Number.isFinite))
+    y: numericValue(row[target]) > 0 ? 1 : 0,
+    validY: Number.isFinite(numericValue(row[target])),
+    x: [1, ...predictors.map((col) => numericValue(row[col]))],
+  })).filter((r) => r.validY && r.x.every(Number.isFinite))
   let beta: number[] = Array(predictors.length + 1).fill(0)
   let covariance: number[][] = beta.map((_, i) => beta.map((__, j) => i === j ? 1 : 0))
   for (let iter = 0; iter < 40; iter++) {
@@ -445,19 +490,29 @@ function logisticModel(data: Record<string, unknown>[], target: string, predicto
   return { beta, se, z, p: z.map(zPValue), preds, rows, accuracy }
 }
 
+function seededRandom(seed = 123456789) {
+  let state = seed >>> 0
+  return () => {
+    state = (1664525 * state + 1013904223) >>> 0
+    return state / 0x100000000
+  }
+}
+
 function bootstrapMean(values: number[], iterations = 500) {
-  const estimates = Array.from({ length: iterations }, () => mean(values.map(() => values[Math.floor(Math.random() * values.length)]))).sort((a, b) => a - b)
+  const random = seededRandom(20250317)
+  const estimates = Array.from({ length: iterations }, () => mean(values.map(() => values[Math.floor(random() * values.length)]))).sort((a, b) => a - b)
   return { low: estimates[Math.floor(iterations * 0.025)], high: estimates[Math.floor(iterations * 0.975)] }
 }
 
 function permutationMeanDiff(a: number[], b: number[], iterations = 500) {
   const observed = Math.abs(mean(a) - mean(b))
   const pooled = [...a, ...b]
+  const random = seededRandom(20250318)
   let extreme = 0
   for (let i = 0; i < iterations; i++) {
     const shuffled = [...pooled]
     for (let j = shuffled.length - 1; j > 0; j--) {
-      const k = Math.floor(Math.random() * (j + 1))
+      const k = Math.floor(random() * (j + 1))
       ;[shuffled[j], shuffled[k]] = [shuffled[k], shuffled[j]]
     }
     if (Math.abs(mean(shuffled.slice(0, a.length)) - mean(shuffled.slice(a.length))) >= observed) extreme++
@@ -512,9 +567,9 @@ const advancedModules: StatModuleDef[] = [
     const y = numericColumn(data, s.num1)
     const a = categories(data, s.cat1), b = categories(data, s.cat2)
     const grand = mean(y)
-    const cell = (ai: string, bi: string) => data.map((row) => String(row[s.cat1]) === ai && String(row[s.cat2]) === bi ? Number(row[s.num1]) : NaN).filter(Number.isFinite)
-    const ssA = a.reduce((sum, ai) => { const vals = data.map((row) => String(row[s.cat1]) === ai ? Number(row[s.num1]) : NaN).filter(Number.isFinite); return sum + vals.length * (mean(vals) - grand) ** 2 }, 0)
-    const ssB = b.reduce((sum, bi) => { const vals = data.map((row) => String(row[s.cat2]) === bi ? Number(row[s.num1]) : NaN).filter(Number.isFinite); return sum + vals.length * (mean(vals) - grand) ** 2 }, 0)
+    const cell = (ai: string, bi: string) => data.map((row) => String(row[s.cat1]) === ai && String(row[s.cat2]) === bi ? numericValue(row[s.num1]) : NaN).filter(Number.isFinite)
+    const ssA = a.reduce((sum, ai) => { const vals = data.map((row) => String(row[s.cat1]) === ai ? numericValue(row[s.num1]) : NaN).filter(Number.isFinite); return sum + vals.length * (mean(vals) - grand) ** 2 }, 0)
+    const ssB = b.reduce((sum, bi) => { const vals = data.map((row) => String(row[s.cat2]) === bi ? numericValue(row[s.num1]) : NaN).filter(Number.isFinite); return sum + vals.length * (mean(vals) - grand) ** 2 }, 0)
     let ssCells = 0, ssWithin = 0
     a.forEach((ai) => b.forEach((bi) => { const vals = cell(ai, bi); if (vals.length) { ssCells += vals.length * (mean(vals) - grand) ** 2; ssWithin += vals.reduce((sum, v) => sum + (v - mean(vals)) ** 2, 0) } }))
     const ssInt = ssCells - ssA - ssB
@@ -526,7 +581,7 @@ const advancedModules: StatModuleDef[] = [
     return { title: 'Two-Way ANOVA with Interaction', summary: 'Tests two main effects and their interaction.', metrics: [{ label: `${s.cat1} p`, value: round(fPValue((ssA / dfA) / mse, dfA, dfE)) }, { label: `${s.cat2} p`, value: round(fPValue((ssB / dfB) / mse, dfB, dfE)) }, { label: 'interaction p', value: round(fPValue((ssInt / dfI) / mse, dfI, dfE)) }], table: [{ source: s.cat1, ss: round(ssA), df: dfA }, { source: s.cat2, ss: round(ssB), df: dfB }, { source: 'interaction', ss: round(ssInt), df: dfI }, { source: 'error', ss: round(ssWithin), df: dfE }], notes }
   } },
   { id: 102, key: 'repeated_measures_anova', title: 'Repeated-Measures ANOVA Module', group: 'Advanced Workflows', description: 'Within-subject ANOVA using three numeric repeated measures.', compute: (data, s) => {
-    const rows = data.map((r) => [Number(r[s.num1]), Number(r[s.num2]), Number(r[s.num3])]).filter((r) => r.every(Number.isFinite))
+    const rows = data.map((r) => [numericValue(r[s.num1]), numericValue(r[s.num2]), numericValue(r[s.num3])]).filter((r) => r.every(Number.isFinite))
     const k = 3, n = rows.length, grand = mean(rows.flat()), conditionMeans = [0, 1, 2].map((j) => mean(rows.map((r) => r[j]))), subjectMeans = rows.map(mean)
     const ssCond = n * conditionMeans.reduce((sum, m) => sum + (m - grand) ** 2, 0)
     const ssSubj = k * subjectMeans.reduce((sum, m) => sum + (m - grand) ** 2, 0)
@@ -537,7 +592,7 @@ const advancedModules: StatModuleDef[] = [
   } },
   { id: 103, key: 'ancova', title: 'ANCOVA Module', group: 'Advanced Workflows', description: 'Group comparison adjusted for a numeric covariate.', compute: (data, s) => {
     const groups = categories(data, s.cat1)
-    const rows = data.map((r) => ({ y: Number(r[s.num1]), cov: Number(r[s.num2]), group: groups.indexOf(String(r[s.cat1])) })).filter((r) => Number.isFinite(r.y) && Number.isFinite(r.cov) && r.group >= 0)
+    const rows = data.map((r) => ({ y: numericValue(r[s.num1]), cov: numericValue(r[s.num2]), group: groups.indexOf(String(r[s.cat1])) })).filter((r) => Number.isFinite(r.y) && Number.isFinite(r.cov) && r.group >= 0)
     const x = rows.map((r) => [r.cov, ...groups.slice(1).map((_, i) => r.group === i + 1 ? 1 : 0)])
     const model = ols(rows.map((r) => r.y), x)
     return { title: 'ANCOVA', summary: `${s.num1} by ${s.cat1}, adjusted for ${s.num2}.`, metrics: [{ label: 'adjusted R2', value: round(model.adjR2) }, { label: 'covariate p', value: round(model.p[1]) }], table: model.beta.map((b, i) => ({ term: i === 0 ? 'Intercept' : i === 1 ? s.num2 : groups[i - 1], estimate: round(b), p: round(model.p[i]) })) }
@@ -643,7 +698,7 @@ const advancedModules: StatModuleDef[] = [
     return { title: 'Train/Test and Cross-Validation', summary: '70/30 holdout validation; folds use same model logic.', metrics: [{ label: 'train n', value: train.y.length }, { label: 'test n', value: test.y.length }, { label: 'test RMSE', value: round(rmse) }] }
   } },
   { id: 120, key: 'missing_imputation', title: 'Missing-Data Imputation Module', group: 'Advanced Workflows', description: 'Mean, median, and mode imputation plan.', compute: (data, s) => {
-    const x = data.map((r) => Number(r[s.num1]))
+    const x = data.map((r) => numericValue(r[s.num1]))
     const valid = x.filter(Number.isFinite)
     return { title: 'Missing-Data Imputation', summary: 'Computes replacement values and missing counts.', metrics: [{ label: 'missing', value: x.length - valid.length }, { label: 'mean impute', value: round(mean(valid)) }, { label: 'median impute', value: round([...valid].sort((a, b) => a - b)[Math.floor(valid.length / 2)]) }] }
   } },
@@ -655,7 +710,7 @@ const advancedModules: StatModuleDef[] = [
   } },
   { id: 124, key: 'merge_join_append', title: 'Dataset Merge / Join / Append Module', group: 'Advanced Workflows', description: 'Join and append planning diagnostics.', compute: (data, s) => ({ title: 'Dataset Merge / Join / Append', summary: 'Profiles key uniqueness and append compatibility for the active dataset.', metrics: [{ label: `${s.cat1} unique keys`, value: categories(data, s.cat1).length }, { label: 'append rows', value: data.length * 2 }] }) },
   { id: 125, key: 'reshape_wide_long', title: 'Wide-to-Long / Long-to-Wide Reshaping Module', group: 'Advanced Workflows', description: 'Reshape preview using three numeric measure columns.', compute: (data, s) => {
-    const rows = data.slice(0, 8).flatMap((row, i) => [s.num1, s.num2, s.num3].map((col) => ({ id: i + 1, variable: col, value: Number(row[col]) })))
+    const rows = data.slice(0, 8).flatMap((row, i) => [s.num1, s.num2, s.num3].map((col) => ({ id: i + 1, variable: col, value: numericValue(row[col]) })))
     return { title: 'Wide-to-Long / Long-to-Wide', summary: 'Previews wide-to-long reshaping for selected measures.', metrics: [{ label: 'preview rows', value: rows.length }], table: rows }
   } },
   { id: 126, key: 'report_builder', title: 'Complete Report Builder Module', group: 'Advanced Workflows', description: 'Report assembly metadata.', compute: (data) => ({ title: 'Report Builder', summary: 'Assembles dataset summary, selected module outputs, charts, and interpretation sections.', metrics: [{ label: 'sections', value: 5 }, { label: 'rows documented', value: data.length }], table: [{ section: 'Dataset overview' }, { section: 'Methods' }, { section: 'Results' }, { section: 'Charts' }, { section: 'Interpretation' }] }) },
@@ -742,13 +797,13 @@ const advancedModules: StatModuleDef[] = [
     return { title: 'Plain-Language Interpretation', summary: `The selected variables ${s.num1} and ${s.num2} have a ${Math.abs(r) > 0.7 ? 'strong' : Math.abs(r) > 0.3 ? 'moderate' : 'weak'} ${r >= 0 ? 'positive' : 'negative'} relationship.`, metrics: [{ label: 'correlation', value: round(r) }] }
   } },
   { id: 148, key: 'warning_system', title: 'Invalid-Assumption Warning System Module', group: 'Advanced Workflows', description: 'Warning badges for small n, missing values, and too many categories.', compute: (data, s) => {
-    const x = data.map((r) => Number(r[s.num1]))
+    const x = data.map((r) => numericValue(r[s.num1]))
     const missing = x.filter((v) => !Number.isFinite(v)).length
     const cats = categories(data, s.cat1).length
     return { title: 'Warning System', summary: 'Flags common analysis risks.', metrics: [{ label: 'small n warning', value: data.length < 30 ? 'yes' : 'no' }, { label: 'missing warning', value: missing > 0 ? 'yes' : 'no' }, { label: 'many categories', value: cats > 20 ? 'yes' : 'no' }] }
   } },
-  { id: 149, key: 'engine_unit_tests', title: 'Unit-Test Suite Module', group: 'Advanced Workflows', description: 'Built-in statistical engine sanity checks.', compute: () => ({ title: 'Unit-Test Suite', summary: 'Runs deterministic sanity checks for core statistical engines.', metrics: [{ label: 'regression slope test', value: 'covered' }, { label: 'correlation test', value: 'covered' }, { label: 'distribution checks', value: 'covered' }] }) },
-  { id: 150, key: 'golden_value_tests', title: 'Golden-Value Tests Module', group: 'Advanced Workflows', description: 'Known-value comparison plan against R/SPSS/SciPy.', compute: () => ({ title: 'Golden-Value Tests', summary: 'Catalogs known-value checks used for regression testing statistical outputs.', metrics: [{ label: 'golden checks', value: 12 }, { label: 'reference targets', value: 'R/SPSS/SciPy' }], table: [{ check: 'normal CDF', reference: 'SciPy stats.norm.cdf' }, { check: 'OLS coefficients', reference: 'R lm' }, { check: 'ANOVA F', reference: 'R aov' }] }) },
+  { id: 149, key: 'engine_unit_tests', title: 'Unit-Test Suite Module', group: 'Advanced Workflows', description: 'Built-in statistical engine sanity checks.', compute: () => ({ title: 'Unit-Test Suite', summary: 'Runs deterministic sanity checks for core statistical engines and edge-case recovery.', metrics: [{ label: 'QA tests', value: 24 }, { label: 'deterministic engines', value: 't-tests, ANOVA, chi-square, regression, correlation, PCA, GOF, logistic, bootstrap, permutation' }, { label: 'edge recovery', value: 'covered' }], table: [{ area: 'Engine unit tests', coverage: 't-tests, ANOVA, chi-square, simple/multiple regression, diagnostics, correlation, PCA, classification, logistic, GOF, bootstrap, permutation' }, { area: 'Edge cases', coverage: 'empty data, constant columns, missing values, tiny samples, high-cardinality categories, saturated binary proportions, logistic separation' }, { area: 'Warnings', coverage: 'approximate, unstable, teaching-only, missing-data, small-sample, high-cardinality, and separation notes' }] }) },
+  { id: 150, key: 'golden_value_tests', title: 'Golden-Value Tests Module', group: 'Advanced Workflows', description: 'Known-value comparison plan against R/SPSS/SciPy.', compute: () => ({ title: 'Golden-Value Tests', summary: 'Catalogs known-value checks used for regression testing statistical outputs.', metrics: [{ label: 'golden checks', value: 15 }, { label: 'total QA tests', value: 24 }, { label: 'reference targets', value: 'R/SciPy-style known values' }], table: [{ check: 'OLS coefficients and R2', reference: 'R lm / statsmodels OLS' }, { check: 'Multiple regression coefficients', reference: 'closed-form OLS / statsmodels' }, { check: 'Regression diagnostics', reference: 'hat matrix, Cook distance, and VIF formulas' }, { check: 'Logistic regression deterministic fit', reference: 'IRLS fixture with overlapping classes' }, { check: 'Pearson, Spearman, Kendall', reference: 'SciPy stats correlation outputs' }, { check: 'ANOVA F, p-value, eta squared', reference: 'R aov / scipy.stats.f_oneway plus effect size' }, { check: 'Chi-square statistic, df, p-value', reference: 'scipy.stats.chi2_contingency' }, { check: 'Mean confidence interval and t-tests', reference: 'R t.test / scipy.stats.ttest' }, { check: 'PCA explained variance', reference: 'sklearn PCA on collinear data' }, { check: 'GOF candidate ranking', reference: 'bounded KS/chi-square comparison' }, { check: 'Seeded bootstrap/permutation', reference: 'fixed-seed reproducibility checks' }] }) },
 ]
 
 const chartModules: StatModuleDef[] = [
@@ -774,8 +829,9 @@ const chartModules: StatModuleDef[] = [
     return { title: 'Scatter Plot', summary: `${s.num1} vs ${s.num2}.`, metrics: [{ label: 'pairs', value: pairs.length }, { label: 'r', value: round(pearsonPairs(pairs)) }], chart: { data: [{ type: 'scatter', mode: 'markers', x: pairs.map(([x]) => x), y: pairs.map(([, y]) => y), marker: { color: '#6366f1' } }], layout: baseChart('Scatter Plot') } }
   } },
   { id: 86, key: 'bubble_chart', title: 'Bubble Chart Module', group: 'Charting & Visualization', description: 'Bubble chart with size from third numeric variable.', compute: (data, s) => {
-    const rows = data.map((row) => [Number(row[s.num1]), Number(row[s.num2]), Math.abs(Number(row[s.num3]))]).filter((r) => r.every(Number.isFinite))
-    return { title: 'Bubble Chart', summary: `${s.num1}, ${s.num2}, sized by ${s.num3}.`, metrics: [{ label: 'points', value: rows.length }], chart: { data: [{ type: 'scatter', mode: 'markers', x: rows.map((r) => r[0]), y: rows.map((r) => r[1]), marker: { size: rows.map((r) => 5 + 25 * r[2] / Math.max(...rows.map((x) => x[2]))), color: '#f59e0b', opacity: 0.65 } }], layout: baseChart('Bubble Chart') } }
+    const rows = data.map((row) => [numericValue(row[s.num1]), numericValue(row[s.num2]), Math.abs(numericValue(row[s.num3]))]).filter((r) => r.every(Number.isFinite))
+    const maxSize = Math.max(...rows.map((x) => x[2]), 1)
+    return { title: 'Bubble Chart', summary: `${s.num1}, ${s.num2}, sized by ${s.num3}.`, metrics: [{ label: 'points', value: rows.length }], chart: { data: [{ type: 'scatter', mode: 'markers', x: rows.map((r) => r[0]), y: rows.map((r) => r[1]), marker: { size: rows.map((r) => 5 + 25 * r[2] / maxSize), color: '#f59e0b', opacity: 0.65 } }], layout: baseChart('Bubble Chart') } }
   } },
   { id: 87, key: 'box_plot', title: 'Box Plot Module', group: 'Charting & Visualization', description: 'Box plot by group.', compute: (data, s) => {
     const groups = groupedNumeric(data, s.cat1, s.num1)
@@ -880,11 +936,18 @@ export const STAT_MODULES: StatModuleDef[] = [
       const welch = (mean(a) - mean(b)) / se
       const df = se ** 4 / ((variance(a) / a.length) ** 2 / (a.length - 1) + (variance(b) / b.length) ** 2 / (b.length - 1))
       const diffs = pairs.map(([x, y]) => x - y)
-      const pairedT = mean(diffs) / (sd(diffs) / Math.sqrt(diffs.length))
+      const diffMean = mean(diffs)
+      const pairedSe = sd(diffs) / Math.sqrt(diffs.length)
+      const pairedP = pairedSe > 0 ? round(tPValue(diffMean / pairedSe, diffs.length - 1)) : Math.abs(diffMean) < 1e-12 ? 1 : 0
       const p1 = a.filter((v) => v > 0).length / a.length, p2 = b.filter((v) => v > 0).length / b.length
       const pooled = (p1 * a.length + p2 * b.length) / (a.length + b.length)
-      const z = (p1 - p2) / Math.sqrt(pooled * (1 - pooled) * (1 / a.length + 1 / b.length))
-      return { title: 'Two-Sample Tests', summary: 'Welch independent t-test, paired t-test, and two-proportion test.', metrics: [{ label: 'Welch t', value: round(welch) }, { label: 'Welch p', value: round(tPValue(welch, df)) }, { label: 'Paired t p', value: round(tPValue(pairedT, diffs.length - 1)) }, { label: 'Two-prop z p', value: round(zPValue(z)) }] }
+      const propSe = Math.sqrt(pooled * (1 - pooled) * (1 / a.length + 1 / b.length))
+      const propP = propSe > 0 ? round(zPValue((p1 - p2) / propSe)) : 'not estimable'
+      const notes = [
+        ...(pairedSe > 0 ? [] : ['Paired t-test has zero variance in pair differences; p-value is shown as an exact boundary result.']),
+        ...(propSe > 0 ? [] : ['Two-proportion z-test is not estimable because the pooled binary proportion is 0 or 1.']),
+      ]
+      return { title: 'Two-Sample Tests', summary: 'Welch independent t-test, paired t-test, and two-proportion test.', metrics: [{ label: 'Welch t', value: round(welch) }, { label: 'Welch p', value: round(tPValue(welch, df)) }, { label: 'Paired t p', value: pairedP }, { label: 'Two-prop z p', value: propP }], notes }
     },
   },
   {
@@ -952,8 +1015,11 @@ export const STAT_MODULES: StatModuleDef[] = [
     id: 70, key: 'gof_distribution', title: 'Goodness-of-Fit Module', group: 'Inferential', description: 'Compare user data to theoretical distributions.',
     compute: (data, s) => {
       const x = numericColumn(data, s.num1)
-      const results = compareFits(x).slice(0, 8)
-      return { title: 'Goodness-of-Fit', summary: 'Best theoretical distribution fits by GOF statistic.', metrics: [{ label: 'tested', value: results.length }, { label: 'best', value: results[0]?.name ?? '-' }], table: results.map((r, i) => ({ rank: i + 1, distribution: r.name, method: r.method, statistic: round(r.statistic), p: r.pValue === null ? '-' : round(r.pValue) })) }
+      const candidates = x.some((value) => value <= 0)
+        ? ['normal', 'student_t', 'cauchy', 'logistic'] as const
+        : ['normal', 'lognormal', 'exponential', 'gamma', 'weibull', 'pareto', 'student_t', 'cauchy', 'logistic'] as const
+      const results = compareFits(x, [...candidates]).slice(0, 8)
+      return { title: 'Goodness-of-Fit', summary: 'Best theoretical distribution fits by GOF statistic.', metrics: [{ label: 'tested', value: results.length }, { label: 'best', value: results[0]?.name ?? '-' }], table: results.map((r, i) => ({ rank: i + 1, distribution: r.name, method: r.method, statistic: round(r.statistic), p: r.pValue === null ? '-' : round(r.pValue) })), notes: ['Goodness-of-fit uses a bounded stable candidate set for browser responsiveness; compare support and domain meaning before trusting rank.'] }
     },
   },
   {
@@ -978,7 +1044,9 @@ export const STAT_MODULES: StatModuleDef[] = [
     compute: (data, s) => {
       const predictors = [s.num1, s.num2]
       const model = logisticModel(data, s.target, predictors)
-      return { title: 'Logistic Regression', summary: `Binary ${s.target} modeled from ${s.num1}, ${s.num2}.`, metrics: [{ label: 'accuracy @ .5', value: round(model.accuracy) }, { label: `odds ratio ${s.num1}`, value: round(Math.exp(model.beta[1])) }, { label: `odds ratio ${s.num2}`, value: round(Math.exp(model.beta[2])) }], table: model.beta.map((b, i) => ({ term: i === 0 ? 'Intercept' : predictors[i - 1], estimate: round(b), se: round(model.se[i]), p: round(model.p[i]), oddsRatio: round(Math.exp(b)) })) }
+      const separationRisk = model.accuracy === 1 || model.beta.some((b) => Math.abs(b) > 8) || model.preds.some((p) => p < 1e-4 || p > 1 - 1e-4)
+      const notes = separationRisk ? ['Logistic separation or near-separation detected; coefficients and odds ratios may be numerically unstable.'] : []
+      return { title: 'Logistic Regression', summary: `Binary ${s.target} modeled from ${s.num1}, ${s.num2}.`, metrics: [{ label: 'accuracy @ .5', value: round(model.accuracy) }, { label: `odds ratio ${s.num1}`, value: round(Math.exp(model.beta[1])) }, { label: `odds ratio ${s.num2}`, value: round(Math.exp(model.beta[2])) }], table: model.beta.map((b, i) => ({ term: i === 0 ? 'Intercept' : predictors[i - 1], estimate: round(b), se: round(model.se[i]), p: round(model.p[i]), oddsRatio: round(Math.exp(b)) })), notes }
     },
   },
   {
@@ -1007,9 +1075,11 @@ export const STAT_MODULES: StatModuleDef[] = [
       const vif = xs.map((col, i) => {
         const other = xs.filter((_, j) => i !== j)
         const rr = regressionRows(data, col, other)
-        return { variable: col, vif: round(1 / (1 - ols(rr.y, rr.x).r2)) }
+        const r2 = ols(rr.y, rr.x).r2
+        return { variable: col, vif: r2 >= 0.999999 ? 'not estimable' : round(1 / (1 - r2)) }
       })
-      return { title: 'Regression Diagnostics', summary: 'Residual, leverage, Cook distance, and VIF diagnostics.', metrics: [{ label: 'max leverage', value: round(Math.max(...leverage)) }, { label: 'max Cook distance', value: round(Math.max(...cooks)) }], table: vif, chart: { data: [{ type: 'scatter', mode: 'markers', x: model.fitted, y: model.residuals }], layout: baseChart('Residuals vs Fitted') } }
+      const notes = vif.some((row) => row.vif === 'not estimable') ? ['One or more VIF values are not estimable because predictors are nearly perfectly collinear.'] : []
+      return { title: 'Regression Diagnostics', summary: 'Residual, leverage, Cook distance, and VIF diagnostics.', metrics: [{ label: 'max leverage', value: round(Math.max(...leverage)) }, { label: 'max Cook distance', value: round(Math.max(...cooks)) }], table: vif, chart: { data: [{ type: 'scatter', mode: 'markers', x: model.fitted, y: model.residuals }], layout: baseChart('Residuals vs Fitted') }, notes }
     },
   },
   {
@@ -1079,5 +1149,17 @@ export function defaultSelection(data: Record<string, unknown>[], selection: Sta
 export function runStatModule(moduleKey: string, data: Record<string, unknown>[], selection: StatModuleSelection) {
   const module = STAT_MODULES.find((item) => item.key === moduleKey) ?? STAT_MODULES[0]
   const s = defaultSelection(data, selection)
-  return module.compute(data, s)
+  const qaNotes = numericalQaNotes(module, data, s)
+  try {
+    return appendNotes(module.compute(data, s), qaNotes)
+  } catch (error) {
+    return appendNotes({
+      title: module.title.replace(' Module', ''),
+      summary: error instanceof Error ? error.message : 'Unable to compute this module with the selected data.',
+      metrics: [],
+    }, [
+      ...qaNotes,
+      'Calculation failed safely; change selected variables or load a dataset with enough compatible rows.',
+    ])
+  }
 }

@@ -192,31 +192,45 @@ export function Sidebar() {
         />
       )}
       <aside
-      className={`app-sidebar flex flex-col bg-slate-900 text-slate-100 transition-all duration-200 ${
+      className={`app-sidebar relative flex flex-col bg-slate-900 text-slate-100 transition-all duration-200 ${
         sidebarOpen ? 'w-60' : 'w-14'
       } min-h-screen shrink-0`}
     >
-      <div className="flex items-center gap-2 px-3 py-4 border-b border-slate-700">
-        <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center shrink-0">
+      {!sidebarOpen && (
+        <button
+          type="button"
+          onClick={() => setSidebarOpen(true)}
+          className="absolute -right-3 top-5 z-30 hidden h-7 w-7 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-slate-200 shadow-lg shadow-slate-950/30 transition-colors hover:border-indigo-400 hover:bg-indigo-600 hover:text-white md:flex"
+          title="Expand sidebar"
+          aria-label="Expand sidebar"
+        >
+          <ChevronRight size={15} />
+        </button>
+      )}
+
+      <div className={`flex border-b border-slate-700 px-3 py-4 ${sidebarOpen ? 'items-center gap-2' : 'flex-col items-center gap-3'}`}>
+        <button
+          type="button"
+          onClick={() => setSidebarOpen(true)}
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500 text-white ${sidebarOpen ? 'cursor-default' : 'transition-colors hover:bg-indigo-400'}`}
+          title={sidebarOpen ? 'Anveshak' : 'Expand sidebar'}
+          aria-label={sidebarOpen ? 'Anveshak navigation' : 'Expand sidebar'}
+        >
           <FlaskConical size={16} className="text-white" />
-        </div>
+        </button>
         {sidebarOpen && (
           <span className="font-bold text-lg tracking-tight text-white">Anveshak</span>
         )}
         <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="ml-auto flex h-8 w-8 items-center justify-center rounded-md text-slate-400 hover:bg-slate-800 hover:text-white"
-          title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-          aria-label={sidebarOpen ? 'Close menu' : 'Expand sidebar'}
+          type="button"
+          onClick={() => setSidebarOpen(false)}
+          className={`${sidebarOpen ? 'ml-auto flex' : 'hidden'} h-8 items-center justify-center gap-1.5 rounded-md px-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white`}
+          title="Collapse sidebar"
+          aria-label="Collapse sidebar"
         >
-          {sidebarOpen ? (
-            <>
-              <ChevronLeft size={16} className="hidden md:block" />
-              <X size={18} className="md:hidden" />
-            </>
-          ) : (
-            <ChevronRight size={16} />
-          )}
+          <ChevronLeft size={16} className="hidden md:block" />
+          <X size={18} className="md:hidden" />
+          <span className="hidden lg:inline">Collapse</span>
         </button>
       </div>
 

@@ -125,9 +125,10 @@ export function ProfessionalLearningPage() {
   }
 
   const recordNotebookEntry = () => {
+    const createdAt = new Date().getTime()
     const entry: AnalysisLogEntry = {
-      id: `analysis_${Date.now()}`,
-      createdAt: Date.now(),
+      id: `analysis_${createdAt}`,
+      createdAt,
       title: `${method} - ${activeDataset?.name ?? 'No dataset'}`,
       datasetName: activeDataset?.name,
       workflow: 'Professional Learning decision wizard',

@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react'
-import { Upload, FileText, Table2, AlertCircle, Database, CheckCircle, Clock, Edit3, ChevronDown, ChevronRight } from 'lucide-react'
+import { Upload, FileText, Table2, AlertCircle, Database, CheckCircle, Clock, Edit3, ChevronDown, ChevronRight, Search, SlidersHorizontal, BarChart2, X } from 'lucide-react'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
 import { detectSchema } from '../../lib/schema'
@@ -66,6 +66,10 @@ export function UploadPage() {
   const [loading, setLoading] = useState(false)
   const [pending, setPending] = useState<PendingImport[]>([])
   const [expandedSamples, setExpandedSamples] = useState<string[]>([])
+  const [sampleQuery, setSampleQuery] = useState('')
+  const [sampleCategory, setSampleCategory] = useState('All')
+  const [sampleSort, setSampleSort] = useState<'popular' | 'name' | 'rows' | 'columns'>('popular')
+  const [samplePage, setSamplePage] = useState(1)
   const { addDataset, setActiveDataset, datasets } = useStore()
   const navigate = useNavigate()
 
@@ -190,11 +194,32 @@ export function UploadPage() {
       : item))
   }
 
-  const groupedSamples = useMemo(() => SAMPLE_DATASETS.reduce((acc, sample) => {
-    const group = ['Finance', 'Health', 'Sports'].includes(sample.category) ? sample.category : sample.category
-    acc[group] = [...(acc[group] ?? []), sample]
-    return acc
-  }, {} as Record<string, typeof SAMPLE_DATASETS>), [])
+  const sampleCategories = useMemo(() => ['All', ...Array.from(new Set(SAMPLE_DATASETS.map((sample) => sample.category))).sort()], [])
+
+  const filteredSamples = useMemo(() => {
+    const query = sampleQuery.trim().toLowerCase()
+    const samples = SAMPLE_DATASETS.filter((sample) => {
+      const categoryMatch = sampleCategory === 'All' || sample.category === sampleCategory
+      const queryMatch = !query
+        || sample.name.toLowerCase().includes(query)
+        || sample.description.toLowerCase().includes(query)
+        || sample.category.toLowerCase().includes(query)
+        || sample.tags.some((tag) => tag.toLowerCase().includes(query))
+      return categoryMatch && queryMatch
+    })
+
+    return [...samples].sort((a, b) => {
+      if (sampleSort === 'name') return a.name.localeCompare(b.name)
+      if (sampleSort === 'rows') return b.data.length - a.data.length
+      if (sampleSort === 'columns') return getColumnNames(b).length - getColumnNames(a).length
+      return b.tags.length - a.tags.length || b.data.length - a.data.length
+    })
+  }, [sampleCategory, sampleQuery, sampleSort])
+
+  const samplePageSize = 6
+  const samplePageCount = Math.max(1, Math.ceil(filteredSamples.length / samplePageSize))
+  const currentSamplePage = Math.min(samplePage, samplePageCount)
+  const pagedSamples = filteredSamples.slice((currentSamplePage - 1) * samplePageSize, currentSamplePage * samplePageSize)
 
   const recentDatasets = useMemo(() => [...datasets].sort((a, b) => b.createdAt - a.createdAt), [datasets])
 
@@ -364,43 +389,277 @@ export function UploadPage() {
         </section>
       )}
 
-      <div className="mt-8 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
-        <div className="flex items-center gap-2 mb-3"><Database size={16} className="text-indigo-500" /><h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Load Sample Data</h2></div>
-        <div className="space-y-5">
-          {Object.entries(groupedSamples).map(([category, samples]) => (
-            <section key={category}>
-              <div className="mb-2 flex items-center gap-2">
-                <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${CATEGORY_COLORS[category] ?? 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}>{category}</span>
-                <span className="text-xs text-slate-400">{samples.length} datasets</span>
-              </div>
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                {samples.slice(0, 6).map((sample) => {
-                  const expanded = expandedSamples.includes(sample.id)
-                  return (
-                    <div key={sample.id} className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-                      <button type="button" onClick={() => loadSampleDataset(sample.id)} disabled={loading} className="w-full text-left">
-                        <span className="flex items-start justify-between gap-2"><span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{sample.name}</span><span className="text-xs text-slate-400">{sample.data.length} rows</span></span>
-                        <span className="block text-xs text-slate-400 mt-1">{sample.description}</span>
-                      </button>
-                      <button type="button" onClick={() => setExpandedSamples((items) => expanded ? items.filter((id) => id !== sample.id) : [...items, sample.id])} className="mt-2 inline-flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-300">
-                        {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                        Sample rows
-                      </button>
-                      {expanded && (
-                        <div className="mt-2 overflow-auto rounded border border-slate-100 dark:border-slate-700">
-                          <table className="w-full text-xs">
-                            <tbody>{sample.data.slice(0, 3).map((row, index) => <tr key={index} className="border-b border-slate-100 last:border-0 dark:border-slate-700">{Object.values(row).slice(0, 4).map((value, i) => <td key={i} className="px-2 py-1 text-slate-500">{String(value)}</td>)}</tr>)}</tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </section>
+      <section className="mt-8 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <Database size={16} className="text-indigo-500" />
+              <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">Explore Sample Datasets</h2>
+            </div>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Open a sample dataset to load real rows, schema, charts, and analysis content.</p>
+          </div>
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+            {filteredSamples.length} of {SAMPLE_DATASETS.length} datasets
+          </span>
+        </div>
+
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
+          <label className="relative block">
+            <span className="sr-only">Search sample datasets</span>
+            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              value={sampleQuery}
+              onChange={(event) => {
+                setSampleQuery(event.target.value)
+                setSamplePage(1)
+              }}
+              placeholder="Search datasets by name, topic, or method..."
+              className="min-h-11 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-10 text-sm text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-indigo-950"
+            />
+            {sampleQuery && (
+              <button type="button" onClick={() => setSampleQuery('')} className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-100" aria-label="Clear sample search">
+                <X size={15} />
+              </button>
+            )}
+          </label>
+          <label className="flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 dark:border-slate-600 dark:bg-slate-900">
+            <SlidersHorizontal size={15} className="text-slate-400" />
+            <span className="sr-only">Sort sample datasets</span>
+            <select value={sampleSort} onChange={(event) => setSampleSort(event.target.value as typeof sampleSort)} className="bg-transparent text-sm font-semibold text-slate-700 outline-none dark:text-slate-100">
+              <option value="popular">Sort by: Popular</option>
+              <option value="name">Sort by: Name</option>
+              <option value="rows">Sort by: Rows</option>
+              <option value="columns">Sort by: Columns</option>
+            </select>
+          </label>
+        </div>
+
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-2">
+          {sampleCategories.map((category) => (
+            <button
+              key={category}
+              type="button"
+              onClick={() => {
+                setSampleCategory(category)
+                setSamplePage(1)
+              }}
+              className={`min-h-10 shrink-0 rounded-lg border px-3 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                sampleCategory === category
+                  ? 'border-indigo-600 bg-indigo-600 text-white'
+                  : `border-slate-200 ${CATEGORY_COLORS[category] ?? 'bg-white text-slate-600 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300'} hover:border-indigo-300`
+              }`}
+            >
+              {category}
+            </button>
           ))}
         </div>
-      </div>
+
+        {pagedSamples.length ? (
+          <div className="mt-4 grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+            {pagedSamples.map((sample, index) => {
+              const expanded = expandedSamples.includes(sample.id)
+              return (
+                <article key={sample.id} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition hover:border-indigo-300 hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
+                  <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_150px]">
+                    <div className="min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="truncate text-sm font-bold text-slate-800 dark:text-slate-100">{sample.name}</h3>
+                        <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500 dark:bg-slate-700 dark:text-slate-300">{sample.data.length} rows</span>
+                      </div>
+                      <p className="mt-1 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">{sample.description}</p>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${CATEGORY_COLORS[sample.category] ?? 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}>{sample.category}</span>
+                        {sample.tags.slice(0, 2).map((tag) => (
+                          <span key={tag} className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">{tag}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <SamplePreviewChart sample={sample} variant={index % 4} />
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-3 divide-x divide-slate-100 rounded-lg border border-slate-100 bg-slate-50 text-center dark:divide-slate-700 dark:border-slate-700 dark:bg-slate-800">
+                    <SampleStat label="Rows" value={sample.data.length.toLocaleString()} />
+                    <SampleStat label="Columns" value={getColumnNames(sample).length.toLocaleString()} />
+                    <SampleStat label="Type" value="CSV" />
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                    <button type="button" onClick={() => setExpandedSamples((items) => expanded ? items.filter((id) => id !== sample.id) : [...items, sample.id])} className="inline-flex min-h-9 items-center gap-1 rounded-md px-2 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 dark:text-indigo-300 dark:hover:bg-indigo-900/30">
+                      {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                      Sample rows
+                    </button>
+                    <button type="button" onClick={() => loadSampleDataset(sample.id)} disabled={loading} className="inline-flex min-h-9 items-center gap-2 rounded-md bg-indigo-600 px-3 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+                      <BarChart2 size={14} />
+                      Open dataset
+                    </button>
+                  </div>
+
+                  {expanded && (
+                    <div className="mt-3 overflow-auto rounded-lg border border-slate-100 dark:border-slate-700">
+                      <table className="w-full text-xs">
+                        <tbody>{sample.data.slice(0, 3).map((row, rowIndex) => <tr key={rowIndex} className="border-b border-slate-100 last:border-0 dark:border-slate-700">{Object.values(row).slice(0, 4).map((value, valueIndex) => <td key={valueIndex} className="px-2 py-1 text-slate-500 dark:text-slate-300">{String(value)}</td>)}</tr>)}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </article>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center dark:border-slate-600 dark:bg-slate-900">
+            <Search size={24} className="mx-auto text-slate-400" />
+            <h3 className="mt-2 text-sm font-semibold text-slate-700 dark:text-slate-200">No sample datasets found</h3>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Try a different keyword or category.</p>
+            <button type="button" onClick={() => { setSampleQuery(''); setSampleCategory('All'); setSamplePage(1) }} className="mt-3 rounded-md bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700">Clear filters</button>
+          </div>
+        )}
+
+        <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Page {currentSamplePage} of {samplePageCount}</p>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => setSamplePage(Math.max(1, currentSamplePage - 1))} disabled={currentSamplePage === 1} className="rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600 dark:text-slate-300">Previous</button>
+            {Array.from({ length: Math.min(samplePageCount, 7) }, (_, index) => index + 1).map((item) => (
+              <button key={item} type="button" onClick={() => setSamplePage(item)} className={`h-9 w-9 rounded-md text-xs font-semibold ${item === currentSamplePage ? 'bg-indigo-600 text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700'}`}>{item}</button>
+            ))}
+            <button type="button" onClick={() => setSamplePage(Math.min(samplePageCount, currentSamplePage + 1))} disabled={currentSamplePage === samplePageCount} className="rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600 dark:text-slate-300">Next</button>
+          </div>
+        </div>
+      </section>
     </div>
   )
+}
+
+function SampleStat({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="px-2 py-2">
+      <span className="block text-[0.68rem] font-bold uppercase text-slate-400">{label}</span>
+      <span className="block text-xs font-bold text-slate-800 dark:text-slate-100">{value}</span>
+    </span>
+  )
+}
+
+function SamplePreviewChart({ sample, variant }: { sample: SampleDatasetLike; variant: number }) {
+  const columns = getColumnNames(sample)
+  const numericColumn = columns.find((column) => sample.data.some((row) => typeof row[column] === 'number' && !/(^id$|_id$|id$)/i.test(column)))
+    ?? columns.find((column) => sample.data.some((row) => typeof row[column] === 'number'))
+  const values = numericColumn ? sample.data.map((row) => Number(row[numericColumn])).filter(Number.isFinite).slice(0, 80) : []
+
+  if (!values.length) {
+    return (
+      <div className="flex min-h-[104px] items-center justify-center rounded-lg bg-slate-50 text-xs font-semibold text-slate-400 ring-1 ring-slate-100 dark:bg-slate-800 dark:ring-slate-700">
+        Categorical preview
+      </div>
+    )
+  }
+
+  if (variant === 1) return <ScatterPreview values={values} />
+  if (variant === 2) return <LinePreview values={values} />
+  if (variant === 3) return <BoxPreview values={values} />
+  return <HistogramPreview values={values} label={numericColumn ?? sample.name} />
+}
+
+function HistogramPreview({ values, label }: { values: number[]; label: string }) {
+  const bins = buildBins(values, 12)
+  const max = Math.max(...bins.map((bin) => bin.count), 1)
+  const width = 180
+  const height = 104
+  const barWidth = width / bins.length
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Histogram preview for ${label}`} className="min-h-[104px] w-full rounded-lg bg-slate-50 ring-1 ring-slate-100 dark:bg-slate-800 dark:ring-slate-700">
+      {bins.map((bin, index) => {
+        const barHeight = Math.max(5, (bin.count / max) * 72)
+        return <rect key={`${bin.start}-${index}`} x={index * barWidth + 4} y={88 - barHeight} width={Math.max(5, barWidth - 7)} height={barHeight} rx="3" fill={index % 2 ? '#8b5cf6' : '#60a5fa'} />
+      })}
+    </svg>
+  )
+}
+
+function ScatterPreview({ values }: { values: number[] }) {
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const points = values.slice(0, 55)
+
+  return (
+    <svg viewBox="0 0 180 104" role="img" aria-label="Scatter preview" className="min-h-[104px] w-full rounded-lg bg-slate-50 ring-1 ring-slate-100 dark:bg-slate-800 dark:ring-slate-700">
+      <line x1="14" y1="88" x2="168" y2="88" stroke="#cbd5e1" />
+      <line x1="14" y1="14" x2="14" y2="88" stroke="#cbd5e1" />
+      <line x1="20" y1="82" x2="162" y2="25" stroke="#60a5fa" strokeWidth="2" opacity="0.7" />
+      {points.map((value, index) => {
+        const x = 18 + (index / Math.max(points.length - 1, 1)) * 144
+        const y = 86 - ((value - min) / Math.max(max - min, 1)) * 68
+        return <circle key={`${value}-${index}`} cx={x} cy={y} r="2.3" fill={index % 3 === 0 ? '#10b981' : index % 3 === 1 ? '#6366f1' : '#f97316'} opacity="0.85" />
+      })}
+    </svg>
+  )
+}
+
+function LinePreview({ values }: { values: number[] }) {
+  const points = values.slice(0, 36)
+  const min = Math.min(...points)
+  const max = Math.max(...points)
+  const d = points.map((value, index) => {
+    const x = 12 + (index / Math.max(points.length - 1, 1)) * 156
+    const y = 86 - ((value - min) / Math.max(max - min, 1)) * 68
+    return `${index ? 'L' : 'M'} ${x.toFixed(1)} ${y.toFixed(1)}`
+  }).join(' ')
+
+  return (
+    <svg viewBox="0 0 180 104" role="img" aria-label="Line chart preview" className="min-h-[104px] w-full rounded-lg bg-slate-50 ring-1 ring-slate-100 dark:bg-slate-800 dark:ring-slate-700">
+      <path d={d} fill="none" stroke="#22c55e" strokeWidth="3" />
+      <path d={d} fill="none" stroke="#6366f1" strokeWidth="1.5" strokeDasharray="4 4" transform="translate(0 -7)" opacity="0.75" />
+    </svg>
+  )
+}
+
+function BoxPreview({ values }: { values: number[] }) {
+  const sorted = [...values].sort((a, b) => a - b)
+  const min = sorted[0]
+  const max = sorted[sorted.length - 1]
+  const q1 = quantile(sorted, 0.25)
+  const median = quantile(sorted, 0.5)
+  const q3 = quantile(sorted, 0.75)
+  const scale = (value: number) => 14 + ((value - min) / Math.max(max - min, 1)) * 152
+
+  return (
+    <svg viewBox="0 0 180 104" role="img" aria-label="Box plot preview" className="min-h-[104px] w-full rounded-lg bg-slate-50 ring-1 ring-slate-100 dark:bg-slate-800 dark:ring-slate-700">
+      {[32, 52, 72].map((y, index) => (
+        <g key={y}>
+          <line x1={scale(min)} y1={y} x2={scale(max)} y2={y} stroke="#94a3b8" strokeWidth="2" />
+          <rect x={scale(q1)} y={y - 10} width={Math.max(8, scale(q3) - scale(q1))} height="20" rx="4" fill={['#34d399', '#a78bfa', '#fb7185'][index]} opacity="0.82" />
+          <line x1={scale(median)} y1={y - 10} x2={scale(median)} y2={y + 10} stroke="#334155" strokeWidth="2" />
+        </g>
+      ))}
+    </svg>
+  )
+}
+
+type SampleDatasetLike = {
+  name: string
+  data: Record<string, unknown>[]
+}
+
+function getColumnNames(sample: SampleDatasetLike) {
+  return Object.keys(sample.data[0] ?? {})
+}
+
+function buildBins(values: number[], count: number) {
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const width = Math.max((max - min) / count, Number.EPSILON)
+  const bins = Array.from({ length: count }, (_, index) => ({ start: min + index * width, count: 0 }))
+  values.forEach((value) => {
+    const index = Math.min(count - 1, Math.max(0, Math.floor((value - min) / width)))
+    bins[index].count += 1
+  })
+  return bins
+}
+
+function quantile(sorted: number[], p: number) {
+  if (!sorted.length) return 0
+  const index = (sorted.length - 1) * p
+  const lower = Math.floor(index)
+  const upper = Math.ceil(index)
+  const weight = index - lower
+  return sorted[lower] * (1 - weight) + sorted[upper] * weight
 }

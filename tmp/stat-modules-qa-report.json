@@ -1,0 +1,176 @@
+{
+  "generatedAt": "2026-08-17T14:01:30.654Z",
+  "total": 24,
+  "passed": 24,
+  "failed": 0,
+  "tolerances": {
+    "referenceTolerances": {
+      "exact": 0,
+      "strict": 0.000001,
+      "standard": 0.0001,
+      "approximate": 0.005,
+      "simulation": 0.01
+    },
+    "toleranceByMethod": {
+      "regression": 0.0001,
+      "correlation": 0.0001,
+      "anova": 0.005,
+      "chiSquare": 0.005,
+      "tTest": 0.005,
+      "pca": 0.000001,
+      "classification": 0,
+      "bootstrap": 0.000001,
+      "permutation": 0.000001,
+      "gof": 0.005,
+      "logistic": 0.01
+    }
+  },
+  "coverage": {
+    "goldenValueTests": [
+      "simple regression",
+      "multiple regression",
+      "correlation",
+      "ANOVA",
+      "chi-square",
+      "confidence interval",
+      "one-sample t-test",
+      "two-sample Welch/paired tests",
+      "PCA",
+      "classification metrics",
+      "logistic regression",
+      "goodness-of-fit",
+      "bootstrap",
+      "permutation"
+    ],
+    "engineUnitTests": [
+      "t-tests",
+      "ANOVA",
+      "chi-square",
+      "simple regression",
+      "multiple regression",
+      "regression diagnostics",
+      "correlation",
+      "PCA",
+      "classification",
+      "logistic regression",
+      "GOF",
+      "bootstrap",
+      "permutation"
+    ],
+    "edgeCaseTests": [
+      "empty data",
+      "constant columns",
+      "missing values",
+      "tiny samples",
+      "high-cardinality categories",
+      "saturated binary proportions",
+      "perfect logistic separation"
+    ],
+    "numericalWarnings": [
+      "approximate modules",
+      "small samples",
+      "missing/filtered rows",
+      "constant columns",
+      "high-cardinality categories",
+      "logistic separation"
+    ]
+  },
+  "results": [
+    {
+      "name": "golden simple regression matches reference coefficients",
+      "status": "passed"
+    },
+    {
+      "name": "golden correlation matches Pearson/Spearman/Kendall references",
+      "status": "passed"
+    },
+    {
+      "name": "golden ANOVA matches reference F, p-value, and eta squared",
+      "status": "passed"
+    },
+    {
+      "name": "golden chi-square independence matches reference statistic",
+      "status": "passed"
+    },
+    {
+      "name": "golden confidence interval mean CI is stable",
+      "status": "passed"
+    },
+    {
+      "name": "golden one-sample t-test is deterministic",
+      "status": "passed"
+    },
+    {
+      "name": "golden two-sample Welch and paired t-tests match references",
+      "status": "passed"
+    },
+    {
+      "name": "golden PCA explains perfectly collinear two-variable data",
+      "status": "passed"
+    },
+    {
+      "name": "golden multiple regression matches closed-form OLS reference",
+      "status": "passed"
+    },
+    {
+      "name": "golden regression diagnostics return leverage, Cook distance, and VIF",
+      "status": "passed"
+    },
+    {
+      "name": "golden logistic regression is deterministic on nonseparable binary data",
+      "status": "passed"
+    },
+    {
+      "name": "golden goodness-of-fit ranks normal data as a tested candidate",
+      "status": "passed"
+    },
+    {
+      "name": "golden classification metrics are deterministic",
+      "status": "passed"
+    },
+    {
+      "name": "golden bootstrap CI is seeded and reproducible",
+      "status": "passed"
+    },
+    {
+      "name": "golden permutation test is seeded and reproducible",
+      "status": "passed"
+    },
+    {
+      "name": "edge empty data returns warnings instead of throwing",
+      "status": "passed"
+    },
+    {
+      "name": "edge constant columns produce explicit warning metadata",
+      "status": "passed"
+    },
+    {
+      "name": "edge missing values are filtered and reported",
+      "status": "passed"
+    },
+    {
+      "name": "edge high-cardinality categories warn for chi-square",
+      "status": "passed"
+    },
+    {
+      "name": "edge tiny samples return instability warning",
+      "status": "passed"
+    },
+    {
+      "name": "edge saturated two-proportion test does not emit NaN",
+      "status": "passed"
+    },
+    {
+      "name": "edge logistic perfect separation does not emit non-finite outputs and warns",
+      "status": "passed"
+    },
+    {
+      "name": "approximate modules expose numerical warning notes",
+      "status": "passed"
+    },
+    {
+      "name": "all stat modules avoid non-finite numeric metrics on representative data",
+      "status": "passed"
+    }
+  ]
+}

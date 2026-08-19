@@ -191,6 +191,11 @@ function chiSquareGof(data: number[], pmf: (k: number) => number, lo: number, hi
   const counts = new Map<number, number>()
   integers(data).forEach((value) => counts.set(value, (counts.get(value) ?? 0) + 1))
   const n = data.length
+  const start = Math.ceil(lo)
+  const end = Math.floor(hi)
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start || end - start > 10000) {
+    return { statistic: NaN, pValue: null }
+  }
   let chi = 0
   let bins = 0
   let observedBin = 0
@@ -202,7 +207,7 @@ function chiSquareGof(data: number[], pmf: (k: number) => number, lo: number, hi
     observedBin = 0
     expectedBin = 0
   }
-  for (let k = Math.ceil(lo); k <= Math.floor(hi); k++) {
+  for (let k = start; k <= end; k++) {
     const expected = n * pmf(k)
     observedBin += counts.get(k) ?? 0
     expectedBin += expected
