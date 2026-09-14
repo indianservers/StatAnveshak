@@ -19,12 +19,15 @@ const DistributionsPage = lazy(() => import('./pages/DistributionsPage').then((m
 const InferencePage = lazy(() => import('./pages/InferencePage').then((m) => ({ default: m.InferencePage })))
 const RegressionPage = lazy(() => import('./pages/RegressionPage').then((m) => ({ default: m.RegressionPage })))
 const AdvancedAnalysisPage = lazy(() => import('./pages/AdvancedAnalysisPage').then((m) => ({ default: m.AdvancedAnalysisPage })))
+const AnalysisPage = lazy(() => import('./pages/AnalysisPage').then((m) => ({ default: m.AnalysisPage })))
 const StatModulesPage = lazy(() => import('./pages/StatModulesPage').then((m) => ({ default: m.StatModulesPage })))
 const ComputingModulesPage = lazy(() => import('./pages/ComputingModulesPage').then((m) => ({ default: m.ComputingModulesPage })))
 const SyllabusModulesPage = lazy(() => import('./pages/SyllabusModulesPage').then((m) => ({ default: m.SyllabusModulesPage })))
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })))
 const ReportsPage = lazy(() => import('./pages/ReportsPage').then((m) => ({ default: m.ReportsPage })))
 const LearnPage = lazy(() => import('./pages/LearnPage').then((m) => ({ default: m.LearnPage })))
+const ChapterPage = lazy(() => import('./pages/ChapterPage').then((m) => ({ default: m.ChapterPage })))
+const ClassroomPage = lazy(() => import('./pages/ClassroomPage').then((m) => ({ default: m.ClassroomPage })))
 const ProfessionalLearningPage = lazy(() => import('./pages/ProfessionalLearningPage').then((m) => ({ default: m.ProfessionalLearningPage })))
 const SolverPage = lazy(() => import('./pages/SolverPage').then((m) => ({ default: m.SolverPage })))
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })))
@@ -57,6 +60,8 @@ function App() {
               <Route path="data/workbench" element={<WorkbenchPage />} />
               <Route path="data/query" element={<QueryPage />} />
               <Route path="explore/summary" element={<SummaryPage />} />
+              <Route path="analysis" element={<AnalysisPage />} />
+              <Route path="analysis/:analysisId" element={<AnalysisPage />} />
               <Route path="explore/charts" element={<ChartsPage />} />
               <Route path="explore/correlation" element={<CorrelationPage />} />
               <Route path="explore/frequency" element={<FrequencyPage />} />
@@ -74,6 +79,8 @@ function App() {
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="reports" element={<ReportsPage />} />
               <Route path="learn" element={<LearnPage />} />
+              <Route path="learn/:chapterId" element={<ChapterPage />} />
+              <Route path="classroom" element={<ClassroomPage />} />
               <Route path="professional-learning" element={<ProfessionalLearningPage />} />
               <Route path="solver" element={<SolverPage />} />
               <Route path="documentation" element={<DocumentationPage />} />

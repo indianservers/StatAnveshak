@@ -1,4 +1,5 @@
 import type { Dataset } from '../types'
+import { recommendLearnStatsTree } from '../analysis/engines/frequentist/learnStats'
 
 export type Guardrail = {
   id: string
@@ -78,11 +79,7 @@ export function datasetGuardrails(dataset: Dataset | null): Guardrail[] {
 }
 
 export function recommendTest(dataset: Dataset | null, outcomeType: string, groupCount: string, paired: boolean) {
-  if (!dataset) return 'Load a dataset first, then choose outcome and study design.'
-  if (outcomeType === 'categorical' && groupCount !== 'one') return 'Chi-square independence; use Fisher exact for small expected counts.'
-  if (outcomeType === 'categorical') return 'One-proportion or binomial test; logistic regression when predictors matter.'
-  if (groupCount === 'one') return 'One-sample t-test; use Wilcoxon signed-rank if symmetry or normality is doubtful.'
-  if (groupCount === 'two' && paired) return 'Paired t-test; use Wilcoxon signed-rank for non-normal paired differences.'
-  if (groupCount === 'two') return 'Welch two-sample t-test; use Mann-Whitney or bootstrap CI for robust comparison.'
-  return 'ANOVA for parametric comparison; Kruskal-Wallis for robust ranks; add multiple-comparison correction.'
+  const rec = recommendLearnStatsTree({ outcomeType, groups: groupCount, paired, predictors: 'none' })
+  if (!dataset) return `Load a dataset, then open ${rec.title} (${rec.analysisId}). ${rec.reason}`
+  return `${rec.title} (${rec.analysisId}). ${rec.reason}`
 }

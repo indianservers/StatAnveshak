@@ -32,6 +32,7 @@ import { SAMPLE_DATASETS } from '../lib/sampleData'
 import { sampleToDataset } from '../lib/dataset'
 import { saveDataset } from '../lib/storage'
 import type { Dataset, Project, SampleDataset } from '../types'
+import { LearnHome } from './LearnHome'
 
 type HomeMode = 'overview' | 'datasets' | 'guided' | 'recent'
 type DatasetSort = 'popular' | 'name' | 'rows' | 'columns'
@@ -59,9 +60,9 @@ const HOME_MODES: Array<{ id: HomeMode; label: string }> = [
 
 const QUICK_ACTIONS: Array<{ icon: LucideIcon; title: string; description: string; to: string; tone: Tone }> = [
   { icon: Upload, title: 'Import Data', description: 'CSV, Excel, JSON and TXT', to: '/data/upload', tone: 'indigo' },
-  { icon: Sigma, title: 'Explore Statistics', description: 'Descriptive summaries', to: '/explore/summary', tone: 'emerald' },
+  { icon: Sigma, title: 'Explore Statistics', description: 'Descriptive summaries', to: '/analysis/descriptives.statistics', tone: 'emerald' },
   { icon: BarChart2, title: 'Create Visualization', description: 'Charts and dashboards', to: '/explore/charts', tone: 'violet' },
-  { icon: Activity, title: 'Run a Test', description: 'Hypothesis testing', to: '/inference', tone: 'orange' },
+  { icon: Activity, title: 'Run a Test', description: 'Hypothesis testing', to: '/analysis/t.oneSample', tone: 'orange' },
 ]
 
 const METHOD_CARDS: Array<{
@@ -74,19 +75,19 @@ const METHOD_CARDS: Array<{
   to: string
   tone: Tone
 }> = [
-  { key: 'descriptive', icon: BarChart2, title: 'Summary Statistics', question: 'Describe your data with key measures.', techniques: 'Mean, median, spread, frequency', variables: 'Any numeric or categorical fields', to: '/explore/summary', tone: 'indigo' },
-  { key: 'inferential', icon: Sigma, title: 'Compare Groups', question: 'Test differences between two or more groups.', techniques: 't-test, ANOVA, chi-square', variables: 'Outcome plus grouping field', to: '/inference', tone: 'sky' },
-  { key: 'exploratory', icon: Sparkles, title: 'Relationships', question: 'Explore relationships between variables.', techniques: 'Correlation, scatterplots, heatmaps', variables: 'Two or more numeric fields', to: '/explore/correlation', tone: 'violet' },
-  { key: 'predictive', icon: LineChart, title: 'Predict Outcomes', question: 'Build models to make predictions.', techniques: 'Regression, diagnostics, forecasting', variables: 'Target and predictor fields', to: '/regression', tone: 'orange' },
+  { key: 'descriptive', icon: BarChart2, title: 'Summary Statistics', question: 'Describe your data with key measures.', techniques: 'Mean, median, spread, frequency', variables: 'Any numeric or categorical fields', to: '/analysis/descriptives.statistics', tone: 'indigo' },
+  { key: 'inferential', icon: Sigma, title: 'Compare Groups', question: 'Test differences between two or more groups.', techniques: 't-test, ANOVA, chi-square', variables: 'Outcome plus grouping field', to: '/analysis/t.independent', tone: 'sky' },
+  { key: 'exploratory', icon: Sparkles, title: 'Relationships', question: 'Explore relationships between variables.', techniques: 'Correlation, scatterplots, heatmaps', variables: 'Two or more numeric fields', to: '/analysis/regression.correlation', tone: 'violet' },
+  { key: 'predictive', icon: LineChart, title: 'Predict Outcomes', question: 'Build models to make predictions.', techniques: 'Regression, diagnostics, forecasting', variables: 'Target and predictor fields', to: '/analysis/regression.linear', tone: 'orange' },
   { key: 'exploratory', icon: Activity, title: 'Distribution Analysis', question: 'Understand shape, tails, and probability.', techniques: 'PDF, CDF, simulation, GoF', variables: 'Numeric field or parameters', to: '/distributions', tone: 'emerald' },
   { key: 'predictive', icon: Clock, title: 'Time-Series Analysis', question: 'Track trends and seasonality over time.', techniques: 'Trend, decomposition, forecast', variables: 'Date or time plus numeric value', to: '/stat-modules/time_series_basics', tone: 'rose' },
 ]
 
 const PINNED_TOOL_OPTIONS: Array<{ label: string; path: string; icon: LucideIcon; tone: Tone }> = [
-  { label: 'Descriptive Statistics', path: '/explore/summary', icon: Sigma, tone: 'emerald' },
-  { label: 'Correlation Matrix', path: '/explore/correlation', icon: Grid2X2, tone: 'violet' },
-  { label: 'Hypothesis Tests', path: '/inference', icon: Activity, tone: 'rose' },
-  { label: 'Regression Analysis', path: '/regression', icon: LineChart, tone: 'indigo' },
+  { label: 'Descriptive Statistics', path: '/analysis/descriptives.statistics', icon: Sigma, tone: 'emerald' },
+  { label: 'Correlation Matrix', path: '/analysis/regression.correlation', icon: Grid2X2, tone: 'violet' },
+  { label: 'Hypothesis Tests', path: '/analysis/t.oneSample', icon: Activity, tone: 'rose' },
+  { label: 'Regression Analysis', path: '/analysis/regression.linear', icon: LineChart, tone: 'indigo' },
   { label: 'Distributions', path: '/distributions', icon: Calculator, tone: 'orange' },
   { label: 'Charts', path: '/explore/charts', icon: BarChart2, tone: 'sky' },
 ]
@@ -110,6 +111,7 @@ export function HomePage() {
     favoriteModules,
     toggleFavoriteModule,
     analysisHistory,
+    workspaceMode,
   } = useStore()
   const [mode, setMode] = useState<HomeMode>('overview')
   const [query, setQuery] = useState('')
@@ -171,6 +173,8 @@ export function HomePage() {
     setSortBy('popular')
     setPage(1)
   }
+
+  if (workspaceMode === 'learn') return <LearnHome />
 
   return (
     <main className="min-w-0 bg-slate-50/70 px-4 py-5 text-slate-900 dark:bg-slate-950 dark:text-slate-100 sm:px-6 lg:px-8">
@@ -468,7 +472,7 @@ function InsightPreview({ dataset, labelledAsSample }: { dataset: Dataset; label
           <Metric label="Skewness" value={stats ? formatNumber(stats.skewness) : '-'} />
         </dl>
       </div>
-      <Link to="/explore/summary" className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-300">
+      <Link to="/analysis/descriptives.statistics" className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-300">
         Open full analysis <ArrowRight size={15} />
       </Link>
     </section>
@@ -502,7 +506,7 @@ function LoadedDatasetPanel({ dataset, profile, onOpenDataset }: { dataset: Data
         <div className="flex flex-wrap items-center gap-2 xl:justify-end">
           <button type="button" onClick={() => onOpenDataset(dataset, '/data/grid')} className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">Data Grid</button>
           <button type="button" onClick={() => onOpenDataset(dataset, '/data/clean')} className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700">Clean & Transform</button>
-          <button type="button" onClick={() => onOpenDataset(dataset, '/explore/summary')} className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700">Summary</button>
+          <button type="button" onClick={() => onOpenDataset(dataset, '/analysis/descriptives.statistics')} className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700">Summary</button>
           <button type="button" onClick={() => onOpenDataset(dataset, '/explore/charts')} className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700">Create Chart</button>
         </div>
       </div>
@@ -684,7 +688,7 @@ function GuidedAnalysisMode({ guideKey, setGuideKey, hasDataset, onLoadSample }:
   const steps = [
     { icon: Database, title: 'Choose Data', text: hasDataset ? 'Dataset is ready for analysis.' : 'Select or import a dataset to begin.', done: hasDataset, to: '/data/upload' },
     { icon: MessageSquareText, title: 'Ask a Question', text: 'Define what you want to learn or test.', done: false, to: '/professional-learning' },
-    { icon: Sigma, title: 'Select a Method', text: 'Pick the right statistical method.', done: false, to: '/inference' },
+    { icon: Sigma, title: 'Select a Method', text: 'Pick the right statistical method.', done: false, to: '/analysis/t.oneSample' },
     { icon: BarChart2, title: 'See Results', text: 'Understand results with clear insights.', done: false, to: '/reports' },
   ]
 
@@ -750,10 +754,10 @@ function AnalysisMethodCard({ method, active, onSelect }: { method: typeof METHO
 
 function MethodGuide({ guideKey }: { guideKey: GuideKey }) {
   const guide = {
-    descriptive: { title: 'Descriptive', text: 'Summarize and understand your data before making claims.', route: '/explore/summary' },
-    inferential: { title: 'Inferential', text: 'Test conclusions about populations using sample evidence.', route: '/inference' },
+    descriptive: { title: 'Descriptive', text: 'Summarize and understand your data before making claims.', route: '/analysis/descriptives.statistics' },
+    inferential: { title: 'Inferential', text: 'Test conclusions about populations using sample evidence.', route: '/analysis/t.oneSample' },
     exploratory: { title: 'Exploratory', text: 'Find patterns, relationships, clusters, and unusual values.', route: '/explore/charts' },
-    predictive: { title: 'Predictive', text: 'Build models and evaluate how well they predict outcomes.', route: '/regression' },
+    predictive: { title: 'Predictive', text: 'Build models and evaluate how well they predict outcomes.', route: '/analysis/regression.linear' },
   }[guideKey]
 
   return (
@@ -1167,9 +1171,9 @@ function getDatasetProfile(dataset: Dataset | null): DatasetProfile {
 }
 
 function getRecommendations(profile: DatasetProfile) {
-  const items = [{ label: 'Summary Statistics', to: '/explore/summary' }]
-  if (profile.numeric >= 2) items.push({ label: 'Correlation', to: '/explore/correlation' }, { label: 'Regression', to: '/regression' })
-  if (profile.categorical >= 1) items.push({ label: 'Frequency Tables', to: '/explore/frequency' })
+  const items = [{ label: 'Summary Statistics', to: '/analysis/descriptives.statistics' }]
+  if (profile.numeric >= 2) items.push({ label: 'Correlation', to: '/analysis/regression.correlation' }, { label: 'Regression', to: '/analysis/regression.linear' })
+  if (profile.categorical >= 1) items.push({ label: 'Frequency Tables', to: '/analysis/frequencies.contingency' })
   if (profile.numeric >= 1) items.push({ label: 'Create Chart', to: '/explore/charts' })
   return items.slice(0, 5)
 }

@@ -357,7 +357,7 @@ const FEATURE_GROUPS_V2: Record<FeatureGroup, FeatureItem[]> = {
     { label: 'Power and sample-size calculators', status: 'done' },
   ],
   Modeling: [
-    { label: 'Simple and multiple linear regression', status: 'linked', linkTo: '/regression' },
+    { label: 'Simple and multiple linear regression', status: 'linked', linkTo: '/analysis/regression.linear' },
     { label: 'Logistic regression', status: 'todo' },
     { label: 'Regression diagnostics', status: 'done' },
     { label: 'Model comparison and validation', status: 'done' },

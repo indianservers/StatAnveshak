@@ -193,7 +193,7 @@ export function GridPage() {
         {activeDataset.schema.slice(0, 12).map((col) => (
           <button
             key={col.name}
-            onClick={() => navigate(col.type === 'numeric' ? '/explore/summary' : '/explore/frequency')}
+            onClick={() => navigate(col.type === 'numeric' ? '/analysis/descriptives.statistics' : '/analysis/frequencies.contingency')}
             className="inline-flex items-center gap-1 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 hover:border-indigo-300 hover:text-indigo-600"
             title={`Analyze ${col.name}`}
           >

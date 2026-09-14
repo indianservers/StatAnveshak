@@ -7,7 +7,7 @@ import { escapeHtml } from '../lib/validation'
 import { DatasetEmptyState } from '../components/ui/DatasetEmptyState'
 
 export function ReportsPage() {
-  const { activeDataset } = useStore()
+  const { activeDataset, savedStages } = useStore()
 
   if (!activeDataset) {
     return <DatasetEmptyState preferredPath="/reports" description="Load a dataset to export reports, tables, markdown, HTML, and reproducible scripts." />
@@ -214,6 +214,24 @@ ${corr ? `
           </div>
         ))}
       </div>
+
+      {savedStages.length > 0 && (
+        <section className="mt-8">
+          <h2 className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Pinned stages (PNG + caption)</h2>
+          <div className="grid gap-3 md:grid-cols-2">
+            {savedStages.map((stage) => (
+              <div key={stage.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
+                <img src={stage.pngDataUrl} alt={stage.title} className="h-36 w-full object-cover object-top" />
+                <div className="p-3 text-xs text-slate-600 dark:text-slate-300">
+                  <p className="font-bold text-slate-800 dark:text-white">{stage.title}</p>
+                  <p className="mt-1">{stage.intuition}</p>
+                  <p className="mt-1 text-amber-800 dark:text-amber-200">{stage.misuse}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   )
 }

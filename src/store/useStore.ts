@@ -1,6 +1,25 @@
 import { create } from 'zustand'
 import type { AnalysisLogEntry, Dataset, Project, ChartConfig } from '../types'
 import { loadDatasets, loadProjects } from '../lib/storage'
+import { addSavedStage, loadSavedStages, removeSavedStage, type SavedStage } from '../lib/lessonWall'
+import { DEFAULT_LEARN_CHAPTER, type LearnChapterId } from '../lib/learnChapters'
+
+export type WorkspaceMode = 'learn' | 'analyze'
+export type MotionPreference = 'full' | 'reduced'
+export type CaptionSize = 'sm' | 'md' | 'lg'
+
+const loadMode = (): WorkspaceMode => (localStorage.getItem('pref-workspace-mode') === 'analyze' ? 'analyze' : 'learn')
+const loadMotion = (): MotionPreference => (localStorage.getItem('pref-motion') === 'reduced' ? 'reduced' : 'full')
+const loadCaptionSize = (): CaptionSize => {
+  const value = localStorage.getItem('pref-caption-size')
+  return value === 'sm' || value === 'lg' ? value : 'md'
+}
+const loadChapter = (): LearnChapterId => {
+  const value = localStorage.getItem('pref-default-chapter')
+  return value === 'compound' || value === 'distributions' || value === 'frequentist' || value === 'bayesian' || value === 'regression'
+    ? value
+    : DEFAULT_LEARN_CHAPTER
+}
 
 const loadBool = (key: string, fallback: boolean) => localStorage.getItem(key) ? localStorage.getItem(key) === 'true' : fallback
 const savePref = (key: string, value: string | boolean | number) => localStorage.setItem(key, String(value))
@@ -83,6 +102,19 @@ interface AppState {
   addAnalysisLog: (entry: AnalysisLogEntry) => void
   removeAnalysisLog: (id: string) => void
   clearAnalysisHistory: () => void
+  workspaceMode: WorkspaceMode
+  setWorkspaceMode: (mode: WorkspaceMode) => void
+  motion: MotionPreference
+  setMotion: (value: MotionPreference) => void
+  colorblindPalette: boolean
+  toggleColorblindPalette: () => void
+  captionSize: CaptionSize
+  setCaptionSize: (value: CaptionSize) => void
+  defaultChapter: LearnChapterId
+  setDefaultChapter: (value: LearnChapterId) => void
+  savedStages: SavedStage[]
+  pinStage: (stage: SavedStage) => void
+  unpinStage: (id: string) => void
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -101,7 +133,10 @@ export const useStore = create<AppState>((set) => ({
       activeProject: state.activeProject ?? sortedProjects[0] ?? null,
     }))
   },
-  addDataset: (ds) => set((s) => ({ datasets: [...s.datasets.filter((d) => d.id !== ds.id), ds] })),
+  addDataset: (ds) => set((s) => ({
+    datasets: [...s.datasets.filter((d) => d.id !== ds.id), ds],
+    activeDataset: s.activeDataset?.id === ds.id ? ds : s.activeDataset ?? ds,
+  })),
   removeDataset: (id) => set((s) => ({ datasets: s.datasets.filter((d) => d.id !== id) })),
   updateDataset: (ds) => set((s) => ({ datasets: s.datasets.map((d) => (d.id === ds.id ? ds : d)) })),
 
@@ -156,6 +191,19 @@ export const useStore = create<AppState>((set) => ({
     localStorage.removeItem('analysis-history')
     set({ analysisHistory: [] })
   },
+  workspaceMode: loadMode(),
+  setWorkspaceMode: (mode) => { savePref('pref-workspace-mode', mode); set({ workspaceMode: mode }) },
+  motion: loadMotion(),
+  setMotion: (value) => { savePref('pref-motion', value); set({ motion: value }) },
+  colorblindPalette: loadBool('pref-colorblind-palette', false),
+  toggleColorblindPalette: () => set((s) => { const colorblindPalette = !s.colorblindPalette; savePref('pref-colorblind-palette', colorblindPalette); return { colorblindPalette } }),
+  captionSize: loadCaptionSize(),
+  setCaptionSize: (value) => { savePref('pref-caption-size', value); set({ captionSize: value }) },
+  defaultChapter: loadChapter(),
+  setDefaultChapter: (value) => { savePref('pref-default-chapter', value); set({ defaultChapter: value }) },
+  savedStages: loadSavedStages(),
+  pinStage: (stage) => set((s) => ({ savedStages: addSavedStage(stage, s.savedStages) })),
+  unpinStage: (id) => set((s) => ({ savedStages: removeSavedStage(id, s.savedStages) })),
 }))
 
 function persistFavorites(value: string[]) {

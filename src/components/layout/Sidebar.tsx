@@ -17,6 +17,7 @@ import {
   GitFork,
   Home,
   Layers,
+  LayoutDashboard,
   Menu,
   Map,
   KeyRound,
@@ -33,9 +34,12 @@ import {
   TrendingUp,
   Upload,
   Code2,
+  Target,
+  Users,
   X,
 } from 'lucide-react'
 import { useStore } from '../../store/useStore'
+import { LEARN_CHAPTERS } from '../../lib/learnChapters'
 
 const NAV_GROUPS = [
   {
@@ -60,18 +64,30 @@ const NAV_GROUPS = [
   {
     label: 'Explore',
     items: [
-      { to: '/explore/summary', icon: Sigma, label: 'Summary Stats' },
+      { to: '/analysis/descriptives.statistics', icon: Sigma, label: 'Descriptives' },
       { to: '/explore/charts', icon: BarChart2, label: 'Charts' },
-      { to: '/explore/correlation', icon: GitFork, label: 'Correlation' },
-      { to: '/explore/frequency', icon: PieChart, label: 'Frequency' },
+      { to: '/analysis/regression.correlation', icon: GitFork, label: 'Correlation' },
+      { to: '/analysis/frequencies.contingency', icon: PieChart, label: 'Frequency' },
     ],
   },
   {
     label: 'Analysis',
     items: [
+      { to: '/analysis/descriptives.statistics', icon: FlaskConical, label: 'Analysis' },
       { to: '/distributions', icon: Activity, label: 'Distributions' },
-      { to: '/inference', icon: Calculator, label: 'Inference Tests' },
-      { to: '/regression', icon: TrendingUp, label: 'Regression' },
+      { to: '/analysis/t.oneSample', icon: Calculator, label: 'Inference Tests' },
+      { to: '/analysis/regression.linear', icon: TrendingUp, label: 'Regression' },
+      { to: '/analysis/learnBayes.labs', icon: BookOpen, label: 'Learn Bayes' },
+      { to: '/analysis/learnStats.labs', icon: GraduationCap, label: 'Learn Stats' },
+      { to: '/analysis/bff.general', icon: Target, label: 'Bayes Factor Functions' },
+      { to: '/analysis/timeSeries.arima', icon: Activity, label: 'Time Series' },
+      { to: '/analysis/survival.nonparametric', icon: Target, label: 'Survival' },
+      { to: '/analysis/mixed.lmm', icon: Layers, label: 'Mixed Models' },
+      { to: '/analysis/sem.sem', icon: GitFork, label: 'SEM' },
+      { to: '/analysis/meta.analysis', icon: BarChart2, label: 'Meta-Analysis' },
+      { to: '/analysis/network.psych', icon: Activity, label: 'Networks' },
+      { to: '/analysis/ml.regression', icon: Brain, label: 'Machine Learning' },
+      { to: '/analysis/qc.charts', icon: Activity, label: 'Quality Control' },
       { to: '/advanced', icon: Brain, label: 'Advanced Analysis' },
       { to: '/stat-modules', icon: FlaskConical, label: 'Stat Modules' },
       { to: '/syllabus', icon: GraduationCap, label: 'Syllabus Modules' },
@@ -97,8 +113,30 @@ const NAV_GROUPS = [
   },
 ]
 
+const CHAPTER_ICONS = {
+  chance: Sigma,
+  compound: GitFork,
+  distributions: Activity,
+  frequentist: Target,
+  bayesian: Brain,
+  regression: TrendingUp,
+} as const
+
+const LEARN_NAV = [
+  { to: '/', icon: Home, label: 'Chapters' },
+  { to: '/learn', icon: BookOpen, label: 'Core labs' },
+  ...LEARN_CHAPTERS.map((chapter) => ({
+    to: chapter.href,
+    icon: CHAPTER_ICONS[chapter.id],
+    label: chapter.title,
+  })),
+  { to: '/classroom', icon: Users, label: 'Classroom' },
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Lesson wall' },
+  { to: '/settings', icon: Settings, label: 'Settings' },
+]
+
 export function Sidebar() {
-  const { sidebarOpen, setSidebarOpen, favoriteModules, toggleFavoriteModule, activeDataset, datasets, setActiveDataset } = useStore()
+  const { sidebarOpen, setSidebarOpen, favoriteModules, toggleFavoriteModule, activeDataset, datasets, setActiveDataset, workspaceMode, setWorkspaceMode } = useStore()
   const [query, setQuery] = useState('')
   const [atTop, setAtTop] = useState(true)
   const [atBottom, setAtBottom] = useState(false)
@@ -127,6 +165,10 @@ export function Sidebar() {
 
   const filteredGroups = useMemo(() => {
     const q = query.trim().toLowerCase()
+    if (workspaceMode === 'learn') {
+      const items = q ? LEARN_NAV.filter((item) => item.label.toLowerCase().includes(q)) : LEARN_NAV
+      return [{ label: 'Learn', items }]
+    }
     const groups = NAV_GROUPS.map((group) => ({
       ...group,
       items: q ? group.items.filter((item) => item.label.toLowerCase().includes(q)) : group.items,
@@ -136,12 +178,12 @@ export function Sidebar() {
       .filter((col) => col.name.toLowerCase().includes(q))
       .slice(0, 8)
       .map((col) => ({
-        to: col.type === 'numeric' ? '/explore/summary' : '/explore/frequency',
+        to: col.type === 'numeric' ? '/explore/summary' : '/analysis/frequencies.contingency',
         icon: col.type === 'numeric' ? Sigma : Table2,
         label: col.name,
       }))
     return columnItems.length > 0 ? [{ label: 'Columns', items: columnItems }, ...groups] : groups
-  }, [query, activeDataset])
+  }, [query, activeDataset, workspaceMode])
 
   const favoriteItems = useMemo(() => {
     const all = NAV_GROUPS.flatMap((group) => group.items)
@@ -264,7 +306,22 @@ export function Sidebar() {
           }
         }}
       >
-        {favoriteItems.length > 0 && sidebarOpen && (
+        {workspaceMode === 'learn' && sidebarOpen && (
+          <div className="px-3 pb-2">
+            <button
+              type="button"
+              onClick={() => {
+                setWorkspaceMode('analyze')
+                closeMobileDrawer()
+              }}
+              className="w-full rounded-md border border-indigo-400/40 bg-indigo-600/20 px-3 py-2 text-left text-sm font-semibold text-indigo-200 hover:bg-indigo-600/30"
+            >
+              Open analysis
+            </button>
+          </div>
+        )}
+
+        {favoriteItems.length > 0 && sidebarOpen && workspaceMode === 'analyze' && (
           <div className="mb-1">
             <p className="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-widest text-slate-500">Pinned</p>
             {favoriteItems.map((item) => (
@@ -280,7 +337,7 @@ export function Sidebar() {
           </div>
         )}
 
-        {recentDatasets.length > 0 && sidebarOpen && (
+        {recentDatasets.length > 0 && sidebarOpen && workspaceMode === 'analyze' && (
           <div className="mb-1">
             <p className="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-widest text-slate-500">Recents</p>
             <div className="flex gap-2 px-3 pb-2">

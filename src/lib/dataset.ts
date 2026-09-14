@@ -1,5 +1,6 @@
 import type { Dataset, SampleDataset } from '../types'
 import { detectSchema } from './schema'
+import { SAMPLE_DATASETS } from './sampleData'
 
 export function sampleToDataset(sample: SampleDataset): Dataset {
   const data = sample.data.map((row) => ({ ...row }))
@@ -18,4 +19,9 @@ export function sampleToDataset(sample: SampleDataset): Dataset {
     parseDetails: 'Built-in sample dataset',
     data,
   }
+}
+
+export function defaultTeachingSample(): Dataset {
+  const sample = SAMPLE_DATASETS.find((item) => item.id === 'student-marks') ?? SAMPLE_DATASETS[0]
+  return sampleToDataset(sample)
 }

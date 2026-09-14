@@ -46,7 +46,7 @@ export function PreviewPage() {
         <div className="flex flex-wrap gap-2">
           <Link to="/explore/charts" className="text-sm bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Visualize</Link>
           <Link to="/dashboard" className="text-sm border border-slate-200 px-4 py-2 rounded-md text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">Dashboard</Link>
-          <Link to="/explore/summary" className="text-sm border border-slate-200 px-4 py-2 rounded-md text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">Statistics</Link>
+          <Link to="/analysis/descriptives.statistics" className="text-sm border border-slate-200 px-4 py-2 rounded-md text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">Statistics</Link>
           <Link to="/data/grid" className="text-sm border border-slate-200 px-4 py-2 rounded-md text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">Grid</Link>
         </div>
       </div>

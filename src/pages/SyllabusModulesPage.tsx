@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { BarChart3, BookOpen, Brain, Calculator, FlaskConical, GitBranch, GraduationCap, ListChecks, Network, Shapes, Sigma } from 'lucide-react'
 import { SYLLABUS_MODULE_BY_KEY, SYLLABUS_MODULES, type SyllabusModuleGroup, type SyllabusModuleKey } from '../lib/syllabusModules'
+import { SyllabusHero } from '../components/visual/SyllabusHero'
 
 const ICONS: Partial<Record<SyllabusModuleKey, typeof Shapes>> = {
   sample_spaces: Shapes,
@@ -109,9 +110,19 @@ export function SyllabusModulesPage() {
           </div>
 
           {activeKey === 'sample_spaces' && <SampleSpacesModule />}
-          {activeKey === 'conditional_bayes' && <ConditionalBayesModule />}
+          {activeKey === 'conditional_bayes' && (
+            <>
+              <SyllabusHero moduleKey={activeKey} />
+              <ConditionalBayesModule />
+            </>
+          )}
           {activeKey === 'counting' && <CountingModule />}
-          {activeKey !== 'sample_spaces' && activeKey !== 'conditional_bayes' && activeKey !== 'counting' && <SuiteModuleView moduleKey={activeKey} />}
+          {activeKey !== 'sample_spaces' && activeKey !== 'conditional_bayes' && activeKey !== 'counting' && (
+            <>
+              <SyllabusHero moduleKey={activeKey} />
+              <SuiteModuleView moduleKey={activeKey} />
+            </>
+          )}
         </div>
       </main>
     </div>

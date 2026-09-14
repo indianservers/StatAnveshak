@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-08-17T14:01:30.654Z",
+  "generatedAt": "2026-09-01T02:50:02.679Z",
   "total": 24,
-  "passed": 24,
-  "failed": 0,
+  "passed": 21,
+  "failed": 3,
   "tolerances": {
     "referenceTolerances": {
       "exact": 0,
@@ -114,11 +114,13 @@
     },
     {
       "name": "golden regression diagnostics return leverage, Cook distance, and VIF",
-      "status": "passed"
+      "status": "failed",
+      "error": "Regression Diagnostics returned non-finite table value vif=NaN"
     },
     {
       "name": "golden logistic regression is deterministic on nonseparable binary data",
-      "status": "passed"
+      "status": "failed",
+      "error": "Expected 1 to be within 0.01 of 0.833333"
     },
     {
       "name": "golden goodness-of-fit ranks normal data as a tested candidate",
@@ -162,7 +164,8 @@
     },
     {
       "name": "edge logistic perfect separation does not emit non-finite outputs and warns",
-      "status": "passed"
+      "status": "failed",
+      "error": "Expected logistic instability warning"
     },
     {
       "name": "approximate modules expose numerical warning notes",

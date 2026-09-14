@@ -10,6 +10,7 @@ const PAGE_LABELS: Record<string, string> = {
   '/data/upload': 'Upload',
   '/data/grid': 'Data Grid',
   '/explore/summary': 'Summary',
+  '/analysis': 'Analysis',
   '/explore/charts': 'Charts',
   '/distributions': 'Distributions',
   '/stat-modules': 'Stat Modules',
@@ -23,7 +24,7 @@ const PAGE_LABELS: Record<string, string> = {
 }
 
 export function UiPolishLayer() {
-  const { activeDataset, reportPreviewOpen, setReportPreviewOpen } = useStore()
+  const { activeDataset, reportPreviewOpen, setReportPreviewOpen, workspaceMode } = useStore()
   const location = useLocation()
   const [showTour, setShowTour] = useState(() => localStorage.getItem('anveshak-tour-done') !== 'yes')
 
@@ -55,7 +56,7 @@ export function UiPolishLayer() {
 
   return (
     <>
-      {showTour && (
+      {showTour && workspaceMode === 'analyze' && (
         <div className="fixed bottom-4 left-4 z-40 w-80 rounded-xl border border-indigo-200 bg-white p-4 shadow-2xl dark:border-indigo-900 dark:bg-slate-800">
           <div className="mb-2 flex items-start justify-between gap-2">
             <div className="flex items-center gap-2">

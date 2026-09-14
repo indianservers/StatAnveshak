@@ -5,6 +5,7 @@ import { useStore } from '../../store/useStore'
 import { saveDataset } from '../../lib/storage'
 import { useToast } from '../ui/toastContext'
 import { datasetGuardrails } from '../../lib/guardrails'
+import { TeachingDatasetChip } from '../visual/TeachingDatasetChip'
 
 const PAGE_NAMES: Record<string, string> = {
   '/': 'Home',
@@ -15,10 +16,36 @@ const PAGE_NAMES: Record<string, string> = {
   '/data/clean': 'Clean & Transform',
   '/data/workbench': 'Statistics Workbench',
   '/data/query': 'Query Workbench',
-  '/explore/summary': 'Summary Statistics',
+  '/explore/summary': 'Descriptive Statistics',
+  '/analysis': 'Analysis',
   '/explore/charts': 'Charts',
   '/explore/correlation': 'Correlation',
   '/explore/frequency': 'Frequency',
+  '/analysis/regression.correlation': 'Correlation',
+  '/analysis/frequencies.contingency': 'Contingency Tables',
+  '/analysis/regression.linear': 'Linear Regression',
+  '/analysis/bff.general': 'Bayes Factor Functions',
+  '/analysis/learnBayes.labs': 'Learn Bayes',
+  '/analysis/learnStats.labs': 'Learn Stats',
+  '/analysis/summaryStats.fromPublished': 'Summary Statistics',
+  '/analysis/robustT.modelAveraged': 'Robust T-Tests',
+  '/analysis/mixed.lmm': 'Linear Mixed Models',
+  '/analysis/timeSeries.arima': 'ARIMA',
+  '/analysis/survival.nonparametric': 'Kaplan–Meier',
+  '/analysis/process.model': 'PROCESS',
+  '/analysis/prophet.forecast': 'Prophet',
+  '/analysis/factor.cfa': 'Confirmatory Factor Analysis',
+  '/analysis/sem.sem': 'Structural Equation Modeling',
+  '/analysis/meta.analysis': 'Meta-Analysis',
+  '/analysis/network.psych': 'Network Analysis',
+  '/analysis/jags.model': 'JAGS',
+  '/analysis/bain.tests': 'Bain',
+  '/analysis/ml.regression': 'ML Regression',
+  '/analysis/ml.clustering': 'ML Clustering',
+  '/analysis/qc.charts': 'Control Charts',
+  '/analysis/qc.capability': 'Process Capability',
+  '/analysis/audit.data': 'Data Auditing',
+  '/analysis/distributions.explorer': 'Distribution Families',
   '/distributions': 'Distributions',
   '/inference': 'Inference Tests',
   '/regression': 'Regression',
@@ -29,6 +56,13 @@ const PAGE_NAMES: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/reports': 'Reports',
   '/learn': 'Core Statistics',
+  '/learn/chance': 'Chance',
+  '/learn/compound': 'Compound probability',
+  '/learn/distributions': 'Distributions',
+  '/learn/frequentist': 'Frequentist inference',
+  '/learn/bayesian': 'Bayesian inference',
+  '/learn/regression': 'Regression',
+  '/classroom': 'Classroom',
   '/professional-learning': 'Professional Learning',
   '/solver': 'Solver',
   '/documentation': 'Documentation',
@@ -58,6 +92,8 @@ export function TopBar() {
     setReportPreviewOpen,
     lastSavedAt,
     setLastSavedAt,
+    workspaceMode,
+    setWorkspaceMode,
   } = useStore()
   const [showHelp, setShowHelp] = useState(false)
   const [showHealth, setShowHealth] = useState(false)
@@ -113,6 +149,23 @@ export function TopBar() {
 
   return (
     <header className="h-12 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2 pl-14 pr-2 shrink-0 sm:gap-3 sm:pr-4 md:px-4">
+      <div className="flex items-center rounded-lg border border-slate-200 p-0.5 dark:border-slate-600" role="tablist" aria-label="Workspace mode">
+        {(['learn', 'analyze'] as const).map((mode) => (
+          <button
+            key={mode}
+            type="button"
+            onClick={() => setWorkspaceMode(mode)}
+            className={`rounded-md px-2.5 py-1 text-xs font-bold capitalize ${
+              workspaceMode === mode
+                ? 'bg-indigo-600 text-white'
+                : 'text-slate-500 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700'
+            }`}
+          >
+            {mode}
+          </button>
+        ))}
+      </div>
+
       <div className="flex-1 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 min-w-0">
         <nav className="hidden lg:flex items-center gap-1 text-xs min-w-0" aria-label="Breadcrumb">
           {breadcrumb.map((part, index) => (
@@ -135,7 +188,9 @@ export function TopBar() {
           </>
         )}
 
-        {activeDataset ? (
+        {workspaceMode === 'learn' ? (
+          <TeachingDatasetChip compact />
+        ) : activeDataset ? (
           <div className="flex items-center gap-1.5 min-w-0">
             <Database size={14} className="text-green-500 shrink-0" />
             <select
@@ -216,6 +271,8 @@ export function TopBar() {
         </div>
       )}
 
+      {workspaceMode === 'analyze' && (
+        <>
       <button
         onClick={() => navigate('/data/upload')}
         className="hidden md:flex items-center gap-1.5 text-xs border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-md transition-colors"
@@ -239,6 +296,8 @@ export function TopBar() {
           </span>
         )}
       </button>
+        </>
+      )}
 
       <button
         onClick={openCommandPalette}
@@ -249,6 +308,8 @@ export function TopBar() {
         Ctrl K
       </button>
 
+      {workspaceMode === 'analyze' && (
+        <>
       <button
         onClick={toggleDensity}
         className={`hidden lg:flex items-center gap-1.5 text-xs border px-3 py-1.5 rounded-md transition-colors ${
@@ -270,8 +331,10 @@ export function TopBar() {
         <FileText size={12} />
         Report
       </button>
+        </>
+      )}
 
-      {activeDataset && (
+      {workspaceMode === 'analyze' && activeDataset && (
         <button
           onClick={handleSave}
           className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 rounded-md transition-colors sm:px-3"
@@ -281,7 +344,7 @@ export function TopBar() {
         </button>
       )}
 
-      {activeDataset && (
+      {workspaceMode === 'analyze' && activeDataset && (
         <button
           onClick={unloadDataset}
           className="flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"

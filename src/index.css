@@ -368,3 +368,48 @@ body {
     font-size: 0.78rem;
   }
 }
+
+@media (max-width: 1023px) {
+  .lesson-stage {
+    min-height: min(48vh, 420px);
+  }
+}
+
+.lesson-preview-loop {
+  animation: lesson-preview-loop 2s ease-in-out infinite;
+}
+
+@keyframes lesson-preview-loop {
+  0%, 100% { transform: translateY(0); opacity: 0.9; }
+  50% { transform: translateY(-5px); opacity: 1; }
+}
+
+.palette-cb {
+  --viz-sample: #0072b2;
+  --viz-sampling: #cc79a7;
+  --viz-success: #009e73;
+  --viz-warn: #e69f00;
+  --viz-misuse: #d55e00;
+}
+
+.palette-cb .lesson-stage circle[fill='#818cf8'],
+.palette-cb .lesson-stage circle[fill="#818cf8"] {
+  fill: #0072b2;
+}
+
+.caption-size-sm .lesson-caption { font-size: 0.8rem; }
+.caption-size-lg .lesson-caption { font-size: 1.05rem; }
+
+.motion-reduced .lesson-preview-loop,
+.motion-reduced .visual-lesson * {
+  animation: none !important;
+  transition-duration: 0.01ms !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lesson-preview-loop,
+  .visual-lesson * {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}

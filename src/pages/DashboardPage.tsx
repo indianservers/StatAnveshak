@@ -5,6 +5,7 @@ import { useStore } from '../store/useStore'
 import { datasetKpis, numericColumn, numericDescriptiveRows, summaryStats } from '../lib/stats'
 import { BarChart3, Gauge } from 'lucide-react'
 import { DatasetEmptyState } from '../components/ui/DatasetEmptyState'
+import { LessonWall } from '../components/visual/LessonWall'
 
 function formatBytes(value?: number) {
   if (!value) return '-'
@@ -26,7 +27,7 @@ function formatCell(value: number | string) {
 }
 
 export function DashboardPage() {
-  const { activeDataset, theme } = useStore()
+  const { activeDataset, theme, workspaceMode } = useStore()
   const loadingView = false
   const chart1Ref = useRef<HTMLDivElement>(null)
   const chart2Ref = useRef<HTMLDivElement>(null)
@@ -84,6 +85,8 @@ export function DashboardPage() {
     }
   }, [activeDataset, layoutBase, numCols, catCols, loadingView])
 
+  if (workspaceMode === 'learn') return <LessonWall />
+
   if (!activeDataset) {
     return <DatasetEmptyState preferredPath="/dashboard" description="Load a dataset to open the dashboard with automatic charts, KPIs, and data-quality cards." />
   }
@@ -108,7 +111,7 @@ export function DashboardPage() {
           <p className="text-xs text-slate-400">KPI overview, descriptive statistics, and quick visual checks.</p>
         </div>
         <Link
-          to="/explore/summary"
+          to="/analysis/descriptives.statistics"
           className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 hover:border-indigo-300 hover:text-indigo-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
         >
           <BarChart3 size={14} />
@@ -191,20 +194,23 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* Charts grid */}
+      {/* Charts grid — click a panel to reopen the matching lesson */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {numCols.length > 0 && (
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3">
+          <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
+            <Link to="/learn/distributions" className="mb-1 inline-block text-xs font-bold text-indigo-600 hover:underline">Open CLT / shape lesson</Link>
             {loadingView ? <div className="h-64 animate-pulse rounded bg-slate-100 dark:bg-slate-700" /> : <div ref={chart1Ref} style={{ minHeight: 260 }} />}
           </div>
         )}
         {numCols.length >= 2 && (
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3">
+          <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
+            <Link to="/explore/charts" className="mb-1 inline-block text-xs font-bold text-indigo-600 hover:underline">Open chart stage</Link>
             {loadingView ? <div className="h-64 animate-pulse rounded bg-slate-100 dark:bg-slate-700" /> : <div ref={chart2Ref} style={{ minHeight: 260 }} />}
           </div>
         )}
         {catCols.length > 0 && (
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3">
+          <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
+            <Link to="/explore/frequency" className="mb-1 inline-block text-xs font-bold text-indigo-600 hover:underline">Open frequency lesson</Link>
             {loadingView ? <div className="h-64 animate-pulse rounded bg-slate-100 dark:bg-slate-700" /> : <div ref={chart3Ref} style={{ minHeight: 260 }} />}
           </div>
         )}

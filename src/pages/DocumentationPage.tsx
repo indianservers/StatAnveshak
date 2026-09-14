@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom'
 import { BookOpen, Database, FileText, GraduationCap, Link2, Search, ShieldCheck, Sigma } from 'lucide-react'
 import { CORE_SITE_LINKS, MODULE_SITE_LINKS, SITE_CATALOG, type SiteCatalogEntry } from '../lib/siteCatalog'
+import { ANALYSIS_CATALOG, JASP_MODULE_ORDER, analysesForModule } from '../analysis/catalog'
 import { useSeoMetadata } from '../lib/seo'
 
 const WORKFLOWS = [
   ['Import data', 'Upload CSV, Excel, JSON, TSV, or load a sample dataset, then preview schema and missingness.', '/data/upload'],
-  ['Explore variables', 'Use summary statistics, charts, correlation, and frequency pages to understand distributions and relationships.', '/explore/summary'],
+  ['Explore variables', 'Use descriptive statistics, raincloud plots, charts, correlation, and frequency pages to understand distributions and relationships.', '/analysis/descriptives.statistics'],
   ['Run analysis', 'Move from inference tests to regression, advanced analysis, distribution fitting, and statistical modules.', '/stat-modules'],
   ['Teach and learn', 'Use core statistics, syllabus modules, professional learning, solver examples, and CS modules.', '/learn'],
   ['Report results', 'Review dashboard outputs and export report-ready tables, charts, and summaries.', '/reports'],
@@ -64,6 +65,33 @@ export function DocumentationPage() {
               </Link>
             ))}
           </div>
+        </section>
+
+        <section className="mb-6 rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
+          <div className="mb-4 flex items-center gap-2">
+            <Sigma size={16} className="text-indigo-500" />
+            <h2 className="text-lg font-bold text-slate-800 dark:text-white">JASP modules</h2>
+          </div>
+          <p className="mb-4 max-w-3xl text-sm text-slate-500">
+            Each JASP module maps to one or more analysis IDs in the workspace. Frequentist and Bayesian share the same ID.
+          </p>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {JASP_MODULE_ORDER.map((module) => {
+              const items = analysesForModule(module)
+              const first = items[0]
+              return (
+                <Link
+                  key={module}
+                  to={`/analysis/${first?.id ?? 'descriptives.statistics'}`}
+                  className="rounded-lg border border-slate-100 p-3 hover:border-indigo-200 dark:border-slate-700"
+                >
+                  <p className="text-sm font-semibold text-slate-800 dark:text-white">{first?.moduleLabel ?? module}</p>
+                  <p className="mt-1 text-xs text-slate-500">{items.map((item) => item.id).join(', ')}</p>
+                </Link>
+              )
+            })}
+          </div>
+          <p className="mt-3 text-xs text-slate-400">{ANALYSIS_CATALOG.length} analyses · {JASP_MODULE_ORDER.length} modules · all implemented</p>
         </section>
 
         <section className="mb-6 rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">

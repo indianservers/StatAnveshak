@@ -1,4 +1,5 @@
 import * as ss from 'simple-statistics'
+import { describeNumeric } from '../analysis/engines/frequentist/descriptives'
 import type { ColumnSchema, StatResult } from '../types'
 
 export interface DatasetKpi {
@@ -46,30 +47,32 @@ export function numericColumn(data: Record<string, unknown>[], col: string): num
   return data.map((r) => Number(r[col])).filter((n) => !isNaN(n) && isFinite(n))
 }
 
+function finiteOrDash(value: number): number | string {
+  return Number.isFinite(value) ? +value.toFixed(6) : '-'
+}
+
 export function summaryStats(data: Record<string, unknown>[], col: string): StatResult[] {
   const nums = numericColumn(data, col)
   if (nums.length === 0) return []
-  const sorted = [...nums].sort((a, b) => a - b)
-  const mean = ss.mean(nums)
-  const std = nums.length > 1 ? ss.standardDeviation(nums) : 0
-  const variance = nums.length > 1 ? ss.variance(nums) : 0
-
+  const stats = describeNumeric(nums, data.length - nums.length)
   return [
-    { label: 'Count', value: nums.length },
-    { label: 'Mean', value: +mean.toFixed(6) },
-    { label: 'Median', value: +ss.median(nums).toFixed(6) },
-    { label: 'Mode', value: +ss.mode(nums).toFixed(6) },
-    { label: 'Std Dev', value: +std.toFixed(6) },
-    { label: 'Variance', value: +variance.toFixed(6) },
-    { label: 'Min', value: +ss.min(nums).toFixed(6) },
-    { label: 'Max', value: +ss.max(nums).toFixed(6) },
-    { label: 'Range', value: +(ss.max(nums) - ss.min(nums)).toFixed(6) },
-    { label: 'Q1', value: +ss.quantile(sorted, 0.25).toFixed(6) },
-    { label: 'Q3', value: +ss.quantile(sorted, 0.75).toFixed(6) },
-    { label: 'IQR', value: +(ss.quantile(sorted, 0.75) - ss.quantile(sorted, 0.25)).toFixed(6) },
-    { label: 'Skewness', value: nums.length > 2 ? +ss.sampleSkewness(nums).toFixed(6) : 0 },
-    { label: 'Kurtosis', value: nums.length > 3 ? +ss.sampleKurtosis(nums).toFixed(6) : 0 },
-    { label: 'CV (%)', value: mean === 0 ? '-' : +((std / Math.abs(mean)) * 100).toFixed(4) },
+    { label: 'Count', value: stats.valid },
+    { label: 'Mean', value: finiteOrDash(stats.mean) },
+    { label: 'Median', value: finiteOrDash(stats.median) },
+    { label: 'Mode', value: stats.mode },
+    { label: 'Std Dev', value: finiteOrDash(stats.sd) },
+    { label: 'Variance', value: finiteOrDash(stats.variance) },
+    { label: 'Min', value: finiteOrDash(stats.min) },
+    { label: 'Max', value: finiteOrDash(stats.max) },
+    { label: 'Range', value: finiteOrDash(stats.range) },
+    { label: 'Q1', value: finiteOrDash(stats.q1) },
+    { label: 'Q3', value: finiteOrDash(stats.q3) },
+    { label: 'IQR', value: finiteOrDash(stats.iqr) },
+    { label: 'Skewness', value: finiteOrDash(stats.skew) },
+    { label: 'Kurtosis', value: finiteOrDash(stats.kurtosis) },
+    { label: 'CV (%)', value: Number.isFinite(stats.cv) ? +(stats.cv * 100).toFixed(4) : '-' },
+    { label: 'Shapiro–Wilk W', value: finiteOrDash(stats.shapiroW) },
+    { label: 'Shapiro–Wilk p', value: finiteOrDash(stats.shapiroP) },
   ]
 }
 

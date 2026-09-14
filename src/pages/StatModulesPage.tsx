@@ -5,6 +5,8 @@ import { useStore } from '../store/useStore'
 import type { AppTheme } from '../store/useStore'
 import { defaultSelection, numericColumn, runStatModule, STAT_MODULES, type StatModuleGroup, type StatModuleResult, type StatModuleSelection } from '../lib/statModules'
 import { getStatModuleLearningContent, getStatModuleProfile, type ModuleLearningContent, type ModuleProfile } from '../lib/statModuleProfiles'
+import { isTeachingApproximation, isWorkflowOnlyModule } from '../lib/statModulePresets'
+import { StatModuleHero } from '../components/visual/StatModuleHero'
 import { analyzeDatasetQuality, buildCleaningRecommendations, detectColumnRoles, scoreModulesForDataset, type CleaningRecommendation, type ColumnRoleProfile, type DataQualityReport, type ModuleDatasetMatch } from '../lib/dataIntelligence'
 import { useToast } from '../components/ui/toastContext'
 import { SAMPLE_DATASETS } from '../lib/sampleData'
@@ -37,7 +39,7 @@ const downloadText = (filename: string, text: string, mime = 'text/plain') => {
 }
 
 export function StatModulesPage() {
-  const { activeDataset, datasets, projects, activeProject, theme, addDataset, setActiveDataset, addProject, setActiveProject, addAnalysisLog, analysisHistory } = useStore()
+  const { activeDataset, datasets, projects, activeProject, theme, workspaceMode, addDataset, setActiveDataset, addProject, setActiveProject, addAnalysisLog, analysisHistory } = useStore()
   const { notify } = useToast()
   const { moduleKey: routeModuleKey } = useParams()
   const navigate = useNavigate()
@@ -49,7 +51,7 @@ export function StatModulesPage() {
   const [recentKeys, setRecentKeys] = useState<string[]>(() => JSON.parse(localStorage.getItem('stat-module-recents') ?? '[]') as string[])
   const [showExplain, setShowExplain] = useState(true)
   const [compactMode, setCompactMode] = useState(false)
-  const [workMode, setWorkMode] = useState<'work' | 'learn'>('work')
+  const [panel, setPanel] = useState<'why' | 'picture' | 'numbers' | 'report'>('picture')
   const [moduleMenuOpen, setModuleMenuOpen] = useState(false)
   const [collapsedGroups, setCollapsedGroups] = useState<StatModuleGroup[]>([])
   const [menuDensity, setMenuDensity] = useState<'comfortable' | 'compact'>('comfortable')
@@ -121,7 +123,11 @@ export function StatModulesPage() {
     const need = moduleNeedState(module, numericCols.length, catCols.length)
     const kind = moduleKind(module).toLowerCase()
     const requirements = moduleRequirementBadges(module).map((item) => item.toLowerCase())
-    const matchesFilter = menuFilter === 'all'
+    const tooling = isWorkflowOnlyModule(module.key)
+    const showTooling = workspaceMode === 'analyze' || menuFilter === 'tooling' || menuFilter === 'favorites'
+    if (tooling && !showTooling) return false
+    if (menuFilter === 'tooling' && !tooling) return false
+    const matchesFilter = menuFilter === 'all' || menuFilter === 'tooling'
       || (menuFilter === 'ready' && !need.blocked)
       || (menuFilter === 'favorites' && favoriteKeys.includes(module.key))
       || kind === menuFilter
@@ -419,7 +425,7 @@ export function StatModulesPage() {
           </div>
           <div className="mt-2 flex items-center gap-1.5 px-1 text-[11px] text-slate-400">
             <Keyboard size={12} />
-            <span>Use /, arrows, Enter · {visitedKeys.length}/{STAT_MODULES.length} explored</span>
+            <span>Use /, arrows, Enter · {visitedKeys.length}/{STAT_MODULES.filter((module) => !isWorkflowOnlyModule(module.key)).length} teaching modules explored</span>
           </div>
         </div>
 
@@ -544,6 +550,12 @@ export function StatModulesPage() {
               </button>
               <h1 className="text-base font-bold text-slate-800 dark:text-white">{selectedModule.id}. {selectedModule.title}</h1>
               <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">{selectedModule.group}</span>
+              {isTeachingApproximation(selectedModule.key) && (
+                <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-200">Teaching approximation</span>
+              )}
+              {isWorkflowOnlyModule(selectedModule.key) && (
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-300">Analyze tooling</span>
+              )}
               <span className="rounded-full bg-green-50 px-2 py-0.5 text-xs text-green-600 dark:bg-green-900/30 dark:text-green-300">{activeDataset.name}</span>
               <span className="text-xs text-slate-400">Result {resultAt.toLocaleTimeString()}</span>
             </div>
@@ -554,9 +566,15 @@ export function StatModulesPage() {
               <button type="button" onClick={exportTable} disabled={!result.table?.length || busyAction === 'export'} aria-busy={busyAction === 'export'} className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-300">{busyAction === 'export' ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />} CSV</button>
               <button type="button" onClick={loadModuleSample} disabled={busyAction === 'sample'} aria-busy={busyAction === 'sample'} className="inline-flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-70 dark:border-emerald-900/50 dark:bg-emerald-950/25 dark:text-emerald-300">{busyAction === 'sample' ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />} Sample</button>
               <div className="inline-flex rounded-md border border-slate-200 bg-white p-0.5 dark:border-slate-600 dark:bg-slate-800">
-                {(['work', 'learn'] as const).map((mode) => (
-                  <button key={mode} type="button" onClick={() => setWorkMode(mode)} aria-pressed={workMode === mode} className={`rounded px-2 py-1 text-xs font-semibold capitalize ${workMode === mode ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'}`}>
-                    {mode}
+                {(['why', 'picture', 'numbers', 'report'] as const).map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setPanel(id)}
+                    aria-pressed={panel === id}
+                    className={`rounded px-2 py-1 text-xs font-semibold capitalize ${panel === id ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'}`}
+                  >
+                    {id === 'why' ? 'Why this test' : id}
                   </button>
                 ))}
               </div>
@@ -569,6 +587,13 @@ export function StatModulesPage() {
             <SelectedDataStrip summary={selectedDataSummary} requirements={inputSpec.requirements} />
           )}
           <CalculationStatusBar active={isCalculating} moduleTitle={selectedModule.title.replace(' Module', '')} />
+          {isWorkflowOnlyModule(selectedModule.key) && workspaceMode === 'learn' && (
+            <p className="mb-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+              This module is Analyze tooling (workflow metadata), not a teaching lab. Switch to Analyze to keep it in the gallery.
+            </p>
+          )}
+          {panel === 'report' && (
+            <>
           {dataQualityReport && (
             <DataHandlingCommandCenter
               report={dataQualityReport}
@@ -577,10 +602,6 @@ export function StatModulesPage() {
               activeModuleKey={selectedModule.key}
               onSelectModule={selectModule}
             />
-          )}
-          <ModuleDecisionHeader compatibility={moduleCompatibility} onLoadSample={loadModuleSample} onAddCompare={addToComparisonTray} />
-          {comparisonTray.length > 0 && (
-            <ComparisonTray snapshots={comparisonTray} onClear={clearComparisonTray} onSelect={selectModule} />
           )}
           {trustReport && selectedModule.key !== 'simple_regression' && (
             <ModuleTrustPanel report={trustReport} compact={selectedModule.key === 'simple_regression'} />
@@ -600,6 +621,8 @@ export function StatModulesPage() {
           {workspaceReport && (
             <WorkspaceHandoffPanel report={workspaceReport} onBundle={exportWorkspaceBundle} onHtml={exportShareableHtml} onSnapshot={saveProjectSnapshot} />
           )}
+            </>
+          )}
 
           {warnings.length > 0 && (
             <div className="mb-4 flex flex-wrap gap-2">
@@ -612,7 +635,18 @@ export function StatModulesPage() {
             </div>
           )}
 
-          {selectedModule.key === 'simple_regression' ? (
+          {panel === 'picture' && (
+            <>
+          <ModuleDecisionHeader compatibility={moduleCompatibility} onLoadSample={loadModuleSample} onAddCompare={addToComparisonTray} />
+          {comparisonTray.length > 0 && (
+            <ComparisonTray snapshots={comparisonTray} onClear={clearComparisonTray} onSelect={selectModule} />
+          )}
+            </>
+          )}
+
+          {panel === 'why' && <ModuleTheoryPanel module={selectedModule} profile={moduleProfile} learning={learningContent} compact={compactMode} />}
+
+          {selectedModule.key === 'simple_regression' && panel === 'picture' ? (
             <SimpleLinearRegressionStudio
               dataset={activeDataset}
               dataRows={dataRows}
@@ -631,10 +665,9 @@ export function StatModulesPage() {
               onCopy={copySummary}
               onSelectModule={selectModule}
             />
-          ) : (
+          ) : panel !== 'why' && panel !== 'report' ? (
             <Fragment>
-          {workMode === 'learn' && <ModuleTheoryPanel module={selectedModule} profile={moduleProfile} learning={learningContent} compact={compactMode} />}
-
+          {panel === 'picture' && (
           <section className="mb-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
             <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
               <div>
@@ -673,7 +706,15 @@ export function StatModulesPage() {
             )}
             <SelectedInputPreview rows={selectedInputPreview} />
           </section>
+          )}
 
+          {panel === 'picture' && (
+            <>
+          <StatModuleHero
+            moduleKey={selectedModule.key}
+            values={numericColumn(dataRows, String(effectiveSelection.num1 ?? ''))}
+            column={String(effectiveSelection.num1 ?? '')}
+          />
           <ModuleVisualWorkbench
             module={selectedModule}
             profile={moduleProfile}
@@ -682,9 +723,12 @@ export function StatModulesPage() {
             result={result}
             compact={compactMode}
           />
-
           <StickyMiniActions onRun={captureRun} onReset={resetInputs} onExport={exportTable} onSave={saveModule} canExport={Boolean(result.table?.length)} busyAction={busyAction} />
+            </>
+          )}
 
+          {panel === 'numbers' && (
+            <>
           <section className={`mb-5 rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 ${compactMode ? 'p-3' : 'p-5'}`}>
             <h2 className="text-xl font-bold text-slate-800 dark:text-white">{result.title}</h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{result.summary}</p>
@@ -757,8 +801,10 @@ export function StatModulesPage() {
               </section>
             )}
           </div>
-            </Fragment>
+            </>
           )}
+            </Fragment>
+          ) : null}
         </div>
       </main>
       {fullscreenChart && result.chart && (
@@ -782,7 +828,7 @@ type ModuleInputSpec = {
   requirements: Array<'numeric' | 'categorical' | 'paired' | 'grouped' | 'binary' | 'time'>
 }
 
-type ModuleMenuFilter = 'all' | 'ready' | 'favorites' | 'chart' | 'model' | 'test' | 'data' | 'report' | 'numeric' | 'categorical' | 'grouped' | 'paired' | 'time'
+type ModuleMenuFilter = 'all' | 'ready' | 'favorites' | 'chart' | 'model' | 'test' | 'data' | 'report' | 'numeric' | 'categorical' | 'grouped' | 'paired' | 'time' | 'tooling'
 
 type ModuleCompatibility = {
   score: number
@@ -2050,6 +2096,7 @@ function ModuleMenuFilterBar({ value, onChange }: { value: ModuleMenuFilter; onC
     { key: 'categorical', label: 'Cats' },
     { key: 'paired', label: 'Paired' },
     { key: 'time', label: 'Time' },
+    { key: 'tooling', label: 'Tooling' },
   ]
   return (
     <div className="mt-3">

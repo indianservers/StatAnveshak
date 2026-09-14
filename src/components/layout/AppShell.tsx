@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
@@ -9,16 +9,29 @@ import { UiPolishLayer } from '../ui/UiPolishLayer'
 import { OnboardingTour } from '../ui/OnboardingTour'
 import { TestRecommenderDrawer } from '../ui/TestRecommenderDrawer'
 import { SeoMetadata } from '../ui/SeoMetadata'
+import { ErrorBoundary } from '../ui/ErrorBoundary'
+import { defaultTeachingSample } from '../../lib/dataset'
+import { saveDataset } from '../../lib/storage'
 
 export function AppShell() {
-  const { theme, highContrast, largeText, zoomLevel, density, hydrateStorage } = useStore()
+  const location = useLocation()
+  const { theme, highContrast, largeText, zoomLevel, density, hydrateStorage, addDataset, setActiveDataset, motion, colorblindPalette, captionSize } = useStore()
   const darkSurface = theme === 'dark' || theme === 'midnight' || theme === 'forest'
 
   useEffect(() => {
-    hydrateStorage().catch((error) => {
-      console.error('Failed to hydrate browser storage:', error)
-    })
-  }, [hydrateStorage])
+    hydrateStorage()
+      .then(async () => {
+        const { datasets, activeDataset } = useStore.getState()
+        if (datasets.length > 0) return
+        const sample = defaultTeachingSample()
+        addDataset(sample)
+        if (!activeDataset) setActiveDataset(sample)
+        await saveDataset(sample)
+      })
+      .catch((error) => {
+        console.error('Failed to hydrate browser storage:', error)
+      })
+  }, [addDataset, hydrateStorage, setActiveDataset])
 
   useEffect(() => {
     const base = largeText ? 17 : 16
@@ -32,14 +45,16 @@ export function AppShell() {
     <div className={`${darkSurface || highContrast ? 'dark' : ''} theme-${theme}`}>
       <ToastProvider>
         <SeoMetadata />
-        <div className={`flex h-screen overflow-hidden ${density === 'compact' ? 'ui-compact' : ''} ${highContrast ? 'bg-black' : 'bg-slate-50 dark:bg-slate-900'}`}>
+        <div className={`flex h-screen overflow-hidden ${density === 'compact' ? 'ui-compact' : ''} ${highContrast ? 'bg-black' : 'bg-slate-50 dark:bg-slate-900'} ${colorblindPalette ? 'palette-cb' : ''} ${motion === 'reduced' ? 'motion-reduced' : ''} caption-size-${captionSize}`}>
           <Sidebar />
           <div className="flex flex-col flex-1 overflow-hidden">
             <TopBar />
             <main className="min-h-0 flex-1 overflow-auto page-fade">
               <div className="flex min-h-full flex-col">
                 <div className="flex-1">
-                  <Outlet />
+                  <ErrorBoundary resetKey={location.pathname}>
+                    <Outlet />
+                  </ErrorBoundary>
                 </div>
                 <AimerFooter />
               </div>

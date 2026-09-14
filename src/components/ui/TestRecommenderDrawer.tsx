@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { AlertTriangle, CheckCircle, ShieldCheck, Target, X } from 'lucide-react'
 import { useStore } from '../../store/useStore'
-import { datasetGuardrails, recommendTest } from '../../lib/guardrails'
+import { datasetGuardrails } from '../../lib/guardrails'
+import { recommendLearnStatsTree } from '../../analysis/engines/frequentist/learnStats'
 
 export function TestRecommenderDrawer() {
   const { activeDataset } = useStore()
@@ -10,7 +12,7 @@ export function TestRecommenderDrawer() {
   const [groupCount, setGroupCount] = useState('two')
   const [paired, setPaired] = useState(false)
   const guards = useMemo(() => datasetGuardrails(activeDataset), [activeDataset])
-  const recommendation = recommendTest(activeDataset, outcomeType, groupCount, paired)
+  const rec = recommendLearnStatsTree({ outcomeType, groups: groupCount, paired, predictors: 'none' })
 
   useEffect(() => {
     const handler = () => setOpen(true)
@@ -67,7 +69,15 @@ export function TestRecommenderDrawer() {
               <CheckCircle size={15} />
               Recommended analysis
             </div>
-            {recommendation}
+            <p className="font-semibold">{rec.title}</p>
+            <p className="mt-1 text-xs leading-5">{rec.reason}</p>
+            <Link
+              to={`/analysis/${rec.analysisId}`}
+              className="mt-2 inline-flex text-xs font-bold underline"
+              onClick={() => setOpen(false)}
+            >
+              Open {rec.analysisId}
+            </Link>
           </section>
 
           <section>

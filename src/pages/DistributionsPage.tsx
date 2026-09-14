@@ -35,11 +35,12 @@ import {
   type Distribution,
   type DistributionId,
 } from '../lib/distributions'
-import { SAMPLE_DATASETS } from '../lib/sampleData'
+import { findSampleById, sampleLibraryMeta } from '../lib/sampleLibrary'
 import { sampleToDataset } from '../lib/dataset'
 import { saveDataset } from '../lib/storage'
 import type { Dataset } from '../types'
 import { useToast } from '../components/ui/toastContext'
+import { fdBinCount, scottBinCount } from '../lib/visualMath'
 
 type StudioMode = 'explore' | 'learn' | 'simulate' | 'fit'
 type CurveMode = 'density' | 'cdf'
@@ -117,11 +118,14 @@ type DistributionTheory = {
   examples: string[]
 }
 
-const STUDIO_MODES: Array<{ id: StudioMode; label: string; icon: typeof Sparkles }> = [
-  { id: 'explore', label: 'Explore', icon: Sparkles },
-  { id: 'learn', label: 'Learn', icon: GraduationCap },
-  { id: 'simulate', label: 'Simulate', icon: Shuffle },
-  { id: 'fit', label: 'Fit Data', icon: SlidersHorizontal },
+type StageTool = 'shape' | 'area' | 'quantile' | 'draw' | 'fit'
+
+const STAGE_TOOLS: Array<{ id: StageTool; label: string; icon: typeof Sparkles }> = [
+  { id: 'shape', label: 'Shape', icon: Sparkles },
+  { id: 'area', label: 'Area', icon: Layers3 },
+  { id: 'quantile', label: 'Quantile', icon: Gauge },
+  { id: 'draw', label: 'Draw', icon: Shuffle },
+  { id: 'fit', label: 'Fit', icon: SlidersHorizontal },
 ]
 
 const VISUAL_KIND_BY_ID: Record<DistributionId, VisualKind> = {
@@ -149,9 +153,17 @@ const VISUAL_KIND_BY_ID: Record<DistributionId, VisualKind> = {
   multinomial: 'multinomial',
   dirichlet: 'dirichlet',
   empirical: 'empirical',
+  skew_normal: 'normal',
+  laplace: 'logistic',
+  gumbel: 'weibull',
+  inverse_gaussian: 'lognormal',
+  stretched_beta: 'beta',
+  mixture_normal: 'normal',
+  zip: 'poisson',
+  zinb: 'negative_binomial',
 }
 
-const SUGGESTION_IDS: Record<DistributionId, string[]> = {
+const SUGGESTION_IDS: Partial<Record<DistributionId, string[]>> = {
   bernoulli: ['loan-applications', 'customer-churn', 'campaign-ab-test'],
   binomial: ['campaign-ab-test', 'exam-item-analysis', 'survey-satisfaction'],
   geometric: ['call-center', 'web-analytics', 'campaign-ab-test'],
@@ -244,6 +256,7 @@ export function DistributionsPage() {
   const [params, setParams] = useState<Record<string, number>>(() => defaultParams(dist))
   const cleanParams = sanitizeParams(dist, params)
   const [studioMode, setStudioMode] = useState<StudioMode>('explore')
+  const [stageTool, setStageTool] = useState<StageTool>('shape')
   const [curveMode, setCurveMode] = useState<CurveMode>('density')
   const [questionType, setQuestionType] = useState<QuestionType>('between')
   const [x1, setX1] = useState('-1')
@@ -279,10 +292,8 @@ export function DistributionsPage() {
       ...(activeDataset ? [{ dataset: activeDataset, source: 'Active' }] : []),
       ...datasets.map((dataset) => ({ dataset, source: 'Loaded' })),
     ]
-    const samples = SAMPLE_DATASETS.map((sample) => ({ dataset: sampleToDataset(sample), source: 'Sample' }))
-    const merged = [...loaded, ...samples]
     const seen = new Set<string>()
-    return merged.filter(({ dataset }) => {
+    return loaded.filter(({ dataset }) => {
       if (seen.has(dataset.id)) return false
       seen.add(dataset.id)
       return true
@@ -342,16 +353,16 @@ export function DistributionsPage() {
     fit: fitSummary,
   }, null, 2), 'application/json')
 
-  const generate = () => {
+  const generate = (quiet = false) => {
     const count = clamp(Math.round(Number(sampleCount) || 100), 1, 5000)
     const generated = selected === 'empirical' && visibleFitValues.length
       ? Array.from({ length: count }, () => visibleFitValues[Math.floor(Math.random() * visibleFitValues.length)])
       : generateSamples(dist, cleanParams, count, visibleFitValues)
     setSamples(generated)
-    notify(`Generated ${count.toLocaleString()} ${dist.name} samples.`, 'success')
+    if (!quiet) notify(`Generated ${count.toLocaleString()} ${dist.name} samples.`, 'success')
   }
 
-  const simulateMeans = () => {
+  const simulateMeans = (quiet = false) => {
     const reps = clamp(Math.round(Number(simReps) || 200), 20, 1500)
     const size = clamp(Math.round(Number(sampleCount) || 100), 2, 500)
     const means = Array.from({ length: reps }, () => {
@@ -360,7 +371,7 @@ export function DistributionsPage() {
       return values.length ? mean(values) : NaN
     }).filter(Number.isFinite)
     setSimMeans(means)
-    notify(`Simulated ${means.length.toLocaleString()} sample means.`, 'success')
+    if (!quiet) notify(`Simulated ${means.length.toLocaleString()} sample means.`, 'success')
   }
 
   const loadFitData = () => {
@@ -408,7 +419,7 @@ export function DistributionsPage() {
   }
 
   const openSuggestedDataset = async (sampleId: string) => {
-    const sample = SAMPLE_DATASETS.find((item) => item.id === sampleId)
+    const sample = findSampleById(sampleId)
     if (!sample) return
     const dataset = sampleToDataset(sample)
     addDataset(dataset)
@@ -419,6 +430,23 @@ export function DistributionsPage() {
     setFitColumn(preferredNumericColumn(dataset, numeric, dist))
     notify(`${dataset.name} loaded for fitting.`, 'success')
     setStudioMode('fit')
+    setStageTool('fit')
+  }
+
+  const pickStage = (tool: StageTool) => {
+    setStageTool(tool)
+    if (tool === 'draw') {
+      setStudioMode('simulate')
+      return
+    }
+    if (tool === 'fit') {
+      setStudioMode('fit')
+      return
+    }
+    setStudioMode('explore')
+    if (tool === 'shape') setCurveMode('density')
+    if (tool === 'area') setQuestionType('between')
+    if (tool === 'quantile') setQuestionType('inverse')
   }
 
   return (
@@ -453,6 +481,9 @@ export function DistributionsPage() {
               <p className="text-xs font-semibold text-slate-400">Support: {dist.support}</p>
             </div>
             <div className="flex flex-wrap gap-2">
+              <Link to="/learn/distributions" className="inline-flex min-h-9 items-center rounded-lg border border-indigo-200 px-3 text-sm font-bold text-indigo-700 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-300">
+                CLT lab
+              </Link>
               <button type="button" onClick={exportCurve} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800">
                 <Download size={15} /> Export
               </button>
@@ -476,10 +507,13 @@ export function DistributionsPage() {
             }}
             loadedCount={visibleFitValues.length}
             onLoadData={loadFitData}
-            onOpenFit={() => setStudioMode('fit')}
+            onOpenFit={() => {
+              setStudioMode('fit')
+              setStageTool('fit')
+            }}
           />
 
-          <ModeTabs mode={studioMode} setMode={setStudioMode} />
+          <ModeTabs tool={stageTool} onPick={pickStage} />
 
           {studioMode === 'explore' && (
             <ExploreMode
@@ -586,16 +620,16 @@ function DistributionSidebar({ selected, onSelect }: { selected: DistributionId;
   )
 }
 
-function ModeTabs({ mode, setMode }: { mode: StudioMode; setMode: (mode: StudioMode) => void }) {
+function ModeTabs({ tool, onPick }: { tool: StageTool; onPick: (tool: StageTool) => void }) {
   return (
-    <nav aria-label="Distribution studio modes" className="grid grid-cols-2 gap-2 rounded-2xl border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:grid-cols-4">
-      {STUDIO_MODES.map(({ id, label, icon: Icon }) => (
+    <nav aria-label="Distribution stage tools" className="grid grid-cols-2 gap-2 rounded-2xl border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:grid-cols-5">
+      {STAGE_TOOLS.map(({ id, label, icon: Icon }) => (
         <button
           key={id}
           type="button"
-          onClick={() => setMode(id)}
+          onClick={() => onPick(id)}
           className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl text-sm font-black transition focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-            mode === id ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+            tool === id ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
           }`}
         >
           <Icon size={16} />
@@ -750,8 +784,14 @@ function ExploreMode({
         <TryItCard dist={dist} params={params} loadedData={loadedData} />
       </section>
 
-      <DistributionDepthPanel dist={dist} params={params} loadedData={loadedData} probability={probability} />
-      <DistributionSpecificToolsPanel dist={dist} params={params} loadedData={loadedData} />
+      <details className="xl:col-span-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <summary className="cursor-pointer text-sm font-black text-slate-950 dark:text-white">More tools for this family</summary>
+        <p className="mt-2 text-sm text-slate-500">Calculators and extras live here so the stage stays the lesson.</p>
+        <div className="mt-4 space-y-4">
+          <DistributionDepthPanel dist={dist} params={params} loadedData={loadedData} probability={probability} />
+          <DistributionSpecificToolsPanel dist={dist} params={params} loadedData={loadedData} />
+        </div>
+      </details>
 
       <section className="grid gap-3 xl:col-span-2 md:grid-cols-2 xl:grid-cols-4">
         <InfoStrip icon={Info} title="Assumptions" items={experience.assumptions} />
@@ -764,11 +804,15 @@ function ExploreMode({
         <section className="xl:col-span-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-black text-slate-950 dark:text-white">Empirical controls</h2>
-            <label className="flex items-center gap-3 text-sm font-semibold text-slate-600 dark:text-slate-300">
+            <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
+              <button type="button" className="rounded-lg border border-slate-200 px-2 py-1 dark:border-slate-700" onClick={() => setBinCount(scottBinCount(loadedData))}>Scott</button>
+              <button type="button" className="rounded-lg border border-slate-200 px-2 py-1 dark:border-slate-700" onClick={() => setBinCount(fdBinCount(loadedData))}>Freedman–Diaconis</button>
+              <label className="flex items-center gap-3">
               Bins
               <input type="range" min={6} max={40} value={binCount} onChange={(event) => setBinCount(Number(event.target.value))} className="accent-indigo-600" />
               <span className="w-8 text-right">{binCount}</span>
-            </label>
+              </label>
+            </div>
           </div>
           <p className="text-sm text-slate-500 dark:text-slate-400">Choose a working dataset and numeric column above. The empirical page uses those genuine observations for histogram, ECDF, box, rug and density views.</p>
         </section>
@@ -942,11 +986,17 @@ function ContinuousCurveVisual({ dist, params, curveMode, questionType, x1, x2, 
 }
 
 function DiscreteBarsVisual({ dist, params, questionType, x1, x2, title }: { dist: Distribution; params: Record<string, number>; questionType: QuestionType; x1: number; x2: number; title: string }) {
-  const [lo, hi] = dist.range(params)
-  const start = Math.max(-2, Math.ceil(lo))
-  const end = Math.min(Math.floor(hi), start + 45)
+  const safeParams = sanitizeParams(dist, params)
+  const range = dist.range(safeParams)
+  const lo = Number.isFinite(range[0]) ? range[0] : 0
+  const hi = Number.isFinite(range[1]) ? range[1] : lo + 10
+  const start = Math.max(-2, Math.ceil(Math.min(lo, hi)))
+  const end = Math.min(Math.floor(Math.max(lo, hi)), start + 45)
   const xs = Array.from({ length: Math.max(1, end - start + 1) }, (_, index) => start + index)
-  const ys = xs.map((x) => dist.pdf(x, params))
+  const ys = xs.map((x) => {
+    const value = dist.pdf(x, safeParams)
+    return Number.isFinite(value) ? value : 0
+  })
   const maxY = Math.max(...ys, 1e-9)
   const width = 760
   const height = 330
@@ -963,7 +1013,7 @@ function DiscreteBarsVisual({ dist, params, questionType, x1, x2, title }: { dis
         <line x1={left} x2={width - 18} y1={height - bottom} y2={height - bottom} stroke="#94a3b8" />
         <line x1={left} x2={left} y1="22" y2={height - bottom} stroke="#94a3b8" />
         {xs.map((x, index) => {
-          const h = (ys[index] / maxY) * (height - 72)
+          const h = Math.max(0, Number.isFinite(ys[index]) ? (ys[index] / maxY) * (height - 72) : 0)
           const inRange = questionType === 'right' ? x >= x1 : x >= selectedLow && x <= selectedHigh
           return (
             <g key={x}>
@@ -1338,7 +1388,7 @@ function distributionNumericalFormula(id: DistributionId) {
     dirichlet: 'Use expected share alpha_i/alpha0 and posterior alpha_i+count_i.',
     empirical: 'Use observed-count probability: count satisfying condition divided by total n.',
   }
-  return formulas[id]
+  return formulas[id] ?? DISTRIBUTION_BY_ID[id].formula
 }
 
 function interpretNumericalAnswer(dist: Distribution, answer: string) {
@@ -1494,7 +1544,12 @@ function distributionTheory(id: DistributionId): DistributionTheory {
       examples: ['Percentiles from actual student marks.', 'Observed delivery times from real orders.', 'Distribution of measured air quality values.'],
     },
   }
-  return theory[id]
+  return theory[id] ?? {
+    plainMeaning: DISTRIBUTION_BY_ID[id].explanation,
+    whenToUse: 'Use this model when the support and data-generating story match the problem.',
+    howToRead: DISTRIBUTION_BY_ID[id].support,
+    examples: [],
+  }
 }
 
 function distributionBasics(id: DistributionId) {
@@ -1524,7 +1579,7 @@ function distributionBasics(id: DistributionId) {
     dirichlet: 'Dirichlet is a distribution over probability vectors. That means it models several proportions that must all be positive and must add to 1. It is the natural partner of the Multinomial distribution in Bayesian statistics. If Multinomial models category counts, Dirichlet models uncertainty about the category probabilities before or after seeing those counts. Each alpha parameter belongs to one category. Larger alpha values put more belief in that category. The total alpha controls concentration: low total alpha allows more extreme probability vectors, while high total alpha keeps vectors closer to the average mix. Use Dirichlet for compositions, market shares, topic proportions, or category probability uncertainty, not for one isolated proportion.',
     empirical: 'Empirical distribution is the simplest data-first approach: use the observed values exactly as they are. There is no assumed formula, no smooth curve required, and no parameter story to force onto the data. The empirical CDF tells what fraction of observed values are at or below a chosen value. This is useful for percentiles, medians, outlier inspection, and understanding real shape before fitting a theoretical distribution. Empirical is honest because it only claims what was observed. Its weakness is that it cannot naturally predict beyond the data range, and it can be noisy with small samples. Use it early in analysis, then compare theoretical models only if you need smoothing, extrapolation, or explanation.',
   }
-  return basics[id]
+  return basics[id] ?? DISTRIBUTION_BY_ID[id].explanation
 }
 
 function distributionNumericalExamples(id: DistributionId) {
@@ -1650,7 +1705,7 @@ function distributionNumericalExamples(id: DistributionId) {
       'For data 5, 5, 7, 9, empirical P(X = 5) = 2/4 = 0.5.',
     ],
   }
-  return examples[id]
+  return examples[id] ?? []
 }
 
 function LearnMode({ dist, experience, params }: { dist: Distribution; experience: DistributionExperience; params: Record<string, number> }) {
@@ -1688,8 +1743,15 @@ function LearnMode({ dist, experience, params }: { dist: Distribution; experienc
   )
 }
 
-function SimulateMode({ dist, experience, sampleCount, setSampleCount, simReps, setSimReps, samples, simMeans, onGenerate, onSimulateMeans, loadedData }: { dist: Distribution; experience: DistributionExperience; sampleCount: string; setSampleCount: (value: string) => void; simReps: string; setSimReps: (value: string) => void; samples: Array<number | number[]>; simMeans: number[]; onGenerate: () => void; onSimulateMeans: () => void; loadedData: number[] }) {
+function SimulateMode({ dist, experience, sampleCount, setSampleCount, simReps, setSimReps, samples, simMeans, onGenerate, onSimulateMeans, loadedData }: { dist: Distribution; experience: DistributionExperience; sampleCount: string; setSampleCount: (value: string) => void; simReps: string; setSimReps: (value: string) => void; samples: Array<number | number[]>; simMeans: number[]; onGenerate: (quiet?: boolean) => void; onSimulateMeans: (quiet?: boolean) => void; loadedData: number[] }) {
   const numericSamples = samples.filter((item): item is number => typeof item === 'number' && Number.isFinite(item))
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      onGenerate(true)
+      onSimulateMeans(true)
+    }, 280)
+    return () => window.clearTimeout(timer)
+  }, [dist.id, sampleCount, simReps])
   return (
     <div className="grid gap-4 xl:grid-cols-[360px_1fr]">
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -1699,11 +1761,11 @@ function SimulateMode({ dist, experience, sampleCount, setSampleCount, simReps, 
           <label className="text-sm font-semibold text-slate-600 dark:text-slate-300">Sample size
             <input value={sampleCount} onChange={(event) => setSampleCount(event.target.value)} type="number" min={1} max={5000} className="mt-1 min-h-11 w-full rounded-xl border border-slate-200 px-3 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
           </label>
-          <button type="button" onClick={onGenerate} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-black text-white hover:bg-indigo-700"><RefreshCw size={16} /> Generate</button>
+          <button type="button" onClick={() => onGenerate()} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-black text-white hover:bg-indigo-700"><RefreshCw size={16} /> Play sample</button>
           <label className="text-sm font-semibold text-slate-600 dark:text-slate-300">Sampling repetitions
             <input value={simReps} onChange={(event) => setSimReps(event.target.value)} type="number" min={20} max={1500} className="mt-1 min-h-11 w-full rounded-xl border border-slate-200 px-3 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
           </label>
-          <button type="button" onClick={onSimulateMeans} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-black text-white hover:bg-slate-700 dark:bg-slate-700"><Shuffle size={16} /> Simulate means</button>
+          <button type="button" onClick={() => onSimulateMeans()} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-black text-white hover:bg-slate-700 dark:bg-slate-700"><Shuffle size={16} /> Play means</button>
         </div>
         {dist.id === 'empirical' && !loadedData.length && <p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">Empirical simulation resamples real loaded data. Load a column in Fit Data mode first.</p>}
       </section>
@@ -1718,7 +1780,7 @@ function SimulateMode({ dist, experience, sampleCount, setSampleCount, simReps, 
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <h2 className="mb-3 font-black text-slate-950 dark:text-white">Sampling distribution</h2>
-          {simMeans.length ? <HistogramSvg values={simMeans} binCount={16} title="Sample means" /> : <div className="flex min-h-[250px] items-center justify-center rounded-2xl bg-slate-50 text-sm font-semibold text-slate-400 dark:bg-slate-950">Run simulate means</div>}
+          {simMeans.length ? <HistogramSvg values={simMeans} binCount={16} title="Sample means" /> : <div className="flex min-h-[250px] items-center justify-center rounded-2xl bg-slate-50 text-sm font-semibold text-slate-400 dark:bg-slate-950">Means pile grows as n and reps change</div>}
         </div>
       </section>
     </div>
@@ -1726,7 +1788,7 @@ function SimulateMode({ dist, experience, sampleCount, setSampleCount, simReps, 
 }
 
 function FitDataMode({ dist, params, experience, datasets, fitDatasetId, setFitDatasetId, numericColumns, categoricalColumns, fitColumn, setFitColumn, fitValues, fitSummary, fitResult, fitComparison, onLoadData, onFitCurrent, onCompareAll, onOpenSuggestedDataset }: { dist: Distribution; params: Record<string, number>; experience: DistributionExperience; datasets: Array<{ dataset: Dataset; source: string }>; fitDatasetId: string; setFitDatasetId: (id: string) => void; numericColumns: string[]; categoricalColumns: string[]; fitColumn: string; setFitColumn: (column: string) => void; fitValues: number[]; fitSummary: FitSummary | null; fitResult: ReturnType<typeof goodnessOfFit> | null; fitComparison: ReturnType<typeof compareFits>; onLoadData: () => void; onFitCurrent: () => void; onCompareAll: () => void; onOpenSuggestedDataset: (id: string) => void }) {
-  const suggestions = experience.dataSuggestions.map((id) => SAMPLE_DATASETS.find((sample) => sample.id === id)).filter(Boolean)
+  const suggestions = experience.dataSuggestions.map((id) => sampleLibraryMeta().find((sample) => sample.id === id)).filter(Boolean)
   return (
     <div className="grid gap-4 xl:grid-cols-[360px_1fr]">
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -1913,7 +1975,7 @@ function TryItCard({ dist, params, loadedData }: { dist: Distribution; params: R
 }
 
 function DistributionDepthPanel({ dist, params, loadedData, probability }: { dist: Distribution; params: Record<string, number>; loadedData: number[]; probability: string }) {
-  const enhancements = distributionDepthEnhancements(dist, params, loadedData, probability)
+  const enhancements = distributionDepthEnhancements(dist, params, loadedData, probability) ?? []
   return (
     <section className="xl:col-span-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
@@ -1924,7 +1986,7 @@ function DistributionDepthPanel({ dist, params, loadedData, probability }: { dis
           </div>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Five high-impact distribution-specific tools now attached to this model, not a generic probability page.</p>
         </div>
-        <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">5 enhancements</span>
+        <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">Family extras</span>
       </div>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         {enhancements.map((item) => {
@@ -1957,7 +2019,7 @@ function DistributionDepthPanel({ dist, params, loadedData, probability }: { dis
 }
 
 function DistributionSpecificToolsPanel({ dist, params, loadedData }: { dist: Distribution; params: Record<string, number>; loadedData: number[] }) {
-  const tools = distributionSpecificTools(dist, params, loadedData)
+  const tools = distributionSpecificTools(dist, params, loadedData) ?? []
   return (
     <section className="xl:col-span-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
@@ -2144,7 +2206,7 @@ function distributionSpecificTools(dist: Distribution, params: Record<string, nu
       { action: 'Compare', title: 'Empirical vs fitted curve', output: supportData, detail: 'Use Fit Data mode to compare the data-first shape with candidate curves.' },
     ],
   }
-  return byId[dist.id]
+  return byId[dist.id] ?? []
 }
 
 function cdfAtMean(dist: Distribution, params: Record<string, number>) {
@@ -2339,7 +2401,7 @@ function distributionDepthEnhancements(dist: Distribution, params: Record<string
       { action: 'Misuse guard', title: 'Does not extrapolate tails', detail: 'Empirical distributions cannot predict values beyond observed data.', tone: 'rose' },
     ],
   }
-  return byId[dist.id]
+  return byId[dist.id] ?? []
 }
 
 function FitDiagnosticVisual({ dist, params, values }: { dist: Distribution; params: Record<string, number>; values: number[] }) {
@@ -2883,3 +2945,4 @@ function relatedFor(id: DistributionId): Array<{ id: DistributionId; note: strin
   if (['beta', 'dirichlet', 'multinomial'].includes(id)) return [{ id: 'beta', note: 'One proportion' }, { id: 'dirichlet', note: 'Many proportions' }]
   return [{ id: 'normal', note: 'Baseline comparison' }, { id: 'empirical', note: 'Use real data' }]
 }
+

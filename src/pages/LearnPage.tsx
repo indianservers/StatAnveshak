@@ -12,7 +12,6 @@ import {
   HelpCircle,
   Lightbulb,
   Network,
-  Play,
   Search,
   Sigma,
   Sparkles,
@@ -20,9 +19,11 @@ import {
 } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import { MathText } from '../components/ui/MathText'
+import { CoreLabStudio } from '../components/visual/CoreLabStudio'
+import type { CoreLabId } from '../lib/coreLabs'
 
 type Level = 'beginner' | 'intermediate' | 'advanced'
-type LabId = 'clt' | 'lln' | 'bayes' | 'sampling' | 'errors' | 'ci' | 'bootstrap' | 'permutation' | 'anova' | 'mle' | 'bayesian' | 'regression'
+type LabId = CoreLabId
 type StudyMode = 'self-study' | 'exam-prep' | 'classroom'
 
 type Theorem = {
@@ -662,19 +663,6 @@ function pct(value: number) {
   return `${(value * 100).toFixed(1)}%`
 }
 
-function histogram(values: number[], bins = 18) {
-  if (values.length === 0) return []
-  const lo = Math.min(...values)
-  const hi = Math.max(...values)
-  const width = Math.max((hi - lo) / bins, Number.EPSILON)
-  const counts = Array.from({ length: bins }, () => 0)
-  values.forEach((value) => {
-    counts[Math.min(bins - 1, Math.floor((value - lo) / width))]++
-  })
-  const maxCount = Math.max(...counts, 1)
-  return counts.map((count, index) => ({ label: (lo + index * width).toFixed(1), count, pct: count / maxCount }))
-}
-
 export function LearnPage() {
   const { activeDataset } = useStore()
   const [activePath, setActivePath] = useState('Probability')
@@ -682,17 +670,14 @@ export function LearnPage() {
   const [selectedTheorem, setSelectedTheorem] = useState(THEOREMS[0].id)
   const [showViolation, setShowViolation] = useState(false)
   const [lab, setLab] = useState<LabId>('clt')
-  const [population, setPopulation] = useState('skewed')
-  const [sampleSize, setSampleSize] = useState(30)
-  const [reps, setReps] = useState(200)
-  const [simulation, setSimulation] = useState<number[]>([])
+  const [population] = useState('skewed')
+  const [sampleSize] = useState(30)
+  const [reps] = useState(200)
+  const [simulation] = useState<number[]>([])
   const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({})
-  const [prior, setPrior] = useState(0.03)
-  const [sensitivity, setSensitivity] = useState(0.92)
-  const [falsePositive, setFalsePositive] = useState(0.08)
   const [lessonNotes, setLessonNotes] = useState('')
   const [completed, setCompleted] = useState<string[]>(() => JSON.parse(localStorage.getItem('learn-progress') ?? '[]') as string[])
-  const [sandboxHistory, setSandboxHistory] = useState<string[]>(() => JSON.parse(localStorage.getItem('sandbox-history') ?? '[]') as string[])
+  const [sandboxHistory] = useState<string[]>(() => JSON.parse(localStorage.getItem('sandbox-history') ?? '[]') as string[])
   const [studyMode, setStudyMode] = useState<StudyMode>('self-study')
   const [activeTrack, setActiveTrack] = useState('Probability')
   const [eventA, setEventA] = useState(0.4)
@@ -721,12 +706,6 @@ export function LearnPage() {
     return item.path === activePath && text.includes(query.trim().toLowerCase())
   })
 
-  const posterior = useMemo(() => {
-    const numerator = sensitivity * prior
-    const denominator = numerator + falsePositive * (1 - prior)
-    return denominator === 0 ? 0 : numerator / denominator
-  }, [prior, sensitivity, falsePositive])
-
   const lessonSuggestions = useMemo(() => {
     if (!activeDataset) return ['Load a dataset to get lesson suggestions from its schema.']
     const numeric = activeDataset.schema.filter((col) => col.type === 'numeric')
@@ -744,34 +723,6 @@ export function LearnPage() {
     [activeDataset]
   )
 
-  const runSimulation = () => {
-    const values = Array.from({ length: reps }, () => {
-      const sample = Array.from({ length: sampleSize }, () => randomFrom(population))
-      if (lab === 'lln') return sample.reduce((last, value, index) => (last * index + value) / (index + 1), 0)
-      if (lab === 'errors') return Math.abs(mean(sample)) > 1.96 / Math.sqrt(sampleSize) ? 1 : 0
-      if (lab === 'ci') {
-        const m = mean(sample)
-        const s = sd(sample)
-        const lo = m - 1.96 * s / Math.sqrt(sampleSize)
-        const hi = m + 1.96 * s / Math.sqrt(sampleSize)
-        const trueMean = population === 'binary' ? 0.35 : population === 'uniform' ? 0.5 : population === 'skewed' ? Math.exp(0.405) : 0
-        return lo <= trueMean && trueMean <= hi ? 1 : 0
-      }
-      if (lab === 'bootstrap') return mean(Array.from({ length: sampleSize }, () => sample[Math.floor(Math.random() * sample.length)]))
-      if (lab === 'permutation') return mean(sample.slice(0, Math.floor(sample.length / 2))) - mean(sample.slice(Math.floor(sample.length / 2)))
-      if (lab === 'anova') return Math.abs(mean(sample.slice(0, sampleSize / 3)) - mean(sample.slice(sampleSize / 3, 2 * sampleSize / 3)))
-      if (lab === 'mle') return mean(sample)
-      if (lab === 'bayesian') return posterior
-      if (lab === 'regression') return randomNormal(0.65, 0.12)
-      return mean(sample)
-    })
-    setSimulation(values)
-    const entry = `${lab} lab, n=${sampleSize}, reps=${reps}, population=${population}`
-    const nextHistory = [entry, ...JSON.parse(localStorage.getItem('sandbox-history') ?? '[]')].slice(0, 8)
-    localStorage.setItem('sandbox-history', JSON.stringify(nextHistory))
-    setSandboxHistory(nextHistory)
-  }
-
   const markComplete = (id: string) => {
     const next = completed.includes(id) ? completed.filter((item) => item !== id) : [...completed, id]
     setCompleted(next)
@@ -779,7 +730,6 @@ export function LearnPage() {
   }
 
   const quizScore = Object.entries(quizAnswers).filter(([index, answer]) => QUIZZES[Number(index)].answer === answer).length
-  const bars = histogram(simulation)
   const labMean = simulation.length ? mean(simulation) : 0
   const labSd = simulation.length ? sd(simulation) : 0
   const activeCourse = COURSE_MAP.find((course) => course.title === activeTrack) ?? COURSE_MAP[0]
@@ -851,6 +801,17 @@ export function LearnPage() {
             Export learning report
           </button>
         </div>
+
+        <section className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+          <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+            <h2 className="text-lg font-bold text-slate-800 dark:text-white">Twelve picture labs</h2>
+            <p className="text-sm text-slate-500">Play moves objects. Theorems sit in the drawer below — they are not the home of Learn.</p>
+            <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Sandbox history</p>
+            <p className="text-xs text-slate-400">Sandbox history is saved locally. Copy replay JSON from the lab controls.</p>
+            {sandboxHistory.slice(0, 3).map((item) => <p key={item} className="text-xs text-slate-500">- {item}</p>)}
+          </div>
+          <CoreLabStudio labId={lab} onPick={setLab} />
+        </section>
 
         <div className="mb-6 grid gap-4 lg:grid-cols-4">
           <section className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
@@ -948,12 +909,12 @@ export function LearnPage() {
           </div>
         </section>
 
-        <div className="grid gap-6 xl:grid-cols-[1.25fr_1fr]">
+        <div className="grid gap-6">
           <section className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h2 className="text-xl font-bold text-slate-800 dark:text-white">{theorem.title}</h2>
-                <p className="text-sm text-slate-500">{theorem.path} theorem module</p>
+                <p className="text-sm text-slate-500">{theorem.path} theorem module · drawer for the matching lab</p>
               </div>
               <button onClick={() => setShowViolation((value) => !value)} className="inline-flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 hover:border-amber-300 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
                 <AlertTriangle size={14} />
@@ -982,85 +943,6 @@ export function LearnPage() {
             {showViolation && (
               <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
                 {theorem.violation}
-              </div>
-            )}
-          </section>
-
-          <section className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
-            <div className="mb-4 flex items-center justify-between gap-2">
-              <div>
-                <h2 className="text-lg font-bold text-slate-800 dark:text-white">Interactive Lab</h2>
-                <p className="text-xs text-slate-400">Sandbox history is saved locally.</p>
-              </div>
-              <button onClick={runSimulation} className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-3 py-2 text-xs text-white hover:bg-indigo-700">
-                <Play size={14} />
-                Run
-              </button>
-            </div>
-            <div className="mb-4 grid grid-cols-2 gap-3">
-              <label className="text-xs text-slate-500">
-                Lab
-                <select value={lab} onChange={(event) => setLab(event.target.value as LabId)} className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100">
-                  <option value="clt">CLT sandbox</option>
-                  <option value="lln">Law of large numbers</option>
-                  <option value="bayes">Bayes calculator</option>
-                  <option value="sampling">Sampling distribution</option>
-                  <option value="errors">Type I / power</option>
-                  <option value="ci">Repeated CI coverage</option>
-                  <option value="bootstrap">Bootstrap lab</option>
-                  <option value="permutation">Permutation lab</option>
-                  <option value="anova">ANOVA decomposition</option>
-                  <option value="mle">MLE visualizer</option>
-                  <option value="bayesian">Bayesian updating</option>
-                  <option value="regression">Regression diagnostics</option>
-                </select>
-              </label>
-              <label className="text-xs text-slate-500">
-                Population
-                <select value={population} onChange={(event) => setPopulation(event.target.value)} className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100">
-                  <option value="skewed">Skewed</option>
-                  <option value="normal">Normal</option>
-                  <option value="uniform">Uniform</option>
-                  <option value="binary">Binary</option>
-                </select>
-              </label>
-              <label className="text-xs text-slate-500">
-                Sample size: {sampleSize}
-                <input type="range" min="5" max="250" value={sampleSize} onChange={(event) => setSampleSize(Number(event.target.value))} className="mt-2 w-full accent-indigo-600" />
-              </label>
-              <label className="text-xs text-slate-500">
-                Repetitions: {reps}
-                <input type="range" min="50" max="1000" step="50" value={reps} onChange={(event) => setReps(Number(event.target.value))} className="mt-2 w-full accent-indigo-600" />
-              </label>
-            </div>
-
-            {lab === 'bayes' || lab === 'bayesian' ? (
-              <div className="mb-4 grid gap-3">
-                <Slider label="Prior" value={prior} setValue={setPrior} />
-                <Slider label="Sensitivity" value={sensitivity} setValue={setSensitivity} />
-                <Slider label="False positive rate" value={falsePositive} setValue={setFalsePositive} />
-                <div className="rounded-lg bg-indigo-50 p-3 text-sm text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300">
-                  Posterior after positive evidence: <strong>{pct(posterior)}</strong>
-                </div>
-              </div>
-            ) : null}
-
-            <div className="mb-3 grid grid-cols-3 gap-2">
-              <Metric label="Mean" value={labMean.toFixed(4)} />
-              <Metric label="SD" value={labSd.toFixed(4)} />
-              <Metric label="Runs" value={simulation.length} />
-            </div>
-            <div className="flex h-48 items-end gap-1 rounded-lg bg-slate-50 p-3 dark:bg-slate-900/60">
-              {bars.length ? bars.map((bar, index) => (
-                <div key={`${bar.label}-${index}`} className="min-w-0 flex-1 rounded-t bg-indigo-500" style={{ height: `${Math.max(4, bar.pct * 100)}%` }} title={`${bar.label}: ${bar.count}`} />
-              )) : (
-                <div className="flex h-full w-full items-center justify-center text-sm text-slate-400">Run a lab to see the simulated distribution.</div>
-              )}
-            </div>
-            {sandboxHistory.length > 0 && (
-              <div className="mt-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Sandbox history</p>
-                {sandboxHistory.slice(0, 4).map((item) => <p key={item} className="text-xs text-slate-500">- {item}</p>)}
               </div>
             )}
           </section>

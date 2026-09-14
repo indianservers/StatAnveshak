@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore'
 import type { AppTheme } from '../store/useStore'
 import { loadDatasets, deleteDataset, loadProjects, deleteProject } from '../lib/storage'
 import { Trash2, Database, RefreshCw, Check } from 'lucide-react'
+import { LEARN_CHAPTERS } from '../lib/learnChapters'
 
 const THEMES: Array<{ key: AppTheme; label: string; swatches: string[] }> = [
   { key: 'light', label: 'Light', swatches: ['#f8fafc', '#ffffff', '#4f46e5'] },
@@ -14,7 +15,29 @@ const THEMES: Array<{ key: AppTheme; label: string; swatches: string[] }> = [
 ]
 
 export function SettingsPage() {
-  const { theme, setTheme, highContrast, toggleHighContrast, largeText, toggleLargeText, density, toggleDensity, resetZoom, setActiveDataset, setActiveProject } = useStore()
+  const {
+    theme,
+    setTheme,
+    highContrast,
+    toggleHighContrast,
+    largeText,
+    toggleLargeText,
+    density,
+    toggleDensity,
+    resetZoom,
+    setActiveDataset,
+    setActiveProject,
+    workspaceMode,
+    setWorkspaceMode,
+    motion,
+    setMotion,
+    colorblindPalette,
+    toggleColorblindPalette,
+    captionSize,
+    setCaptionSize,
+    defaultChapter,
+    setDefaultChapter,
+  } = useStore()
   const [storageInfo, setStorageInfo] = useState<{ datasets: number; projects: number }>({ datasets: 0, projects: 0 })
   const [status, setStatus] = useState<string | null>(null)
 
@@ -44,6 +67,11 @@ export function SettingsPage() {
       'pref-zoom-level',
       'pref-density',
       'pref-favorite-modules',
+      'pref-workspace-mode',
+      'pref-motion',
+      'pref-colorblind-palette',
+      'pref-caption-size',
+      'pref-default-chapter',
       'anveshak-onboarding-complete',
       'anveshak-tour-done',
       'anveshak-recent-pages',
@@ -103,6 +131,49 @@ export function SettingsPage() {
               Switch to {density === 'compact' ? 'comfortable' : 'compact'}
             </button>
           </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
+          <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-3">Visual teaching</h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="text-sm text-slate-600 dark:text-slate-300">
+              Default mode
+              <select value={workspaceMode} onChange={(event) => setWorkspaceMode(event.target.value as 'learn' | 'analyze')} className="mt-1 w-full rounded-md border border-slate-200 bg-white px-2 py-2 dark:border-slate-600 dark:bg-slate-900">
+                <option value="learn">Learn</option>
+                <option value="analyze">Analyze</option>
+              </select>
+            </label>
+            <label className="text-sm text-slate-600 dark:text-slate-300">
+              Motion
+              <select value={motion} onChange={(event) => setMotion(event.target.value as 'full' | 'reduced')} className="mt-1 w-full rounded-md border border-slate-200 bg-white px-2 py-2 dark:border-slate-600 dark:bg-slate-900">
+                <option value="full">Full</option>
+                <option value="reduced">Reduced</option>
+              </select>
+            </label>
+            <label className="text-sm text-slate-600 dark:text-slate-300">
+              Learner default chapter
+              <select value={defaultChapter} onChange={(event) => setDefaultChapter(event.target.value as typeof defaultChapter)} className="mt-1 w-full rounded-md border border-slate-200 bg-white px-2 py-2 dark:border-slate-600 dark:bg-slate-900">
+                {LEARN_CHAPTERS.map((chapter) => (
+                  <option key={chapter.id} value={chapter.id}>{chapter.title}</option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm text-slate-600 dark:text-slate-300">
+              Caption size
+              <select value={captionSize} onChange={(event) => setCaptionSize(event.target.value as typeof captionSize)} className="mt-1 w-full rounded-md border border-slate-200 bg-white px-2 py-2 dark:border-slate-600 dark:bg-slate-900">
+                <option value="sm">Small</option>
+                <option value="md">Medium</option>
+                <option value="lg">Large</option>
+              </select>
+            </label>
+          </div>
+          <button
+            type="button"
+            onClick={toggleColorblindPalette}
+            className="mt-3 rounded-md border border-slate-200 px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+          >
+            {colorblindPalette ? 'Disable' : 'Enable'} colorblind-safe palette
+          </button>
         </div>
 
         {/* Storage */}

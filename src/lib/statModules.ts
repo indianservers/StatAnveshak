@@ -1,5 +1,6 @@
 import jStatRaw from 'jstat'
-import { compareFits } from './distributions'
+import { runAnalysis } from '../analysis/runAnalysis'
+import type { AnalysisResult } from '../analysis/types'
 
 type JStatLike = {
   normal: { cdf: (x: number, mean: number, sd: number) => number; inv: (p: number, mean: number, sd: number) => number }
@@ -38,6 +39,27 @@ export type StatModuleDef = {
 }
 
 const round = (value: number, digits = 6) => Number.isFinite(value) ? Number(value.toFixed(digits)) : NaN
+
+function fromAnalysis(result: AnalysisResult): StatModuleResult {
+  const metrics = result.tables.flatMap((table) => table.rows.slice(0, 1).map((row) => ({
+    label: `${table.title}: ${table.columns[0]}`,
+    value: row[0],
+  }))).slice(0, 8)
+  if (metrics.length === 0) metrics.push({ label: 'status', value: result.interpretation.slice(0, 80) })
+  const first = result.tables[0]
+  const table = first
+    ? first.rows.map((row) => Object.fromEntries(first.columns.map((col, i) => [col, row[i]])))
+    : undefined
+  const plot = result.plots[0]
+  return {
+    title: result.title,
+    summary: result.interpretation,
+    metrics: metrics.length ? metrics : [{ label: 'result', value: result.title }],
+    table,
+    chart: plot ? { data: plot.data, layout: plot.layout } : undefined,
+    notes: [...result.assumptions, ...result.footnotes],
+  }
+}
 const alphaDefault = 0.05
 
 function numericValue(value: unknown) {
@@ -563,53 +585,11 @@ function baseChart(title: string) {
 }
 
 const advancedModules: StatModuleDef[] = [
-  { id: 101, key: 'two_way_anova_interaction', title: 'Two-Way ANOVA with Interaction Module', group: 'Advanced Workflows', description: 'Two-factor ANOVA with interaction term.', compute: (data, s) => {
-    const y = numericColumn(data, s.num1)
-    const a = categories(data, s.cat1), b = categories(data, s.cat2)
-    const grand = mean(y)
-    const cell = (ai: string, bi: string) => data.map((row) => String(row[s.cat1]) === ai && String(row[s.cat2]) === bi ? numericValue(row[s.num1]) : NaN).filter(Number.isFinite)
-    const ssA = a.reduce((sum, ai) => { const vals = data.map((row) => String(row[s.cat1]) === ai ? numericValue(row[s.num1]) : NaN).filter(Number.isFinite); return sum + vals.length * (mean(vals) - grand) ** 2 }, 0)
-    const ssB = b.reduce((sum, bi) => { const vals = data.map((row) => String(row[s.cat2]) === bi ? numericValue(row[s.num1]) : NaN).filter(Number.isFinite); return sum + vals.length * (mean(vals) - grand) ** 2 }, 0)
-    let ssCells = 0, ssWithin = 0
-    a.forEach((ai) => b.forEach((bi) => { const vals = cell(ai, bi); if (vals.length) { ssCells += vals.length * (mean(vals) - grand) ** 2; ssWithin += vals.reduce((sum, v) => sum + (v - mean(vals)) ** 2, 0) } }))
-    const ssInt = ssCells - ssA - ssB
-    const dfA = a.length - 1, dfB = b.length - 1, dfI = dfA * dfB, dfE = y.length - a.length * b.length
-    const mse = ssWithin / dfE
-    const cellSizes = a.flatMap((ai) => b.map((bi) => cell(ai, bi).length)).filter((v) => v > 0)
-    const isBalanced = new Set(cellSizes).size === 1
-    const notes = isBalanced ? [] : ['Unbalanced design detected: SS decomposition is marginal (Type I). Interaction estimate may be inaccurate — use equal cell sizes for reliable results.']
-    return { title: 'Two-Way ANOVA with Interaction', summary: 'Tests two main effects and their interaction.', metrics: [{ label: `${s.cat1} p`, value: round(fPValue((ssA / dfA) / mse, dfA, dfE)) }, { label: `${s.cat2} p`, value: round(fPValue((ssB / dfB) / mse, dfB, dfE)) }, { label: 'interaction p', value: round(fPValue((ssInt / dfI) / mse, dfI, dfE)) }], table: [{ source: s.cat1, ss: round(ssA), df: dfA }, { source: s.cat2, ss: round(ssB), df: dfB }, { source: 'interaction', ss: round(ssInt), df: dfI }, { source: 'error', ss: round(ssWithin), df: dfE }], notes }
-  } },
-  { id: 102, key: 'repeated_measures_anova', title: 'Repeated-Measures ANOVA Module', group: 'Advanced Workflows', description: 'Within-subject ANOVA using three numeric repeated measures.', compute: (data, s) => {
-    const rows = data.map((r) => [numericValue(r[s.num1]), numericValue(r[s.num2]), numericValue(r[s.num3])]).filter((r) => r.every(Number.isFinite))
-    const k = 3, n = rows.length, grand = mean(rows.flat()), conditionMeans = [0, 1, 2].map((j) => mean(rows.map((r) => r[j]))), subjectMeans = rows.map(mean)
-    const ssCond = n * conditionMeans.reduce((sum, m) => sum + (m - grand) ** 2, 0)
-    const ssSubj = k * subjectMeans.reduce((sum, m) => sum + (m - grand) ** 2, 0)
-    const ssTotal = rows.flat().reduce((sum, v) => sum + (v - grand) ** 2, 0)
-    const ssErr = ssTotal - ssCond - ssSubj
-    const f = (ssCond / (k - 1)) / (ssErr / ((n - 1) * (k - 1)))
-    return { title: 'Repeated-Measures ANOVA', summary: 'Treats Numeric 1-3 as repeated conditions for each row.', metrics: [{ label: 'F', value: round(f) }, { label: 'p-value', value: round(fPValue(f, k - 1, (n - 1) * (k - 1))) }, { label: 'subjects', value: n }] }
-  } },
-  { id: 103, key: 'ancova', title: 'ANCOVA Module', group: 'Advanced Workflows', description: 'Group comparison adjusted for a numeric covariate.', compute: (data, s) => {
-    const groups = categories(data, s.cat1)
-    const rows = data.map((r) => ({ y: numericValue(r[s.num1]), cov: numericValue(r[s.num2]), group: groups.indexOf(String(r[s.cat1])) })).filter((r) => Number.isFinite(r.y) && Number.isFinite(r.cov) && r.group >= 0)
-    const x = rows.map((r) => [r.cov, ...groups.slice(1).map((_, i) => r.group === i + 1 ? 1 : 0)])
-    const model = ols(rows.map((r) => r.y), x)
-    return { title: 'ANCOVA', summary: `${s.num1} by ${s.cat1}, adjusted for ${s.num2}.`, metrics: [{ label: 'adjusted R2', value: round(model.adjR2) }, { label: 'covariate p', value: round(model.p[1]) }], table: model.beta.map((b, i) => ({ term: i === 0 ? 'Intercept' : i === 1 ? s.num2 : groups[i - 1], estimate: round(b), p: round(model.p[i]) })) }
-  } },
-  { id: 104, key: 'manova', title: 'MANOVA Screening Module', group: 'Advanced Workflows', description: 'Multivariate teaching screen using Numeric 1-3 outcome ANOVAs.', compute: (data, s) => {
-    const outcomes = [s.num1, s.num2, s.num3]
-    const rows = outcomes.map((outcome) => oneWayAnova(groupedNumeric(data, s.cat1, outcome)))
-    const pillaiApprox = rows.reduce((sum, r) => sum + r.eta2, 0) / rows.length
-    return { title: 'MANOVA Screening', summary: 'Teaching screen only: averages separate outcome ANOVA effect sizes; not a formal Pillai/Wilks MANOVA.', metrics: [{ label: 'average eta2', value: round(pillaiApprox) }, { label: 'outcomes', value: outcomes.length }], table: rows.map((r, i) => ({ outcome: outcomes[i], F: round(r.f), p: round(r.p), eta2: round(r.eta2) })) }
-  } },
-  { id: 105, key: 'tukey_hsd', title: 'Tukey-Style Post-Hoc Module', group: 'Advanced Workflows', description: 'Pairwise post-hoc teaching comparison after one-way ANOVA.', compute: (data, s) => {
-    const groups = groupedNumeric(data, s.cat1, s.num1).slice(0, 12)
-    const an = oneWayAnova(groups)
-    const mse = an.ssWithin / an.dfWithin
-    const table = groups.flatMap((g1, i) => groups.slice(i + 1).map((g2) => { const se = Math.sqrt(mse / 2 * (1 / g1[1].length + 1 / g2[1].length)); const q = Math.abs(mean(g1[1]) - mean(g2[1])) / se; return { comparison: `${g1[0]} - ${g2[0]}`, q: round(q), pApprox: round(1 - jStat.studentt.cdf(q / Math.SQRT2, an.dfWithin)) } }))
-    return { title: 'Tukey-Style Post-Hoc', summary: 'Uses pooled ANOVA MSE with an approximate p-value; not an exact studentized-range Tukey HSD.', metrics: [{ label: 'comparisons', value: table.length }], table }
-  } },
+  { id: 101, key: 'two_way_anova_interaction', title: 'Two-Way ANOVA with Interaction Module', group: 'Advanced Workflows', description: 'Two-factor ANOVA with interaction term.', compute: (data, s) => fromAnalysis(runAnalysis('anova.between', data, { dependent: s.num1, factors: [s.cat1, s.cat2], ssType: 'I', postHoc: { tukey: true } })) },
+  { id: 102, key: 'repeated_measures_anova', title: 'Repeated-Measures ANOVA Module', group: 'Advanced Workflows', description: 'Within-subject ANOVA using three numeric repeated measures.', compute: (data, s) => fromAnalysis(runAnalysis('anova.repeated', data, { measures: [s.num1, s.num2, s.num3] })) },
+  { id: 103, key: 'ancova', title: 'ANCOVA Module', group: 'Advanced Workflows', description: 'Group comparison adjusted for a numeric covariate.', compute: (data, s) => fromAnalysis(runAnalysis('anova.ancova', data, { dependent: s.num1, group: s.cat1, covariate: s.num2 })) },
+  { id: 104, key: 'manova', title: 'MANOVA Screening Module', group: 'Advanced Workflows', description: 'Pillai, Wilks, Hotelling–Lawley, and Roy MANOVA.', compute: (data, s) => fromAnalysis(runAnalysis('anova.manova', data, { dependents: [s.num1, s.num2, s.num3], group: s.cat1 })) },
+  { id: 105, key: 'tukey_hsd', title: 'Tukey-Style Post-Hoc Module', group: 'Advanced Workflows', description: 'Pairwise Tukey HSD after one-way ANOVA.', compute: (data, s) => fromAnalysis(runAnalysis('anova.between', data, { dependent: s.num1, factors: [s.cat1], ssType: 'III', postHoc: { tukey: true } })) },
   { id: 106, key: 'multiple_testing_corrections', title: 'Bonferroni / Holm Correction Module', group: 'Advanced Workflows', description: 'Multiple testing correction from pairwise group p-values.', compute: (data, s) => {
     const groups = groupedNumeric(data, s.cat1, s.num1).slice(0, 8)
     const pvals = groups.flatMap((g1, i) => groups.slice(i + 1).map((g2) => {
@@ -619,20 +599,14 @@ const advancedModules: StatModuleDef[] = [
     }))
     return { title: 'Multiple Testing Corrections', summary: 'Bonferroni and Holm-adjusted pairwise p-values.', metrics: [{ label: 'tests', value: pvals.length }], table: correctionRows(pvals) }
   } },
-  { id: 107, key: 'fisher_exact', title: "Fisher's Exact Test Module", group: 'Advanced Workflows', description: 'Exact 2x2 categorical test.', compute: (data, s) => {
-    const res = chiSquareIndependence(data, s.cat1, s.cat2)
-    const a = res.matrix[0]?.[0] ?? 0, b = res.matrix[0]?.[1] ?? 0, c = res.matrix[1]?.[0] ?? 0, d = res.matrix[1]?.[1] ?? 0
-    return { title: "Fisher's Exact Test", summary: 'Uses first two levels of each selected categorical variable.', metrics: [{ label: 'p-value', value: round(fisherExact2x2(a, b, c, d)) }, { label: 'odds ratio', value: round((a * d) / Math.max(1e-8, b * c)) }], table: [{ a, b, c, d }] }
-  } },
+  { id: 107, key: 'fisher_exact', title: "Fisher's Exact Test Module", group: 'Advanced Workflows', description: 'Exact 2x2 categorical test.', compute: (data, s) => fromAnalysis(runAnalysis('frequencies.contingency', data, { rows: s.cat1, columns: s.cat2 })) },
   { id: 108, key: 'mcnemar', title: "McNemar's Test Module", group: 'Advanced Workflows', description: 'Paired categorical change test using two binary-coded numeric columns.', compute: (data, s) => {
-    const pairs = paired(data, s.num1, s.num2).map(([a, b]) => [a > 0 ? 1 : 0, b > 0 ? 1 : 0])
-    const b = pairs.filter(([x, y]) => x === 1 && y === 0).length, c = pairs.filter(([x, y]) => x === 0 && y === 1).length
-    const chi = (Math.abs(b - c) - 1) ** 2 / Math.max(1, b + c)
-    return { title: "McNemar's Test", summary: 'Tests discordant paired binary outcomes.', metrics: [{ label: 'chi-square', value: round(chi) }, { label: 'p-value', value: round(chiPValue(chi, 1)) }, { label: 'discordant', value: b + c }] }
+    const mapped = data.map((row) => ({ a: Number(row[s.num1]) > 0 ? '1' : '0', b: Number(row[s.num2]) > 0 ? '1' : '0' }))
+    return fromAnalysis(runAnalysis('frequencies.contingency', mapped, { rows: 'a', columns: 'b' }))
   } },
   { id: 109, key: 'exact_binomial', title: 'Exact Binomial Test Module', group: 'Advanced Workflows', description: 'Exact test for binary success probability.', compute: (data, s) => {
-    const x = numericColumn(data, s.num1), successes = x.filter((v) => v > 0).length
-    return { title: 'Exact Binomial Test', summary: 'Tests success probability against 0.5.', metrics: [{ label: 'successes', value: successes }, { label: 'n', value: x.length }, { label: 'p-value', value: round(exactBinomialPValue(successes, x.length)) }] }
+    const mapped = data.map((row) => ({ v: Number(row[s.num1]) > 0 ? 'success' : 'other' }))
+    return fromAnalysis(runAnalysis('frequencies.binomial', mapped, { variable: 'v', p0: 0.5 }))
   } },
   { id: 110, key: 'shapiro_wilk', title: 'Shapiro-Francia Normality Module', group: 'Advanced Workflows', description: 'Normality check using Shapiro-Francia approximation.', compute: (data, s) => {
     const x = numericColumn(data, s.num1)
@@ -659,12 +633,7 @@ const advancedModules: StatModuleDef[] = [
     const model = robustHuber(rows.y, rows.x)
     return { title: 'Robust Regression', summary: 'Huber IRLS coefficients reduce outlier influence.', metrics: [{ label: 'downweighted rows', value: model.weights.filter((w) => w < 0.99).length }], table: model.beta.map((b, i) => ({ term: i === 0 ? 'Intercept' : [s.num1, s.num2][i - 1], estimate: round(b) })) }
   } },
-  { id: 115, key: 'ridge_lasso', title: 'Ridge / Lasso Regression Module', group: 'Advanced Workflows', description: 'Regularized regression estimates.', compute: (data, s) => {
-    const rows = regressionRows(data, s.target, [s.num1, s.num2, s.num3])
-    const rb = ridge(rows.y, rows.x, 1)
-    const lb = ridge(rows.y, rows.x, 5).map((b) => Math.abs(b) < 0.05 ? 0 : b)
-    return { title: 'Ridge / Lasso Regression', summary: 'Ridge is exact L2; lasso is a shrinkage teaching approximation.', metrics: [{ label: 'lambda ridge', value: 1 }, { label: 'lambda lasso approx', value: 5 }], table: rb.map((b, i) => ({ term: i === 0 ? 'Intercept' : [s.num1, s.num2, s.num3][i - 1], ridge: round(b), lassoApprox: round(lb[i]) })) }
-  } },
+  { id: 115, key: 'ridge_lasso', title: 'Ridge / Lasso Regression Module', group: 'Advanced Workflows', description: 'Regularized regression estimates.', compute: (data, s) => fromAnalysis(runAnalysis('ml.regression', data, { dependent: s.target, predictors: [s.num1, s.num2, s.num3], algorithm: 'regularized' })) },
   { id: 116, key: 'stepwise_selection', title: 'Stepwise Model Selection Module', group: 'Advanced Workflows', description: 'Forward selection by adjusted R2.', compute: (data, s) => {
     const predictors = [s.num1, s.num2, s.num3]
     const chosen: string[] = []
@@ -677,12 +646,7 @@ const advancedModules: StatModuleDef[] = [
     }
     return { title: 'Stepwise Model Selection', summary: 'Forward selection using adjusted R2.', metrics: [{ label: 'selected', value: chosen.join(', ') || '-' }, { label: 'best adj R2', value: round(best) }], table: steps }
   } },
-  { id: 117, key: 'logistic_se_pvalues', title: 'Logistic Regression SE / p-values Module', group: 'Advanced Workflows', description: 'Logistic regression with odds ratios, standard errors, and Wald p-values.', compute: (data, s) => {
-    const predictors = [s.num1, s.num2]
-    const model = logisticModel(data, s.target, predictors)
-    const terms = ['Intercept', ...predictors]
-    return { title: 'Logistic Regression SE / p-values', summary: 'Fits binary logistic regression by Newton-Raphson and reports Wald standard errors and p-values.', metrics: [{ label: 'accuracy @ .5', value: round(model.accuracy) }, { label: 'rows used', value: model.rows.length }], table: model.beta.map((b, i) => ({ term: terms[i], estimate: round(b), se: round(model.se[i]), z: round(model.z[i]), p: round(model.p[i]), oddsRatio: round(Math.exp(b)) })) }
-  } },
+  { id: 117, key: 'logistic_se_pvalues', title: 'Logistic Regression SE / p-values Module', group: 'Advanced Workflows', description: 'Logistic regression with odds ratios, standard errors, and Wald p-values.', compute: (data, s) => fromAnalysis(runAnalysis('regression.logistic', data, { dependent: s.target, covariates: [s.num1, s.num2], model: 'binomial' })) },
   { id: 118, key: 'roc_auc', title: 'ROC AUC Module', group: 'Advanced Workflows', description: 'ROC AUC calculation from score and binary target.', compute: (data, s) => {
     const pairs = paired(data, s.num1, s.target)
     const roc = rocAuc(pairs.map(([score]) => score), pairs.map(([, y]) => y))
@@ -738,50 +702,16 @@ const advancedModules: StatModuleDef[] = [
     return { title: 'Permutation Tests', summary: 'Randomization p-value for two-group mean difference.', metrics: [{ label: 'p-value', value: round(permutationMeanDiff(groups[0][1], groups[1][1], 400)) }, { label: 'iterations', value: 400 }] }
   } },
   { id: 137, key: 'bayesian_basics', title: 'Bayesian Priors / Posteriors Module', group: 'Advanced Workflows', description: 'Beta-binomial posterior for binary data.', compute: (data, s) => {
-    const x = numericColumn(data, s.num1), successes = x.filter((v) => v > 0).length
-    const a = 1 + successes, b = 1 + x.length - successes
-    return { title: 'Bayesian Basics', summary: 'Beta(1,1) prior updated by binary observations.', metrics: [{ label: 'posterior alpha', value: a }, { label: 'posterior beta', value: b }, { label: 'posterior mean', value: round(a / (a + b)) }] }
+    const mapped = data.map((row) => ({ v: Number(row[s.num1]) > 0 ? 'yes' : 'no' }))
+    return fromAnalysis(runAnalysis('frequencies.binomial', mapped, { variable: 'v', p0: 0.5, inference: 'bayesian', priorAlpha: 1, priorBeta: 1 }))
   } },
-  { id: 138, key: 'survival_analysis', title: 'Kaplan-Meier Survival Module', group: 'Advanced Workflows', description: 'Kaplan-Meier survival table for time and event columns.', compute: (data, s) => {
-    const pairs = paired(data, s.num1, s.num2)
-    const km = kaplanMeier(pairs.map(([t]) => Math.abs(t)), pairs.map(([, e]) => e > 0 ? 1 : 0))
-    return { title: 'Survival Analysis', summary: `${s.num1} is time, ${s.num2} is event indicator.`, metrics: [{ label: 'events', value: pairs.filter(([, e]) => e > 0).length }, { label: 'last survival', value: km[km.length - 1]?.survival ?? '-' }], table: km.slice(0, 30), chart: { data: [{ type: 'scatter', mode: 'lines', x: km.map((r) => r.time), y: km.map((r) => r.survival), line: { shape: 'hv' } }], layout: baseChart('Kaplan-Meier') } }
-  } },
-  { id: 139, key: 'arima_ets', title: 'AR(1) / ETS Time-Series Module', group: 'Advanced Workflows', description: 'AR(1), differencing, and exponential smoothing diagnostics.', compute: (data, s) => {
-    const y = numericColumn(data, s.num1)
-    const lag = pearsonPairs(y.slice(1).map((v, i) => [y[i], v]))
-    let smooth = y[0]; const ets = y.map((v) => { smooth = 0.3 * v + 0.7 * smooth; return smooth })
-    return { title: 'AR(1) / ETS Basics', summary: 'Teaching baseline: AR(1) diagnostic and ETS smoothing, not full ARIMA order estimation.', metrics: [{ label: 'AR(1) phi', value: round(lag) }, { label: 'next ETS', value: round(ets[ets.length - 1]) }] }
-  } },
-  { id: 140, key: 'seasonal_decomposition', title: 'Seasonal Decomposition Module', group: 'Advanced Workflows', description: 'Trend, seasonal indices, and residual diagnostics.', compute: (data, s) => {
-    const y = numericColumn(data, s.num1), trend = movingAverage(y, 12)
-    const seasonal = Array.from({ length: 12 }, (_, m) => mean(y.filter((_, i) => i % 12 === m)) - mean(y))
-    return { title: 'Seasonal Decomposition', summary: 'Moving-average trend with 12-period seasonal indices.', metrics: [{ label: 'seasonal amplitude', value: round(Math.max(...seasonal) - Math.min(...seasonal)) }], chart: { data: [{ type: 'scatter', mode: 'lines', y, name: 'Actual' }, { type: 'scatter', mode: 'lines', y: trend, name: 'Trend' }], layout: baseChart('Seasonal Decomposition') } }
-  } },
-  { id: 141, key: 'robust_pca', title: 'Robust Multi-Variable PCA Module', group: 'Advanced Workflows', description: 'PCA screening for three numeric variables.', compute: (data, s) => {
-    const cols = [s.num1, s.num2, s.num3]
-    const corr = cols.map((a) => cols.map((b) => pearsonPairs(paired(data, a, b))))
-    return { title: 'Robust Multi-Variable PCA', summary: 'Correlation-matrix PCA screening for three variables.', metrics: [{ label: 'variables', value: cols.length }, { label: 'avg abs correlation', value: round(mean(corr.flat().filter((_, i) => i % 4 !== 0).map(Math.abs))) }], chart: { data: [{ type: 'heatmap', x: cols, y: cols, z: corr }], layout: baseChart('PCA Correlation Matrix') } }
-  } },
-  { id: 142, key: 'hierarchical_dendrogram', title: 'Hierarchical Clustering Dendrogram Module', group: 'Advanced Workflows', description: 'Agglomerative clustering merge table.', compute: (data, s) => {
-    const points = paired(data, s.num1, s.num2).slice(0, 30)
-    const rows = points.slice(1).map((p, i) => ({ merge: i + 1, point: i + 2, distanceToPrevious: round(Math.hypot(p[0] - points[i][0], p[1] - points[i][1])) }))
-    return { title: 'Hierarchical Dendrogram', summary: 'Agglomerative merge-distance preview for selected points.', metrics: [{ label: 'points', value: points.length }, { label: 'merges', value: rows.length }], table: rows }
-  } },
-  { id: 143, key: 'dbscan', title: 'DBSCAN Clustering Module', group: 'Advanced Workflows', description: 'Density-based clustering.', compute: (data, s) => {
-    const points = paired(data, s.num1, s.num2)
-    const eps = Math.max(1e-6, sd(points.map(([x]) => x)) * 0.35)
-    const res = dbscan(points, eps, 4)
-    return { title: 'DBSCAN', summary: 'Density-based clustering with automatic epsilon heuristic.', metrics: [{ label: 'clusters', value: res.clusters }, { label: 'noise', value: res.labels.filter((l) => l < 0).length }], chart: { data: [{ type: 'scatter', mode: 'markers', x: points.map(([x]) => x), y: points.map(([, y]) => y), marker: { color: res.labels, colorscale: 'Viridis' } }], layout: baseChart('DBSCAN') } }
-  } },
-  { id: 144, key: 'classification_models', title: 'Classification Models Module', group: 'Advanced Workflows', description: 'Baselines beyond logistic regression.', compute: (data, s) => {
-    const pairs = paired(data, s.num1, s.target)
-    const threshold = mean(pairs.map(([x]) => x))
-    const pred = pairs.map(([x]) => x >= threshold ? 1 : 0)
-    const actual = pairs.map(([, y]) => y > 0 ? 1 : 0)
-    const acc = pred.filter((p, i) => p === actual[i]).length / pred.length
-    return { title: 'Classification Models', summary: 'Threshold classifier, nearest-centroid-ready baseline, and metric scaffold.', metrics: [{ label: 'baseline accuracy', value: round(acc) }, { label: 'threshold', value: round(threshold) }] }
-  } },
+  { id: 138, key: 'survival_analysis', title: 'Kaplan-Meier Survival Module', group: 'Advanced Workflows', description: 'Kaplan-Meier survival table for time and event columns.', compute: (data, s) => fromAnalysis(runAnalysis('survival.nonparametric', data, { time: s.num1, event: s.num2 })) },
+  { id: 139, key: 'arima_ets', title: 'AR(1) / ETS Time-Series Module', group: 'Advanced Workflows', description: 'AR(1), differencing, and exponential smoothing diagnostics.', compute: (data, s) => fromAnalysis(runAnalysis('timeSeries.arima', data, { variable: s.num1, auto: 'auto', horizon: 8 })) },
+  { id: 140, key: 'seasonal_decomposition', title: 'Seasonal Decomposition Module', group: 'Advanced Workflows', description: 'Trend, seasonal indices, and residual diagnostics.', compute: (data, s) => fromAnalysis(runAnalysis('timeSeries.spectral', data, { variable: s.num1 })) },
+  { id: 141, key: 'robust_pca', title: 'Robust Multi-Variable PCA Module', group: 'Advanced Workflows', description: 'PCA screening for three numeric variables.', compute: (data, s) => fromAnalysis(runAnalysis('factor.pca', data, { variables: [s.num1, s.num2, s.num3], matrix: 'correlation' })) },
+  { id: 142, key: 'hierarchical_dendrogram', title: 'Hierarchical Clustering Dendrogram Module', group: 'Advanced Workflows', description: 'Agglomerative clustering merge table.', compute: (data, s) => fromAnalysis(runAnalysis('ml.clustering', data, { variables: [s.num1, s.num2], algorithm: 'hierarchical', k: 3 })) },
+  { id: 143, key: 'dbscan', title: 'DBSCAN Clustering Module', group: 'Advanced Workflows', description: 'Density-based clustering.', compute: (data, s) => fromAnalysis(runAnalysis('ml.clustering', data, { variables: [s.num1, s.num2], algorithm: 'dbscan' })) },
+  { id: 144, key: 'classification_models', title: 'Classification Models Module', group: 'Advanced Workflows', description: 'Baselines beyond logistic regression.', compute: (data, s) => fromAnalysis(runAnalysis('ml.classification', data, { dependent: s.target, predictors: [s.num1], algorithm: 'logistic' })) },
   { id: 145, key: 'model_comparison', title: 'Model Comparison Dashboard Module', group: 'Advanced Workflows', description: 'Compare OLS, ridge, robust, and baseline models.', compute: (data, s) => {
     const rows = regressionRows(data, s.target, [s.num1, s.num2])
     const ol = ols(rows.y, rows.x), rb = ridge(rows.y, rows.x, 1), hub = robustHuber(rows.y, rows.x)
@@ -875,11 +805,7 @@ const chartModules: StatModuleDef[] = [
     const cumulative = counts.map((item) => { cum += item.n; return cum / total * 100 })
     return { title: 'Pareto Chart', summary: `Pareto counts for ${s.cat1}.`, metrics: [{ label: 'categories', value: counts.length }], chart: { data: [{ type: 'bar', x: counts.map((c) => c.cat), y: counts.map((c) => c.n) }, { type: 'scatter', mode: 'lines+markers', x: counts.map((c) => c.cat), y: cumulative, yaxis: 'y2' }], layout: { ...baseChart('Pareto Chart'), yaxis2: { overlaying: 'y', side: 'right', range: [0, 100] } } } }
   } },
-  { id: 96, key: 'control_chart', title: 'Control Chart Module', group: 'Charting & Visualization', description: 'Individuals control chart.', compute: (data, s) => {
-    const y = numericColumn(data, s.num1)
-    const m = mean(y), st = sd(y)
-    return { title: 'Control Chart', summary: `Mean +/- 3 sigma for ${s.num1}.`, metrics: [{ label: 'mean', value: round(m) }, { label: 'UCL', value: round(m + 3 * st) }, { label: 'LCL', value: round(m - 3 * st) }], chart: { data: [{ type: 'scatter', mode: 'lines+markers', y }, { type: 'scatter', mode: 'lines', y: y.map(() => m + 3 * st), name: 'UCL' }, { type: 'scatter', mode: 'lines', y: y.map(() => m), name: 'Mean' }, { type: 'scatter', mode: 'lines', y: y.map(() => m - 3 * st), name: 'LCL' }], layout: baseChart('Control Chart') } }
-  } },
+  { id: 96, key: 'control_chart', title: 'Control Chart Module', group: 'Charting & Visualization', description: 'Individuals control chart.', compute: (data, s) => fromAnalysis(runAnalysis('qc.charts', data, { variable: s.num1, chartKind: 'individuals' })) },
   { id: 97, key: 'pie_donut', title: 'Pie / Donut Chart Module', group: 'Charting & Visualization', description: 'Pie and donut chart by category.', compute: (data, s) => {
     const cats = categories(data, s.cat1)
     const values = cats.map((cat) => data.filter((row) => String(row[s.cat1] ?? '(missing)') === cat).length)
@@ -919,56 +845,19 @@ export const STAT_MODULES: StatModuleDef[] = [
   },
   {
     id: 62, key: 'one_sample_tests', title: 'One-Sample Hypothesis Test Module', group: 'Inferential', description: 'Z-test, t-test, proportion test, and variance test.',
-    compute: (data, s) => {
-      const x = numericColumn(data, s.num1), m = mean(x), st = sd(x)
-      const z = m / (st / Math.sqrt(x.length)), t = z
-      const pHat = x.filter((v) => v > 0).length / x.length
-      const zp = (pHat - 0.5) / Math.sqrt(0.25 / x.length)
-      const chi = (x.length - 1) * variance(x)
-      return { title: 'One-Sample Tests', summary: 'Nulls use mean=0, proportion=0.5, variance=1.', metrics: [{ label: 'Z test p', value: round(zPValue(z)) }, { label: 't test p', value: round(tPValue(t, x.length - 1)) }, { label: 'proportion p', value: round(zPValue(zp)) }, { label: 'variance p', value: round(2 * Math.min(jStat.chisquare.cdf(chi, x.length - 1), 1 - jStat.chisquare.cdf(chi, x.length - 1))) }] }
-    },
+    compute: (data, s) => fromAnalysis(runAnalysis('t.oneSample', data, { variable: s.num1, mu0: 0, alternative: 'two-sided', wilcoxon: true })),
   },
   {
     id: 63, key: 'two_sample_tests', title: 'Two-Sample Hypothesis Test Module', group: 'Inferential', description: 'Independent t-test, paired t-test, and two-proportion z-test.',
-    compute: (data, s) => {
-      const a = numericColumn(data, s.num1), b = numericColumn(data, s.num2), pairs = paired(data, s.num1, s.num2)
-      const se = Math.sqrt(variance(a) / a.length + variance(b) / b.length)
-      const welch = (mean(a) - mean(b)) / se
-      const df = se ** 4 / ((variance(a) / a.length) ** 2 / (a.length - 1) + (variance(b) / b.length) ** 2 / (b.length - 1))
-      const diffs = pairs.map(([x, y]) => x - y)
-      const diffMean = mean(diffs)
-      const pairedSe = sd(diffs) / Math.sqrt(diffs.length)
-      const pairedP = pairedSe > 0 ? round(tPValue(diffMean / pairedSe, diffs.length - 1)) : Math.abs(diffMean) < 1e-12 ? 1 : 0
-      const p1 = a.filter((v) => v > 0).length / a.length, p2 = b.filter((v) => v > 0).length / b.length
-      const pooled = (p1 * a.length + p2 * b.length) / (a.length + b.length)
-      const propSe = Math.sqrt(pooled * (1 - pooled) * (1 / a.length + 1 / b.length))
-      const propP = propSe > 0 ? round(zPValue((p1 - p2) / propSe)) : 'not estimable'
-      const notes = [
-        ...(pairedSe > 0 ? [] : ['Paired t-test has zero variance in pair differences; p-value is shown as an exact boundary result.']),
-        ...(propSe > 0 ? [] : ['Two-proportion z-test is not estimable because the pooled binary proportion is 0 or 1.']),
-      ]
-      return { title: 'Two-Sample Tests', summary: 'Welch independent t-test, paired t-test, and two-proportion test.', metrics: [{ label: 'Welch t', value: round(welch) }, { label: 'Welch p', value: round(tPValue(welch, df)) }, { label: 'Paired t p', value: pairedP }, { label: 'Two-prop z p', value: propP }], notes }
-    },
+    compute: (data, s) => fromAnalysis(runAnalysis('t.independent', data, { dependent: s.num1, group: s.cat1, alternative: 'two-sided', mannWhitney: true })),
   },
   {
     id: 64, key: 'anova', title: 'ANOVA Module', group: 'Inferential', description: 'One-way ANOVA with feasible post-hoc pair comparisons.',
-    compute: (data, s) => {
-      const groups = groupedNumeric(data, s.cat1, s.num1).slice(0, 12)
-      const res = oneWayAnova(groups)
-      const table = groups.flatMap((g1, i) => groups.slice(i + 1).map((g2) => {
-        const diff = mean(g1[1]) - mean(g2[1])
-        const se = Math.sqrt(variance(g1[1]) / g1[1].length + variance(g2[1]) / g2[1].length)
-        return { comparison: `${g1[0]} - ${g2[0]}`, diff: round(diff), p: round(tPValue(diff / se, g1[1].length + g2[1].length - 2)) }
-      }))
-      return { title: 'ANOVA', summary: 'One-way ANOVA plus pairwise Welch-style post-hoc comparisons.', metrics: [{ label: 'F', value: round(res.f) }, { label: 'p-value', value: round(res.p) }, { label: 'eta squared', value: round(res.eta2) }], table, chart: { data: groups.map(([name, y]) => ({ type: 'box', name, y })), layout: baseChart('ANOVA Groups') } }
-    },
+    compute: (data, s) => fromAnalysis(runAnalysis('anova.between', data, { dependent: s.num1, factors: [s.cat1], ssType: 'III', postHoc: { tukey: true, bonferroni: true, holm: true } })),
   },
   {
     id: 65, key: 'chi_square', title: 'Chi-Square Test Module', group: 'Inferential', description: 'Goodness of fit, independence test, and contingency table analysis.',
-    compute: (data, s) => {
-      const res = chiSquareIndependence(data, s.cat1, s.cat2)
-      return { title: 'Chi-Square Tests', summary: 'Independence test on selected categorical variables.', metrics: [{ label: 'chi-square', value: round(res.chi) }, { label: 'df', value: res.df }, { label: 'p-value', value: round(res.p) }], table: res.matrix.map((row, i) => Object.fromEntries([['row', res.rows[i]], ...res.cols.map((c, j) => [c, row[j]])])), chart: { data: [{ type: 'heatmap', x: res.cols, y: res.rows, z: res.matrix }], layout: baseChart('Contingency Heatmap') } }
-    },
+    compute: (data, s) => fromAnalysis(runAnalysis('frequencies.contingency', data, { rows: s.cat1, columns: s.cat2 })),
   },
   {
     id: 66, key: 'non_parametric', title: 'Non-Parametric Tests Module', group: 'Inferential', description: 'Mann-Whitney U, Wilcoxon signed-rank, Kruskal-Wallis, and sign test.',
@@ -985,69 +874,31 @@ export const STAT_MODULES: StatModuleDef[] = [
   },
   {
     id: 67, key: 'correlation_testing', title: 'Correlation Testing Module', group: 'Inferential', description: 'Pearson, Spearman, and Kendall correlation tests.',
-    compute: (data, s) => {
-      const p = paired(data, s.num1, s.num2)
-      const r = pearsonPairs(p), rho = spearmanPairs(p), tau = kendallPairs(p)
-      const t = r * Math.sqrt((p.length - 2) / (1 - r * r))
-      return { title: 'Correlation Testing', summary: `${s.num1} and ${s.num2}.`, metrics: [{ label: 'Pearson r', value: round(r) }, { label: 'Pearson p', value: round(tPValue(t, p.length - 2)) }, { label: 'Spearman rho', value: round(rho) }, { label: 'Kendall tau', value: round(tau) }], chart: { data: [{ type: 'scatter', mode: 'markers', x: p.map(([x]) => x), y: p.map(([, y]) => y) }], layout: baseChart('Correlation') } }
-    },
+    compute: (data, s) => fromAnalysis(runAnalysis('regression.correlation', data, { variables: [s.num1, s.num2], method: 'pearson', ciLevel: 0.95 })),
   },
   {
     id: 68, key: 'power_sample_size', title: 'Power & Sample Size Module', group: 'Inferential', description: 'Basic power analysis for means and proportions.',
-    compute: (_data, s) => {
-      const zAlpha = jStat.normal.inv(1 - s.alpha / 2, 0, 1)
-      const zPower = jStat.normal.inv(0.8, 0, 1)
-      return { title: 'Power and Sample Size', summary: 'Uses 80% power and default detectable effect sizes.', metrics: [{ label: 'Mean n per group d=0.5', value: Math.ceil(2 * ((zAlpha + zPower) / 0.5) ** 2) }, { label: 'Proportion n p1=.5 p2=.6', value: Math.ceil(2 * (zAlpha + zPower) ** 2 * 0.5 * 0.5 / 0.1 ** 2) }] }
-    },
+    compute: (_data, s) => fromAnalysis(runAnalysis('power.analysis', [], { design: 't.independent', compute: 'n', effectSize: 0.5, alpha: s.alpha, power: 0.8, alternative: 'two-sided' })),
   },
   {
     id: 69, key: 'effect_size', title: 'Effect Size Module', group: 'Inferential', description: "Cohen's d, eta squared, odds ratio, and risk ratio.",
-    compute: (data, s) => {
-      const groups = groupedNumeric(data, s.cat1, s.num1).slice(0, 2)
-      const d = (mean(groups[0][1]) - mean(groups[1][1])) / Math.sqrt((variance(groups[0][1]) + variance(groups[1][1])) / 2)
-      const an = oneWayAnova(groupedNumeric(data, s.cat1, s.num1))
-      const chi = chiSquareIndependence(data, s.cat1, s.cat2)
-      const a = chi.matrix[0]?.[0] ?? 1, b = chi.matrix[0]?.[1] ?? 1, c = chi.matrix[1]?.[0] ?? 1, d2 = chi.matrix[1]?.[1] ?? 1
-      return { title: 'Effect Sizes', summary: 'Magnitude measures for means and categorical tables.', metrics: [{ label: "Cohen's d", value: round(d) }, { label: 'eta squared', value: round(an.eta2) }, { label: 'odds ratio', value: round((a * d2) / (b * c)) }, { label: 'risk ratio', value: round((a / (a + b)) / (c / (c + d2))) }] }
-    },
+    compute: (data, s) => fromAnalysis(runAnalysis('t.independent', data, { dependent: s.num1, group: s.cat1, alternative: 'two-sided', mannWhitney: false })),
   },
   {
     id: 70, key: 'gof_distribution', title: 'Goodness-of-Fit Module', group: 'Inferential', description: 'Compare user data to theoretical distributions.',
-    compute: (data, s) => {
-      const x = numericColumn(data, s.num1)
-      const candidates = x.some((value) => value <= 0)
-        ? ['normal', 'student_t', 'cauchy', 'logistic'] as const
-        : ['normal', 'lognormal', 'exponential', 'gamma', 'weibull', 'pareto', 'student_t', 'cauchy', 'logistic'] as const
-      const results = compareFits(x, [...candidates]).slice(0, 8)
-      return { title: 'Goodness-of-Fit', summary: 'Best theoretical distribution fits by GOF statistic.', metrics: [{ label: 'tested', value: results.length }, { label: 'best', value: results[0]?.name ?? '-' }], table: results.map((r, i) => ({ rank: i + 1, distribution: r.name, method: r.method, statistic: round(r.statistic), p: r.pValue === null ? '-' : round(r.pValue) })), notes: ['Goodness-of-fit uses a bounded stable candidate set for browser responsiveness; compare support and domain meaning before trusting rank.'] }
-    },
+    compute: (data, s) => fromAnalysis(runAnalysis('distributions.explorer', data, { variable: s.num1, family: 'auto' })),
   },
   {
     id: 71, key: 'simple_regression', title: 'Simple Linear Regression Module', group: 'Regression & Modeling', description: 'Fit line, residuals, R2, confidence band, and prediction band.',
-    compute: (data, s) => {
-      const rows = regressionRows(data, s.num2, [s.num1])
-      const model = ols(rows.y, rows.x)
-      return { title: 'Simple Linear Regression', summary: `${s.num2} = b0 + b1 ${s.num1}.`, metrics: [{ label: 'intercept', value: round(model.beta[0]) }, { label: 'slope', value: round(model.beta[1]) }, { label: 'R2', value: round(model.r2) }, { label: 'adj R2', value: round(model.adjR2) }], table: model.beta.map((b, i) => ({ term: i === 0 ? 'Intercept' : s.num1, estimate: round(b), se: round(model.se[i]), t: round(model.t[i]), p: round(model.p[i]) })), chart: { data: [{ type: 'scatter', mode: 'markers', x: rows.x.map(([x]) => x), y: rows.y }, { type: 'scatter', mode: 'lines', x: rows.x.map(([x]) => x), y: model.fitted }], layout: baseChart('Regression Fit') } }
-    },
+    compute: (data, s) => fromAnalysis(runAnalysis('regression.linear', data, { dependent: s.num2, covariates: [s.num1], ciLevel: 0.95 })),
   },
   {
     id: 72, key: 'multiple_regression', title: 'Multiple Linear Regression Module', group: 'Regression & Modeling', description: 'Coefficients, standard errors, t-values, p-values, and adjusted R2.',
-    compute: (data, s) => {
-      const xs = [s.num1, s.num2, s.num3]
-      const rows = regressionRows(data, s.target, xs)
-      const model = ols(rows.y, rows.x)
-      return { title: 'Multiple Linear Regression', summary: `${s.target} with ${xs.join(', ')}.`, metrics: [{ label: 'R2', value: round(model.r2) }, { label: 'adj R2', value: round(model.adjR2) }], table: model.beta.map((b, i) => ({ term: i === 0 ? 'Intercept' : xs[i - 1], estimate: round(b), se: round(model.se[i]), t: round(model.t[i]), p: round(model.p[i]) })) }
-    },
+    compute: (data, s) => fromAnalysis(runAnalysis('regression.linear', data, { dependent: s.target, covariates: [s.num1, s.num2, s.num3], ciLevel: 0.95 })),
   },
   {
     id: 73, key: 'logistic_regression', title: 'Logistic Regression Module', group: 'Regression & Modeling', description: 'Binary target modeling, odds ratio, and classification threshold.',
-    compute: (data, s) => {
-      const predictors = [s.num1, s.num2]
-      const model = logisticModel(data, s.target, predictors)
-      const separationRisk = model.accuracy === 1 || model.beta.some((b) => Math.abs(b) > 8) || model.preds.some((p) => p < 1e-4 || p > 1 - 1e-4)
-      const notes = separationRisk ? ['Logistic separation or near-separation detected; coefficients and odds ratios may be numerically unstable.'] : []
-      return { title: 'Logistic Regression', summary: `Binary ${s.target} modeled from ${s.num1}, ${s.num2}.`, metrics: [{ label: 'accuracy @ .5', value: round(model.accuracy) }, { label: `odds ratio ${s.num1}`, value: round(Math.exp(model.beta[1])) }, { label: `odds ratio ${s.num2}`, value: round(Math.exp(model.beta[2])) }], table: model.beta.map((b, i) => ({ term: i === 0 ? 'Intercept' : predictors[i - 1], estimate: round(b), se: round(model.se[i]), p: round(model.p[i]), oddsRatio: round(Math.exp(b)) })), notes }
-    },
+    compute: (data, s) => fromAnalysis(runAnalysis('regression.logistic', data, { dependent: s.target, covariates: [s.num1, s.num2], model: 'binomial' })),
   },
   {
     id: 74, key: 'polynomial_regression', title: 'Polynomial Regression Module', group: 'Regression & Modeling', description: 'Degree selection, fit comparison, and residual chart.',
@@ -1062,59 +913,23 @@ export const STAT_MODULES: StatModuleDef[] = [
   },
   {
     id: 75, key: 'regression_diagnostics', title: 'Regression Diagnostics Module', group: 'Regression & Modeling', description: "Residual plots, leverage, Cook's distance, and multicollinearity indicators.",
-    compute: (data, s) => {
-      const xs = [s.num1, s.num2, s.num3]
-      const rows = regressionRows(data, s.target, xs)
-      const model = ols(rows.y, rows.x)
-      const x = rows.x.map((row) => [1, ...row])
-      const leverage = x.map((row) => {
-        const middle = model.xtxInv.map((invRow) => invRow.reduce((sum, value, i) => sum + value * row[i], 0))
-        return row.reduce((sum, value, i) => sum + value * middle[i], 0)
-      })
-      const cooks = model.residuals.map((r, i) => r ** 2 / ((model.beta.length) * model.mse) * leverage[i] / (1 - leverage[i]) ** 2)
-      const vif = xs.map((col, i) => {
-        const other = xs.filter((_, j) => i !== j)
-        const rr = regressionRows(data, col, other)
-        const r2 = ols(rr.y, rr.x).r2
-        return { variable: col, vif: r2 >= 0.999999 ? 'not estimable' : round(1 / (1 - r2)) }
-      })
-      const notes = vif.some((row) => row.vif === 'not estimable') ? ['One or more VIF values are not estimable because predictors are nearly perfectly collinear.'] : []
-      return { title: 'Regression Diagnostics', summary: 'Residual, leverage, Cook distance, and VIF diagnostics.', metrics: [{ label: 'max leverage', value: round(Math.max(...leverage)) }, { label: 'max Cook distance', value: round(Math.max(...cooks)) }], table: vif, chart: { data: [{ type: 'scatter', mode: 'markers', x: model.fitted, y: model.residuals }], layout: baseChart('Residuals vs Fitted') }, notes }
-    },
+    compute: (data, s) => fromAnalysis(runAnalysis('regression.linear', data, { dependent: s.target, covariates: [s.num1, s.num2, s.num3], ciLevel: 0.95 })),
   },
   {
     id: 76, key: 'time_series_basics', title: 'Time Series Basics Module', group: 'Regression & Modeling', description: 'Trend, moving average, seasonality view, and lag plot.',
-    compute: (data, s) => {
-      const y = numericColumn(data, s.num1), ma = movingAverage(y, 7)
-      return { title: 'Time Series Basics', summary: 'Trend and moving-average view.', metrics: [{ label: 'points', value: y.length }, { label: 'lag-1 r', value: round(pearsonPairs(y.slice(1).map((v, i) => [y[i], v]))) }], chart: { data: [{ type: 'scatter', mode: 'lines', y, name: 'Actual' }, { type: 'scatter', mode: 'lines', y: ma, name: 'MA(7)' }], layout: baseChart('Time Series') } }
-    },
+    compute: (data, s) => fromAnalysis(runAnalysis('descriptives.timeSeries', data, { variable: s.num1, period: 12 })),
   },
   {
     id: 77, key: 'forecasting_basics', title: 'Forecasting Basics Module', group: 'Regression & Modeling', description: 'Naive forecast, moving average forecast, and exponential smoothing.',
-    compute: (data, s) => {
-      const y = numericColumn(data, s.num1)
-      let smooth = y[0]
-      const exp = y.map((v) => { smooth = 0.3 * v + 0.7 * smooth; return smooth })
-      const ma = movingAverage(y, 5)
-      const mae = mean(y.slice(1).map((v, i) => Math.abs(v - y[i])))
-      return { title: 'Forecasting Basics', summary: 'Naive, moving average, and exponential smoothing baselines.', metrics: [{ label: 'naive MAE', value: round(mae) }, { label: 'next naive', value: round(y[y.length - 1]) }, { label: 'next exp smooth', value: round(exp[exp.length - 1]) }], chart: { data: [{ type: 'scatter', mode: 'lines', y, name: 'Actual' }, { type: 'scatter', mode: 'lines', y: ma, name: 'MA(5)' }, { type: 'scatter', mode: 'lines', y: exp, name: 'Exp smooth' }], layout: baseChart('Forecasting') } }
-    },
+    compute: (data, s) => fromAnalysis(runAnalysis('predictive.analytics', data, { predKind: 'forecast', dependent: s.num1, holdout: 0.3 })),
   },
   {
     id: 78, key: 'clustering', title: 'Clustering Basics Module', group: 'Regression & Modeling', description: 'K-means, hierarchical clustering, and cluster visualization.',
-    compute: (data, s) => {
-      const points = paired(data, s.num1, s.num2)
-      const km = kmeans(points, 3)
-      return { title: 'Clustering Basics', summary: 'K-means with k=3 and scatter visualization.', metrics: [{ label: 'clusters', value: 3 }, { label: 'points', value: points.length }], chart: { data: [{ type: 'scatter', mode: 'markers', x: points.map(([x]) => x), y: points.map(([, y]) => y), marker: { color: km.labels, colorscale: 'Viridis' } }], layout: baseChart('K-means Clusters') }, notes: ['Hierarchical clustering scaffold uses the same distance view; k-means assignments are computed directly.'] }
-    },
+    compute: (data, s) => fromAnalysis(runAnalysis('ml.clustering', data, { variables: [s.num1, s.num2], algorithm: 'kmeans', k: 3 })),
   },
   {
     id: 79, key: 'pca', title: 'PCA Module', group: 'Regression & Modeling', description: 'Principal component analysis, explained variance, and biplot.',
-    compute: (data, s) => {
-      const points = paired(data, s.num1, s.num2)
-      const pca = simplePca(points)
-      return { title: 'PCA', summary: 'Two-variable PCA with explained variance.', metrics: [{ label: 'PC1 explained', value: round(pca.explained[0]) }, { label: 'PC2 explained', value: round(pca.explained[1]) }], chart: { data: [{ type: 'scatter', mode: 'markers', x: pca.pc1, y: points.map(([, y]) => y) }], layout: baseChart('PCA Scores') } }
-    },
+    compute: (data, s) => fromAnalysis(runAnalysis('factor.pca', data, { variables: [s.num1, s.num2, s.num3], matrix: 'correlation' })),
   },
   {
     id: 80, key: 'classification_metrics', title: 'Classification Metrics Module', group: 'Regression & Modeling', description: 'Confusion matrix, accuracy, precision, recall, F1, and ROC-style chart.',
@@ -1163,3 +978,16 @@ export function runStatModule(moduleKey: string, data: Record<string, unknown>[]
     ])
   }
 }
+
+void [
+  spearmanPairs,
+  kendallPairs,
+  movingAverage,
+  kmeans,
+  simplePca,
+  fisherExact2x2,
+  exactBinomialPValue,
+  logisticModel,
+  kaplanMeier,
+  dbscan,
+]

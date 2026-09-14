@@ -14,7 +14,7 @@ Use **Clean & Transform** for formula-style column creation and **Stats Workbenc
 
 ## Analyze
 
-Use **Inference Tests**, **Regression**, **Advanced Analysis**, **Distributions**, and **Stat Modules** for statistical workflows.
+Open **Analysis** (`/analysis/:analysisId`) for the JASP catalog. One ID per method; Frequentist | Bayesian is a toggle on the same page. **Learn Stats** (`/analysis/learnStats.labs`) and **Learn Bayes** are teaching labs that call those engines. Legacy **Inference**, **Regression**, and **Explore** routes redirect into the workspace.
 
 ## Export
 

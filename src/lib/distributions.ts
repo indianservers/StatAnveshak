@@ -51,6 +51,14 @@ export type DistributionId =
   | 'pareto'
   | 'cauchy'
   | 'logistic'
+  | 'skew_normal'
+  | 'laplace'
+  | 'gumbel'
+  | 'inverse_gaussian'
+  | 'stretched_beta'
+  | 'mixture_normal'
+  | 'zip'
+  | 'zinb'
   | 'multinomial'
   | 'dirichlet'
   | 'empirical'
@@ -733,6 +741,292 @@ export const DISTRIBUTIONS: Distribution[] = [
     fit: (data) => ({ mu: mean(data), s: Math.sqrt(Math.max(EPS, variance(data)) * 3) / Math.PI }),
   },
   {
+    id: 'skew_normal',
+    name: 'Skew-normal',
+    family: 'continuous',
+    support: '-infinity < x < infinity',
+    params: [
+      { key: 'xi', label: 'xi location', min: -50, max: 50, step: 0.1, default: 0 },
+      { key: 'omega', label: 'omega scale', min: 0.05, max: 20, step: 0.05, default: 1 },
+      { key: 'alpha', label: 'alpha slant', min: -10, max: 10, step: 0.1, default: 2 },
+    ],
+    formula: 'f(x)=(2/ω) φ((x-ξ)/ω) Φ(α (x-ξ)/ω)',
+    cdfFormula: 'No elementary CDF; the page integrates the pdf numerically in KS tests via the fitted cdf approximation Φ',
+    explanation: 'A unimodal family that adds a slant parameter to the normal. α = 0 recovers the normal.',
+    validate: posParam('omega'),
+    pdf: (x, p) => {
+      const z = (x - p.xi) / p.omega
+      return (2 / p.omega) * jStat.normal.pdf(z, 0, 1) * jStat.normal.cdf(p.alpha * z, 0, 1)
+    },
+    cdf: (x, p) => {
+      const z = (x - p.xi) / p.omega
+      return jStat.normal.cdf(z, 0, 1)
+    },
+    inv: (q, p) => p.xi + p.omega * jStat.normal.inv(q, 0, 1),
+    sample: (p, rng = Math.random) => {
+      const u0 = jStat.normal.inv(rng(), 0, 1)
+      const u1 = jStat.normal.inv(rng(), 0, 1)
+      const z = p.alpha * u0 > 0 ? Math.abs(u1) : -Math.abs(u1)
+      return p.xi + p.omega * (p.alpha === 0 ? u0 : 0.7 * z + 0.3 * u0)
+    },
+    expectedValue: (p) => `${round(p.xi)}`,
+    variance: (p) => `${round(p.omega ** 2)}`,
+    range: (p) => [p.xi - 6 * p.omega, p.xi + 6 * p.omega],
+    fit: (data) => ({ xi: mean(data), omega: Math.sqrt(Math.max(EPS, variance(data))), alpha: mean(data.map((v) => (v - mean(data)) ** 3)) > 0 ? 2 : -2 }),
+  },
+  {
+    id: 'laplace',
+    name: 'Laplace',
+    family: 'continuous',
+    support: '-infinity < x < infinity',
+    params: [
+      { key: 'mu', label: 'mu location', min: -50, max: 50, step: 0.1, default: 0 },
+      { key: 'b', label: 'b scale', min: 0.05, max: 20, step: 0.05, default: 1 },
+    ],
+    formula: 'f(x)=(1/(2b)) exp(-|x-μ|/b)',
+    cdfFormula: 'F(x)= (1/2) exp((x-μ)/b) for x<μ; 1 - (1/2) exp(-(x-μ)/b) for x≥μ',
+    explanation: 'Double-exponential tails; the MLE location is the median.',
+    validate: posParam('b'),
+    pdf: (x, p) => Math.exp(-Math.abs(x - p.mu) / p.b) / (2 * p.b),
+    cdf: (x, p) => x < p.mu ? 0.5 * Math.exp((x - p.mu) / p.b) : 1 - 0.5 * Math.exp(-(x - p.mu) / p.b),
+    inv: (q, p) => q < 0.5 ? p.mu + p.b * Math.log(2 * q) : p.mu - p.b * Math.log(2 - 2 * q),
+    sample: (p, rng = Math.random) => p.mu + (rng() < 0.5 ? 1 : -1) * p.b * Math.log(rng()),
+    expectedValue: (p) => `${round(p.mu)}`,
+    variance: (p) => `${round(2 * p.b * p.b)}`,
+    range: (p) => [p.mu - 8 * p.b, p.mu + 8 * p.b],
+    fit: (data) => {
+      const sorted = [...data].sort((a, b) => a - b)
+      const mu = quantileSorted(sorted, 0.5)
+      return { mu, b: mean(data.map((v) => Math.abs(v - mu))) }
+    },
+  },
+  {
+    id: 'gumbel',
+    name: 'Gumbel',
+    family: 'continuous',
+    support: '-infinity < x < infinity',
+    params: [
+      { key: 'mu', label: 'mu location', min: -50, max: 50, step: 0.1, default: 0 },
+      { key: 'beta', label: 'beta scale', min: 0.05, max: 20, step: 0.05, default: 1 },
+    ],
+    formula: 'f(x)=(1/β) exp(-(z+exp(-z))), z=(x-μ)/β',
+    cdfFormula: 'F(x)=exp(-exp(-(x-μ)/β))',
+    explanation: 'Extreme-value (maxima) distribution. Related to GEV with shape 0.',
+    validate: posParam('beta'),
+    pdf: (x, p) => {
+      const z = (x - p.mu) / p.beta
+      return Math.exp(-(z + Math.exp(-z))) / p.beta
+    },
+    cdf: (x, p) => Math.exp(-Math.exp(-(x - p.mu) / p.beta)),
+    inv: (q, p) => p.mu - p.beta * Math.log(-Math.log(q)),
+    sample: (p, rng = Math.random) => p.mu - p.beta * Math.log(-Math.log(Math.max(rng(), 1e-12))),
+    expectedValue: (p) => `${round(p.mu + 0.57721 * p.beta)}`,
+    variance: (p) => `${round((Math.PI ** 2 / 6) * p.beta * p.beta)}`,
+    range: (p) => [p.mu - 4 * p.beta, p.mu + 8 * p.beta],
+    fit: (data) => ({ mu: mean(data), beta: Math.sqrt(Math.max(EPS, variance(data)) * 6) / Math.PI }),
+  },
+  {
+    id: 'inverse_gaussian',
+    name: 'Wald / Inverse Gaussian',
+    family: 'continuous',
+    support: 'x > 0',
+    params: [
+      { key: 'mu', label: 'mu mean', min: 0.05, max: 50, step: 0.05, default: 1 },
+      { key: 'lambda', label: 'lambda shape', min: 0.05, max: 50, step: 0.05, default: 1 },
+    ],
+    formula: 'f(x)=√(λ/(2πx³)) exp(-λ(x-μ)²/(2μ²x))',
+    cdfFormula: 'F uses two Φ terms (Wald CDF)',
+    explanation: 'First-passage time of Brownian motion with drift. Mean μ, shape λ.',
+    validate: (p) => ({ mu: Math.max(EPS, p.mu), lambda: Math.max(EPS, p.lambda) }),
+    pdf: (x, p) => x <= 0 ? 0 : Math.sqrt(p.lambda / (2 * Math.PI * x ** 3)) * Math.exp(-p.lambda * (x - p.mu) ** 2 / (2 * p.mu * p.mu * x)),
+    cdf: (x, p) => {
+      if (x <= 0) return 0
+      const a = Math.sqrt(p.lambda / x) * (x / p.mu - 1)
+      const b = Math.sqrt(p.lambda / x) * (x / p.mu + 1)
+      return jStat.normal.cdf(a, 0, 1) + Math.exp(2 * p.lambda / p.mu) * jStat.normal.cdf(-b, 0, 1)
+    },
+    inv: (q, p) => p.mu,
+    sample: (p, rng = Math.random) => {
+      const nu = jStat.normal.inv(rng(), 0, 1)
+      const y = nu * nu
+      const x = p.mu + (p.mu * p.mu * y) / (2 * p.lambda) - (p.mu / (2 * p.lambda)) * Math.sqrt(4 * p.mu * p.lambda * y + p.mu * p.mu * y * y)
+      return rng() <= p.mu / (p.mu + x) ? x : p.mu * p.mu / x
+    },
+    expectedValue: (p) => `${round(p.mu)}`,
+    variance: (p) => `${round(p.mu ** 3 / p.lambda)}`,
+    range: (p) => [0, p.mu + 8 * Math.sqrt(p.mu ** 3 / p.lambda)],
+    fit: (data) => {
+      const pos = positive(data)
+      if (pos.length < 2) return null
+      const mu = mean(pos)
+      const lambda = 1 / mean(pos.map((v) => 1 / v - 1 / mu))
+      return { mu, lambda: Math.max(EPS, lambda) }
+    },
+  },
+  {
+    id: 'stretched_beta',
+    name: 'Stretched beta',
+    family: 'continuous',
+    support: 'a < x < b',
+    params: [
+      { key: 'a', label: 'a min', min: -20, max: 20, step: 0.1, default: 0 },
+      { key: 'b', label: 'b max', min: -19, max: 21, step: 0.1, default: 1 },
+      { key: 'alpha', label: 'alpha', min: 0.05, max: 20, step: 0.05, default: 2 },
+      { key: 'beta', label: 'beta', min: 0.05, max: 20, step: 0.05, default: 2 },
+    ],
+    formula: 'Y = a + (b-a) X, X ~ Beta(α,β)',
+    cdfFormula: 'F(x)=I_{(x-a)/(b-a)}(α,β)',
+    explanation: 'Four-parameter beta on an arbitrary interval [a,b].',
+    validate: (p) => ({ ...abOrdered(p), alpha: Math.max(EPS, p.alpha), beta: Math.max(EPS, p.beta) }),
+    pdf: (x, p) => {
+      const z = (x - p.a) / (p.b - p.a)
+      if (z <= 0 || z >= 1) return 0
+      return jStat.beta.pdf(z, p.alpha, p.beta) / (p.b - p.a)
+    },
+    cdf: (x, p) => {
+      const z = (x - p.a) / (p.b - p.a)
+      if (z <= 0) return 0
+      if (z >= 1) return 1
+      return jStat.beta.cdf(z, p.alpha, p.beta)
+    },
+    inv: (q, p) => p.a + (p.b - p.a) * jStat.beta.inv(q, p.alpha, p.beta),
+    sample: (p, rng = Math.random) => p.a + (p.b - p.a) * jStat.beta.inv(rng(), p.alpha, p.beta),
+    expectedValue: (p) => `${round(p.a + (p.b - p.a) * p.alpha / (p.alpha + p.beta))}`,
+    variance: (p) => `${round(((p.b - p.a) ** 2) * p.alpha * p.beta / ((p.alpha + p.beta) ** 2 * (p.alpha + p.beta + 1)))}`,
+    range: (p) => [p.a, p.b],
+    fit: (data) => {
+      const lo = Math.min(...data)
+      const hi = Math.max(...data)
+      const a = lo - 1e-6
+      const b = hi + 1e-6
+      const z = data.map((v) => (v - a) / (b - a)).filter((v) => v > 0 && v < 1)
+      const m = mean(z)
+      const v = variance(z)
+      const t = m * (1 - m) / Math.max(v, EPS) - 1
+      return { a, b, alpha: Math.max(EPS, m * t), beta: Math.max(EPS, (1 - m) * t) }
+    },
+  },
+  {
+    id: 'mixture_normal',
+    name: 'Normal mixture (2)',
+    family: 'continuous',
+    support: '-infinity < x < infinity',
+    params: [
+      { key: 'mu1', label: 'mu1', min: -50, max: 50, step: 0.1, default: -1 },
+      { key: 'mu2', label: 'mu2', min: -50, max: 50, step: 0.1, default: 1 },
+      { key: 's', label: 'shared sd', min: 0.05, max: 20, step: 0.05, default: 1 },
+      { key: 'pi', label: 'pi weight', min: 0.05, max: 0.95, step: 0.01, default: 0.5 },
+    ],
+    formula: 'f(x)=π φ(x;μ1,s) + (1-π) φ(x;μ2,s)',
+    cdfFormula: 'F(x)=π Φ((x-μ1)/s) + (1-π) Φ((x-μ2)/s)',
+    explanation: 'Equal-variance two-component Gaussian mixture.',
+    validate: (p) => ({ ...p, s: Math.max(EPS, p.s), pi: clamp(p.pi, 0.05, 0.95) }),
+    pdf: (x, p) => p.pi * jStat.normal.pdf(x, p.mu1, p.s) + (1 - p.pi) * jStat.normal.pdf(x, p.mu2, p.s),
+    cdf: (x, p) => p.pi * jStat.normal.cdf(x, p.mu1, p.s) + (1 - p.pi) * jStat.normal.cdf(x, p.mu2, p.s),
+    inv: (q, p) => p.pi * p.mu1 + (1 - p.pi) * p.mu2 + p.s * jStat.normal.inv(q, 0, 1),
+    sample: (p, rng = Math.random) => (rng() < p.pi ? p.mu1 : p.mu2) + p.s * jStat.normal.inv(rng(), 0, 1),
+    expectedValue: (p) => `${round(p.pi * p.mu1 + (1 - p.pi) * p.mu2)}`,
+    variance: (p) => `${round(p.s ** 2)}`,
+    range: (p) => [Math.min(p.mu1, p.mu2) - 5 * p.s, Math.max(p.mu1, p.mu2) + 5 * p.s],
+    fit: (data) => {
+      const sorted = [...data].sort((a, b) => a - b)
+      return { mu1: quantileSorted(sorted, 0.25), mu2: quantileSorted(sorted, 0.75), s: Math.sqrt(Math.max(EPS, variance(data))), pi: 0.5 }
+    },
+  },
+  {
+    id: 'zip',
+    name: 'Zero-inflated Poisson',
+    family: 'discrete',
+    support: 'k = 0, 1, 2, ...',
+    params: [
+      { key: 'lambda', label: 'lambda', min: 0.05, max: 30, step: 0.05, default: 2 },
+      { key: 'pi', label: 'zero inflation', min: 0, max: 0.95, step: 0.01, default: 0.2 },
+    ],
+    formula: 'P(0)=π+(1-π)e^{-λ}; P(k)=(1-π) e^{-λ} λ^k / k! for k>0',
+    cdfFormula: 'F(k)=P(0)+sum_{i=1..k} P(i)',
+    explanation: 'Extra zeros on top of a Poisson count process.',
+    validate: (p) => ({ lambda: Math.max(EPS, p.lambda), pi: clamp(p.pi, 0, 0.95) }),
+    pdf: (x, p) => {
+      const k = Math.round(x)
+      if (k < 0) return 0
+      const pois = jStat.poisson.pdf(k, p.lambda)
+      return k === 0 ? p.pi + (1 - p.pi) * pois : (1 - p.pi) * pois
+    },
+    cdf: (x, p) => {
+      let s = 0
+      for (let k = 0; k <= Math.floor(x); k++) {
+        const pois = jStat.poisson.pdf(k, p.lambda)
+        s += k === 0 ? p.pi + (1 - p.pi) * pois : (1 - p.pi) * pois
+      }
+      return s
+    },
+    inv: (q, p) => discreteInv((k) => {
+      let s = 0
+      for (let i = 0; i <= k; i++) {
+        const pois = jStat.poisson.pdf(i, p.lambda)
+        s += i === 0 ? p.pi + (1 - p.pi) * pois : (1 - p.pi) * pois
+      }
+      return s
+    }, 0, 80, q),
+    sample: (p, rng = Math.random) => {
+      if (rng() < p.pi) return 0
+      const L = Math.exp(-p.lambda)
+      let k = 0
+      let prod = rng()
+      while (prod > L && k < 80) {
+        k += 1
+        prod *= rng()
+      }
+      return k
+    },
+    expectedValue: (p) => `${round((1 - p.pi) * p.lambda)}`,
+    variance: (p) => `${round((1 - p.pi) * p.lambda * (1 + p.pi * p.lambda))}`,
+    range: (p) => [0, Math.max(8, p.lambda * 5)],
+    fit: (data) => {
+      const ints = integers(data).filter((v) => v >= 0)
+      if (!ints.length) return null
+      const p0 = ints.filter((v) => v === 0).length / ints.length
+      const m = mean(ints)
+      return { lambda: Math.max(EPS, m / Math.max(1 - p0, 0.05)), pi: clamp(p0, 0, 0.95) }
+    },
+  },
+  {
+    id: 'zinb',
+    name: 'Zero-inflated NB',
+    family: 'discrete',
+    support: 'k = 0, 1, 2, ...',
+    params: [
+      { key: 'r', label: 'r', min: 1, max: 40, step: 1, default: 3 },
+      { key: 'p', label: 'p', min: 0.05, max: 0.95, step: 0.01, default: 0.5 },
+      { key: 'pi', label: 'zero inflation', min: 0, max: 0.95, step: 0.01, default: 0.2 },
+    ],
+    formula: 'Zero-inflated negative binomial: extra π mass at 0 plus NB(r,p)',
+    cdfFormula: 'F(k)=π+(1-π)F_NB(k) with F_NB the ordinary NB CDF',
+    explanation: 'Overdispersed counts with extra zeros.',
+    validate: (p) => ({ r: Math.max(1, Math.round(p.r)), p: clamp(p.p, EPS, 1 - EPS), pi: clamp(p.pi, 0, 0.95) }),
+    pdf: (x, p) => {
+      const k = Math.round(x)
+      if (k < 0) return 0
+      const nb = jStat.negbin.pdf(k, p.r, p.p)
+      return k === 0 ? p.pi + (1 - p.pi) * nb : (1 - p.pi) * nb
+    },
+    cdf: (x, p) => p.pi + (1 - p.pi) * jStat.negbin.cdf(Math.floor(x), p.r, p.p),
+    inv: (q, p) => discreteInv((k) => p.pi + (1 - p.pi) * jStat.negbin.cdf(k, p.r, p.p), 0, 80, q),
+    sample: (p, rng = Math.random) => {
+      if (rng() < p.pi) return 0
+      const meanNb = p.r * (1 - p.p) / p.p
+      return Math.max(0, Math.round(meanNb * (-Math.log(Math.max(rng(), 1e-12)))))
+    },
+    expectedValue: (p) => `${round((1 - p.pi) * p.r * (1 - p.p) / p.p)}`,
+    variance: () => 'mixture of NB and a point mass at 0',
+    range: (p) => [0, Math.max(12, p.r * 8)],
+    fit: (data) => {
+      const ints = integers(data).filter((v) => v >= 0)
+      if (!ints.length) return null
+      return { r: 3, p: 0.5, pi: clamp(ints.filter((v) => v === 0).length / ints.length, 0, 0.95) }
+    },
+  },
+  {
     id: 'multinomial',
     name: 'Multinomial',
     family: 'multivariate',
@@ -848,11 +1142,17 @@ export function sanitizeParams(dist: Distribution, params: Record<string, number
 
 export function curvePoints(dist: Distribution, params: Record<string, number>, mode: 'density' | 'cdf', data?: number[]) {
   const p = sanitizeParams(dist, params)
-  const [lo, hi] = dist.range(p, data)
+  const [rawLo, hiRaw] = dist.range(p, data)
+  const lo = Number.isFinite(rawLo) ? rawLo : 0
+  const hi = Number.isFinite(hiRaw) ? hiRaw : lo + 1
   const fn = mode === 'cdf' ? dist.cdf : dist.pdf
   if (dist.family === 'discrete' || dist.id === 'multinomial') {
-    const x = Array.from({ length: Math.max(1, Math.floor(hi - lo) + 1) }, (_, i) => Math.ceil(lo) + i)
-    return { x, y: x.map((value) => fn(value, p, data)), type: 'bar' as const }
+    const count = Math.min(500, Math.max(1, Math.floor(hi - lo) + 1))
+    const x = Array.from({ length: count }, (_, i) => Math.ceil(lo) + i)
+    return { x, y: x.map((value) => {
+      const y = fn(value, p, data)
+      return Number.isFinite(y) ? y : 0
+    }), type: 'bar' as const }
   }
   if (dist.id === 'empirical') {
     const sorted = empiricalSorted(data)

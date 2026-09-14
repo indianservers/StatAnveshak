@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import Plotly from 'plotly.js-dist-min'
 import { useStore } from '../../store/useStore'
 import { numericColumn } from '../../lib/stats'
+import { fdBinCount, scottBinCount } from '../../lib/visualMath'
 import { Download, Save, MessageSquarePlus } from 'lucide-react'
 import * as ss from 'simple-statistics'
 import { DatasetEmptyState } from '../../components/ui/DatasetEmptyState'
@@ -31,11 +32,14 @@ export function ChartsPage() {
   const [snapshots, setSnapshots] = useState<{ name: string; chartType: ChartType; xCol: string; yCol: string; colorCol: string; palette: PaletteName; annotation: string }[]>([])
   const [snapshotName, setSnapshotName] = useState('')
   const [annotation, setAnnotation] = useState('')
+  const [binRule, setBinRule] = useState<'scott' | 'fd' | 'manual'>('scott')
+  const [binCount, setBinCount] = useState(20)
 
   const numCols = useMemo(() => activeDataset?.schema.filter((c) => c.type === 'numeric').map((c) => c.name) ?? [], [activeDataset])
   const catCols = useMemo(() => activeDataset?.schema.filter((c) => c.type === 'categorical').map((c) => c.name) ?? [], [activeDataset])
   const allCols = useMemo(() => activeDataset?.schema.map((c) => c.name) ?? [], [activeDataset])
-  const effectiveXCol = xCol || numCols[0] || allCols[0] || ''
+  const preferredNumeric = numCols.filter((name) => !/_id$/i.test(name))
+  const effectiveXCol = xCol || preferredNumeric[0] || numCols[0] || allCols[0] || ''
   const effectiveYCol = yCol || numCols.find((col) => col !== effectiveXCol) || ''
 
   useEffect(() => {
@@ -71,9 +75,10 @@ export function ChartsPage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const traces: any[] = []
     const xData = numericColumn(activeDataset.data, effectiveXCol)
+    const resolvedBins = binRule === 'scott' ? scottBinCount(xData) : binRule === 'fd' ? fdBinCount(xData) : binCount
 
     if (chartType === 'histogram') {
-      traces.push({ type: 'histogram', x: xData, name: effectiveXCol, marker: { color: PALETTES[palette][0] }, nbinsx: 20 })
+      traces.push({ type: 'histogram', x: xData, name: effectiveXCol, marker: { color: PALETTES[palette][0] }, nbinsx: resolvedBins })
     } else if (chartType === 'box') {
       if (colorCol) {
         const groups = [...new Set(activeDataset.data.map((r) => String(r[colorCol] ?? '')))]
@@ -133,7 +138,7 @@ export function ChartsPage() {
     if (traces.length > 0) {
       Plotly.react(plotRef.current, traces as Plotly.Data[], layout, { responsive: true, displayModeBar: true })
     }
-  }, [activeDataset, chartType, effectiveXCol, effectiveYCol, colorCol, theme, palette, annotation])
+  }, [activeDataset, chartType, effectiveXCol, effectiveYCol, colorCol, theme, palette, annotation, binRule, binCount])
 
   const downloadPNG = async () => {
     if (!plotRef.current) return
@@ -216,6 +221,24 @@ export function ChartsPage() {
                   <option value="">— none —</option>
                   {catCols.map((c) => <option key={c}>{c}</option>)}
                 </select>
+              </div>
+            )}
+            {(chartType === 'histogram') && (
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="text-xs text-slate-500">Bins:</label>
+                {(['scott', 'fd', 'manual'] as const).map((rule) => (
+                  <button
+                    key={rule}
+                    type="button"
+                    onClick={() => setBinRule(rule)}
+                    className={`rounded-md px-2 py-1 text-xs ${binRule === rule ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}
+                  >
+                    {rule === 'scott' ? 'Scott' : rule === 'fd' ? 'Freedman–Diaconis' : 'Manual'}
+                  </button>
+                ))}
+                {binRule === 'manual' && (
+                  <input type="range" min={5} max={40} value={binCount} onChange={(event) => setBinCount(Number(event.target.value))} className="w-28 accent-indigo-600" />
+                )}
               </div>
             )}
             <div className="flex items-center gap-2">
