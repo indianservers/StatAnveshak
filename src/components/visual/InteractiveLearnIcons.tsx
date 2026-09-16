@@ -171,7 +171,7 @@ export function InteractiveHeroArt() {
     <div className="relative min-h-[220px] overflow-hidden rounded-[28px]">
       <img src="/learn/learn-hero.png" alt="From data to understanding: play, explore, learn" className="h-full w-full object-cover" />
       <nav className="absolute inset-0" aria-label="Hero shortcuts">
-        <Link to="/learn/distributions" className="absolute left-[6%] top-[8%] h-[18%] w-[18%] rounded-full" aria-label="Play CLT lab" />
+        <Link to="/distributions" className="absolute left-[6%] top-[8%] h-[18%] w-[18%] rounded-full" aria-label="Open Distributions Studio" />
         <Link to="/explore/charts" className="absolute left-[34%] top-[4%] h-[16%] w-[22%] rounded-full" aria-label="Explore charts" />
         <Link to="/analysis/learnStats.labs" className="absolute right-[12%] top-[10%] h-[22%] w-[22%] rounded-full" aria-label="Learn Stats" />
         <Link to="/analysis/descriptives.statistics" className="absolute bottom-[8%] right-[6%] h-[22%] w-[28%] rounded-xl" aria-label="Open descriptives" />

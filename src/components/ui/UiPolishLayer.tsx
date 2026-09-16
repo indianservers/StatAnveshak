@@ -12,7 +12,7 @@ const PAGE_LABELS: Record<string, string> = {
   '/explore/summary': 'Summary',
   '/analysis': 'Analysis',
   '/explore/charts': 'Charts',
-  '/distributions': 'Distributions',
+  '/distributions': 'Distributions Studio',
   '/stat-modules': 'Stat Modules',
   '/syllabus': 'Syllabus Modules',
   '/modules': 'CS Modules',

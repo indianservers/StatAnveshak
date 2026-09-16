@@ -40,6 +40,7 @@ export function ChapterPage() {
     setRevealed(!practice)
   }, [practice])
 
+  if (chapterId === 'distributions') return <Navigate to="/distributions" replace />
   if (!chapter) return <Navigate to="/" replace />
 
   const params = paramsFromSearch(chapter.id, search)

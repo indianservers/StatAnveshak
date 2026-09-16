@@ -73,7 +73,7 @@ export function DistChart({
   }
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="h-full w-full" role="img" aria-label={`${dist.name} ${mode === 'cdf' ? 'CDF' : dist.family === 'discrete' ? 'PMF' : 'PDF'}`}>
+    <svg viewBox={`0 0 ${width} ${height}`} className="dl-chart-in h-full w-full" role="img" aria-label={`${dist.name} ${mode === 'cdf' ? 'CDF' : dist.family === 'discrete' ? 'PMF' : 'PDF'}`}>
       <defs>
         <linearGradient id={`${uid}-fill`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#6366f1" stopOpacity="0.35" />
@@ -106,6 +106,8 @@ export function DistChart({
           return (
             <g key={x}>
               <rect
+                className="dl-bar"
+                style={{ animationDelay: `${i * 28}ms` }}
                 x={xAt(x) - bw / 2}
                 y={yAt(y)}
                 width={bw}
@@ -122,9 +124,9 @@ export function DistChart({
         })
       ) : (
         <>
-          <path d={areaPath} fill={`url(#${uid}-fill)`} />
+          <path d={areaPath} fill={`url(#${uid}-fill)`} className="dl-bar" />
           {shadePath ? <path d={shadePath} fill={`url(#${uid}-shade)`} /> : null}
-          <path d={linePath} fill="none" stroke="#4f46e5" strokeWidth="2.4" strokeLinejoin="round" />
+          <path d={linePath} pathLength={1} fill="none" stroke="#4f46e5" strokeWidth="2.4" strokeLinejoin="round" strokeDasharray="1" className="dl-line" />
         </>
       )}
       {overlays.map((overlay) => {

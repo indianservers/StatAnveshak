@@ -76,7 +76,6 @@ const NAV_GROUPS = [
     label: 'Analysis',
     items: [
       { to: '/analysis/descriptives.statistics', icon: FlaskConical, label: 'Analysis' },
-      { to: '/distributions', icon: Activity, label: 'Distributions' },
       { to: '/analysis/t.oneSample', icon: Calculator, label: 'Inference Tests' },
       { to: '/analysis/regression.linear', icon: TrendingUp, label: 'Regression' },
       { to: '/analysis/learnBayes.labs', icon: BookOpen, label: 'Learn Bayes' },
@@ -129,7 +128,7 @@ const LEARN_NAV = [
   { to: STUDIOS_ROOT, icon: Layers, label: 'Studios' },
   { to: '/distributions', icon: Activity, label: 'Distributions Studio' },
   { to: '/learn', icon: BookOpen, label: 'Core labs' },
-  ...LEARN_CHAPTERS.map((chapter) => ({
+  ...LEARN_CHAPTERS.filter((chapter) => chapter.id !== 'distributions').map((chapter) => ({
     to: chapter.href,
     icon: CHAPTER_ICONS[chapter.id],
     label: chapter.title,

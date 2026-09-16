@@ -30,7 +30,7 @@ const BASE_COMMANDS: Command[] = [
   { label: 'Charts', path: '/explore/charts', category: 'Explore' },
   { label: 'Correlation', path: '/analysis/regression.correlation', category: 'Explore' },
   { label: 'Frequency', path: '/analysis/frequencies.contingency', category: 'Explore' },
-  { label: 'Distributions', path: '/distributions', category: 'Analysis' },
+  { label: 'Distributions Studio', path: '/distributions', category: 'Studios' },
   { label: 'Independent Samples T-Test', path: '/analysis/t.independent', category: 'Analysis' },
   { label: 'Paired Samples T-Test', path: '/analysis/t.paired', category: 'Analysis' },
   { label: 'One Sample T-Test', path: '/analysis/t.oneSample', category: 'Analysis' },

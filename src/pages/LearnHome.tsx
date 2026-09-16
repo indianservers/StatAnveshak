@@ -39,7 +39,7 @@ export function LearnHome() {
             </p>
             <div className="mt-5 flex flex-wrap items-center gap-2">
               <Link
-                to="/learn/distributions"
+                to="/distributions"
                 className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-indigo-600 px-4 text-sm font-bold text-white shadow-sm hover:bg-indigo-700"
               >
                 <Play size={14} fill="currentColor" /> Play CLT

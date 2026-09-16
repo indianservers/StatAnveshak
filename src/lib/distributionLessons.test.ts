@@ -9,6 +9,16 @@ describe('distribution lessons', () => {
     expect(lessonIds.sort()).toEqual([...catalogIds].sort())
   })
 
+  it('has a 3-4 sentence Learn explanation for every catalog distribution', () => {
+    for (const dist of DISTRIBUTIONS) {
+      const lesson = getDistributionLesson(dist.id)
+      const sentences = (lesson.learn ?? '').split(/(?<=\.)\s+/).filter((part) => part.trim().length > 20)
+      expect(lesson.learn, dist.id).toBeTruthy()
+      expect(sentences.length, dist.id).toBeGreaterThanOrEqual(3)
+      expect(sentences.length, dist.id).toBeLessThanOrEqual(5)
+    }
+  })
+
   it('has mockup sections for the core discrete and continuous pages', () => {
     for (const id of ['bernoulli', 'binomial', 'geometric', 'poisson', 'hypergeometric', 'continuous_uniform', 'normal', 'exponential', 'student_t', 'beta'] as const) {
       const lesson = getDistributionLesson(id)

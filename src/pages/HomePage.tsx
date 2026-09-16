@@ -90,7 +90,7 @@ const PINNED_TOOL_OPTIONS: Array<{ label: string; path: string; icon: LucideIcon
   { label: 'Correlation Matrix', path: '/analysis/regression.correlation', icon: Grid2X2, tone: 'violet' },
   { label: 'Hypothesis Tests', path: '/analysis/t.oneSample', icon: Activity, tone: 'rose' },
   { label: 'Regression Analysis', path: '/analysis/regression.linear', icon: LineChart, tone: 'indigo' },
-  { label: 'Distributions', path: '/distributions', icon: Calculator, tone: 'orange' },
+  { label: 'Distributions Studio', path: '/distributions', icon: Calculator, tone: 'orange' },
   { label: 'Charts', path: '/explore/charts', icon: BarChart2, tone: 'sky' },
 ]
 

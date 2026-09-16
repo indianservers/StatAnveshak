@@ -198,7 +198,7 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {numCols.length > 0 && (
           <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
-            <Link to="/learn/distributions" className="mb-1 inline-block text-xs font-bold text-indigo-600 hover:underline">Open CLT / shape lesson</Link>
+            <Link to="/distributions" className="mb-1 inline-block text-xs font-bold text-indigo-600 hover:underline">Open Distributions Studio</Link>
             {loadingView ? <div className="h-64 animate-pulse rounded bg-slate-100 dark:bg-slate-700" /> : <div ref={chart1Ref} style={{ minHeight: 260 }} />}
           </div>
         )}
