@@ -87,6 +87,8 @@ const BASE_COMMANDS: Command[] = [
   { label: 'Karl Pearson Correlation Solver', path: '/solver', category: 'Learn' },
   { label: 'Documentation', path: '/documentation', category: 'Reference' },
   { label: 'All Links and Details', path: '/documentation', category: 'Reference' },
+  { label: 'Statistics Glossary', path: '/glossary', category: 'Reference' },
+  { label: 'Glossary of Statistics Terms', path: '/glossary', category: 'Reference' },
   { label: 'Sitemap', path: '/sitemap', category: 'Reference' },
   { label: 'Search Engine Sitemap', path: '/sitemap', category: 'Reference' },
   { label: 'Settings', path: '/settings', category: 'Learn' },

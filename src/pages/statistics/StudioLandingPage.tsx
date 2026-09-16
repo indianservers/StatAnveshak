@@ -13,6 +13,26 @@ import {
 import { StudioIcon, StudioIconStyles } from '../../components/visual/StudioIcons'
 import { StudioBreadcrumb } from '../../components/statistics/StudioBreadcrumb'
 import { ACCENTS, FOCUS_RING, LEVEL_CLASSES, LEVEL_LABELS } from '../../components/statistics/studioTheme'
+import { ProbabilityStudioHome } from '../../components/probability/ProbabilityStudioHome'
+import { RandomVariablesStudioHome } from '../../components/random-variables/RandomVariablesStudioHome'
+import { DescriptiveStatsStudioHome } from '../../components/descriptive-statistics/DescriptiveStatsStudioHome'
+import { SamplingMethodsStudioHome } from '../../components/sampling-methods/SamplingMethodsStudioHome'
+import { SamplingDistributionsStudioHome } from '../../components/sampling-distributions-clt/SamplingDistributionsStudioHome'
+import { BayesianStudioHome } from '../../components/bayesian-statistics/BayesianStudioHome'
+import { CorrelationStudioHome } from '../../components/correlation-association/CorrelationStudioHome'
+import { RegressionStudioHome } from '../../components/regression-studio/RegressionStudioHome'
+import { TimeSeriesStudioHome } from '../../components/time-series-basics/TimeSeriesStudioHome'
+import { AnovaStudioHome } from '../../components/anova-studio/AnovaStudioHome'
+import { PF_STUDIO_SLUG } from '../../lib/probabilityFoundations'
+import { RV_STUDIO_SLUG } from '../../lib/randomVariables'
+import { DS_STUDIO_SLUG } from '../../lib/descriptiveStatistics'
+import { SM_STUDIO_SLUG } from '../../lib/samplingMethods'
+import { CLT_STUDIO_SLUG } from '../../lib/samplingDistributionsClt'
+import { BAYES_STUDIO_SLUG } from '../../lib/bayesianStatistics'
+import { CA_STUDIO_SLUG } from '../../lib/correlationAssociation'
+import { REG_STUDIO_SLUG } from '../../lib/regressionStudio'
+import { TS_STUDIO_SLUG } from '../../lib/timeSeriesBasics'
+import { ANOVA_STUDIO_SLUG } from '../../lib/anovaStudio'
 
 export function StudioLandingPage() {
   const { studioSlug } = useParams()
@@ -20,6 +40,16 @@ export function StudioLandingPage() {
   const [heroActive, setHeroActive] = useState(false)
 
   if (!studio) return <StudioNotFound slug={studioSlug} />
+  if (studio.slug === PF_STUDIO_SLUG) return <ProbabilityStudioHome />
+  if (studio.slug === RV_STUDIO_SLUG) return <RandomVariablesStudioHome />
+  if (studio.slug === DS_STUDIO_SLUG) return <DescriptiveStatsStudioHome />
+  if (studio.slug === CLT_STUDIO_SLUG) return <SamplingDistributionsStudioHome />
+  if (studio.slug === SM_STUDIO_SLUG) return <SamplingMethodsStudioHome />
+  if (studio.slug === CA_STUDIO_SLUG) return <CorrelationStudioHome />
+  if (studio.slug === BAYES_STUDIO_SLUG) return <BayesianStudioHome />
+  if (studio.slug === REG_STUDIO_SLUG) return <RegressionStudioHome />
+  if (studio.slug === TS_STUDIO_SLUG) return <TimeSeriesStudioHome />
+  if (studio.slug === ANOVA_STUDIO_SLUG) return <AnovaStudioHome />
 
   const accent = ACCENTS[studio.accent]
   const category = STUDIO_CATEGORIES.find((item) => item.id === studio.category)

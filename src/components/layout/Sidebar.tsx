@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import {
   Activity,
   BarChart2,
+  BookMarked,
   BookOpen,
   Brain,
   Calculator,
@@ -108,6 +109,7 @@ const NAV_GROUPS = [
       { to: '/learn', icon: BookOpen, label: 'Core Statistics' },
       { to: '/professional-learning', icon: GraduationCap, label: 'Professional Learning' },
       { to: '/documentation', icon: FileText, label: 'Documentation' },
+      { to: '/glossary', icon: BookMarked, label: 'Glossary' },
       { to: '/sitemap', icon: Map, label: 'Sitemap' },
       { to: '/settings', icon: Settings, label: 'Settings' },
     ],

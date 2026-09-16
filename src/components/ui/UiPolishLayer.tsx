@@ -20,6 +20,7 @@ const PAGE_LABELS: Record<string, string> = {
   '/reports': 'Reports',
   '/professional-learning': 'Professional Learning',
   '/docs': 'Documentation',
+  '/glossary': 'Glossary',
   '/sitemap': 'Sitemap',
 }
 

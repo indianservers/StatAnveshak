@@ -68,6 +68,7 @@ const PAGE_NAMES: Record<string, string> = {
   '/solver': 'Solver',
   '/documentation': 'Documentation',
   '/docs': 'Documentation',
+  '/glossary': 'Glossary',
   '/sitemap': 'Sitemap',
   '/settings': 'Settings',
 }

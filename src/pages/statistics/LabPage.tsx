@@ -15,6 +15,26 @@ import { StudioIcon, StudioIconStyles } from '../../components/visual/StudioIcon
 import { StudioBreadcrumb } from '../../components/statistics/StudioBreadcrumb'
 import { LabSection } from '../../components/statistics/LabSection'
 import { ACCENTS, FOCUS_RING, LEVEL_CLASSES, LEVEL_LABELS } from '../../components/statistics/studioTheme'
+import { ProbabilityLabScreen } from '../../components/probability/ProbabilityLabScreen'
+import { RandomVariableLabScreen } from '../../components/random-variables/RandomVariableLabScreen'
+import { DescriptiveStatsLabScreen } from '../../components/descriptive-statistics/DescriptiveStatsLabScreen'
+import { SamplingMethodsLabScreen } from '../../components/sampling-methods/SamplingMethodsLabScreen'
+import { SamplingDistributionsLabScreen } from '../../components/sampling-distributions-clt/SamplingDistributionsLabScreen'
+import { BayesianLabScreen } from '../../components/bayesian-statistics/BayesianLabScreen'
+import { CorrelationLabScreen } from '../../components/correlation-association/CorrelationLabScreen'
+import { RegressionLabScreen } from '../../components/regression-studio/RegressionLabScreen'
+import { TimeSeriesLabScreen } from '../../components/time-series-basics/TimeSeriesLabScreen'
+import { AnovaLabScreen } from '../../components/anova-studio/AnovaLabScreen'
+import { PF_STUDIO_SLUG } from '../../lib/probabilityFoundations'
+import { RV_STUDIO_SLUG } from '../../lib/randomVariables'
+import { DS_STUDIO_SLUG } from '../../lib/descriptiveStatistics'
+import { SM_STUDIO_SLUG } from '../../lib/samplingMethods'
+import { CLT_STUDIO_SLUG } from '../../lib/samplingDistributionsClt'
+import { BAYES_STUDIO_SLUG } from '../../lib/bayesianStatistics'
+import { CA_STUDIO_SLUG } from '../../lib/correlationAssociation'
+import { REG_STUDIO_SLUG } from '../../lib/regressionStudio'
+import { TS_STUDIO_SLUG } from '../../lib/timeSeriesBasics'
+import { ANOVA_STUDIO_SLUG } from '../../lib/anovaStudio'
 
 export function LabPage() {
   const { studioSlug, labSlug } = useParams()
@@ -24,6 +44,16 @@ export function LabPage() {
   if (!found) return <LabNotFound studioSlug={studioSlug} labSlug={labSlug} />
 
   const { studio, lab } = found
+  if (studio.slug === PF_STUDIO_SLUG) return <ProbabilityLabScreen studio={studio} lab={lab} />
+  if (studio.slug === RV_STUDIO_SLUG) return <RandomVariableLabScreen studio={studio} lab={lab} />
+  if (studio.slug === DS_STUDIO_SLUG) return <DescriptiveStatsLabScreen studio={studio} lab={lab} />
+  if (studio.slug === CLT_STUDIO_SLUG) return <SamplingDistributionsLabScreen studio={studio} lab={lab} />
+  if (studio.slug === SM_STUDIO_SLUG) return <SamplingMethodsLabScreen studio={studio} lab={lab} />
+  if (studio.slug === CA_STUDIO_SLUG) return <CorrelationLabScreen studio={studio} lab={lab} />
+  if (studio.slug === BAYES_STUDIO_SLUG) return <BayesianLabScreen studio={studio} lab={lab} />
+  if (studio.slug === REG_STUDIO_SLUG) return <RegressionLabScreen studio={studio} lab={lab} />
+  if (studio.slug === TS_STUDIO_SLUG) return <TimeSeriesLabScreen studio={studio} lab={lab} />
+  if (studio.slug === ANOVA_STUDIO_SLUG) return <AnovaLabScreen studio={studio} lab={lab} />
   const accent = ACCENTS[studio.accent]
   const index = studio.labs.findIndex((item) => item.slug === lab.slug)
   const previous = index > 0 ? studio.labs[index - 1] : undefined

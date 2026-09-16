@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   AlertTriangle,
   BarChart3,
@@ -1415,6 +1416,9 @@ export function LearnPage() {
             <div className="mb-4 flex items-center gap-2">
               <BookOpen size={16} className="text-indigo-500" />
               <h2 className="text-lg font-bold text-slate-800 dark:text-white">Glossary</h2>
+              <Link to="/glossary" className="ml-auto text-xs font-semibold text-indigo-600 hover:text-indigo-700">
+                Open full glossary
+              </Link>
             </div>
             <div className="grid gap-2 md:grid-cols-2">
               {GLOSSARY.map(([term, definition]) => (

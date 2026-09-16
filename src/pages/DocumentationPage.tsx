@@ -112,9 +112,14 @@ export function DocumentationPage() {
               <Search size={16} className="text-indigo-500" />
               <h2 className="text-lg font-bold text-slate-800 dark:text-white">Module Directory</h2>
             </div>
-            <Link to="/sitemap" className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">
-              Open sitemap
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link to="/glossary" className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">
+                Open glossary
+              </Link>
+              <Link to="/sitemap" className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">
+                Open sitemap
+              </Link>
+            </div>
           </div>
           <div className="grid gap-5 xl:grid-cols-2">
             {Object.entries(groupedModules).map(([section, links]) => (

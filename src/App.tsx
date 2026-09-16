@@ -35,6 +35,7 @@ const ProfessionalLearningPage = lazy(() => import('./pages/ProfessionalLearning
 const SolverPage = lazy(() => import('./pages/SolverPage').then((m) => ({ default: m.SolverPage })))
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })))
 const DocumentationPage = lazy(() => import('./pages/DocumentationPage').then((m) => ({ default: m.DocumentationPage })))
+const GlossaryPage = lazy(() => import('./pages/GlossaryPage').then((m) => ({ default: m.GlossaryPage })))
 const SitemapPage = lazy(() => import('./pages/SitemapPage').then((m) => ({ default: m.SitemapPage })))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })))
 
@@ -90,6 +91,7 @@ function App() {
               <Route path="professional-learning" element={<ProfessionalLearningPage />} />
               <Route path="solver" element={<SolverPage />} />
               <Route path="documentation" element={<DocumentationPage />} />
+              <Route path="glossary" element={<GlossaryPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="docs" element={<DocumentationPage />} />
               <Route path="sitemap" element={<SitemapPage />} />
