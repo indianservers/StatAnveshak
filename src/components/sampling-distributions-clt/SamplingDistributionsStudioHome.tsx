@@ -88,22 +88,20 @@ export function SamplingDistributionsStudioHome() {
             return (
               <article key={lab.slug} className="clt-card clt-home-card flex h-full flex-col p-5">
                 <div className="flex items-start justify-between gap-3">
-                  <span className="grid h-7 w-7 place-items-center rounded-full bg-slate-50 text-xs font-black text-slate-400 dark:bg-slate-800">
-                    {index + 1}
-                  </span>
-                  {complete && (
-                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
-                      Done
-                    </span>
-                  )}
-                </div>
-                <div className="mt-3 flex items-start gap-3">
                   <LabIcon id={lab.slug} />
-                  <div className="min-w-0">
-                    <h3 className="text-[15px] font-black leading-snug text-slate-950 dark:text-white">{lab.title}</h3>
-                    <p className="mt-1 text-sm leading-5 text-slate-500">{CLT_HOME_COPY[lab.slug]?.blurb ?? lab.summary}</p>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="grid h-7 w-7 place-items-center rounded-full bg-slate-50 text-xs font-black text-slate-400 dark:bg-slate-800">
+                      {index + 1}
+                    </span>
+                    {complete && (
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                        Done
+                      </span>
+                    )}
                   </div>
                 </div>
+                <h3 className="mt-3 text-[15px] font-black leading-snug text-slate-950 dark:text-white">{lab.title}</h3>
+                <p className="mt-1 text-sm leading-5 text-slate-500">{CLT_HOME_COPY[lab.slug]?.blurb ?? lab.summary}</p>
                 <Link to={cltLabPath(lab.slug)} className="clt-btn mt-5 w-full">
                   Start Lab <ArrowRight size={15} aria-hidden />
                 </Link>

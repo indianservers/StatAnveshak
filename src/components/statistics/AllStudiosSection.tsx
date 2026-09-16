@@ -52,7 +52,7 @@ export function AllStudiosSection() {
           <span
             onMouseEnter={() => setFeaturedHovered(true)}
             onMouseLeave={() => setFeaturedHovered(false)}
-            className="flex h-20 items-center justify-center rounded-xl bg-white/80 p-3 ring-1 ring-indigo-100 dark:bg-slate-900/70 dark:ring-indigo-900"
+            className="flex h-24 items-center justify-center rounded-2xl bg-white/80 p-3 ring-1 ring-indigo-100 dark:bg-slate-900/70 dark:ring-indigo-900"
           >
             <StudioIcon icon={FEATURED_STUDIO.icon} active={featuredHovered} />
           </span>

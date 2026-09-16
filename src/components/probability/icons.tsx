@@ -69,19 +69,19 @@ export function TwinDice({ active = false }: { active?: boolean }) {
   )
 }
 
-function IconFrame({ children, label }: { children: ReactNode; label: string }) {
+function IconFrame({ children, label, size = 72 }: { children: ReactNode; label: string; size?: number }) {
   return (
-    <svg viewBox="0 0 72 72" width="56" height="56" role="img" aria-label={label}>
+    <svg viewBox="0 0 72 72" width={size} height={size} role="img" aria-label={label}>
       {children}
     </svg>
   )
 }
 
-export function LabIcon({ id }: { id: string }) {
+export function LabIcon({ id, size = 72 }: { id: string; size?: number }) {
   switch (id) {
     case 'sample-space-events':
       return (
-        <IconFrame label="Sample space die">
+        <IconFrame size={size} label="Sample space die">
           <rect x="14" y="16" width="40" height="40" rx="10" fill="#fff" stroke="#fecaca" strokeWidth="2" />
           <rect x="18" y="20" width="40" height="40" rx="10" fill="#fff1f2" />
           <rect x="16" y="14" width="40" height="40" rx="10" fill="#fff" stroke="#fda4af" strokeWidth="1.5" />
@@ -94,14 +94,14 @@ export function LabIcon({ id }: { id: string }) {
       )
     case 'set-operations':
       return (
-        <IconFrame label="Overlapping sets">
+        <IconFrame size={size} label="Overlapping sets">
           <circle cx="30" cy="36" r="16" fill="#60a5fa" opacity="0.85" />
           <circle cx="42" cy="36" r="16" fill="#34d399" opacity="0.75" />
         </IconFrame>
       )
     case 'probability-rules':
       return (
-        <IconFrame label="Probability rules">
+        <IconFrame size={size} label="Probability rules">
           <text x="16" y="48" fontSize="36" fontWeight="800" fill="#2563eb" fontFamily="Georgia, serif">
             Σ
           </text>
@@ -109,14 +109,14 @@ export function LabIcon({ id }: { id: string }) {
       )
     case 'conditional-probability':
       return (
-        <IconFrame label="Conditional overlap">
+        <IconFrame size={size} label="Conditional overlap">
           <circle cx="30" cy="36" r="15" fill="none" stroke="#22c55e" strokeWidth="4" />
           <circle cx="42" cy="36" r="15" fill="none" stroke="#86efac" strokeWidth="4" />
         </IconFrame>
       )
     case 'independence':
       return (
-        <IconFrame label="Independence link">
+        <IconFrame size={size} label="Independence link">
           <path d="M24 28a10 10 0 1 0 0 16h6" fill="none" stroke="#f59e0b" strokeWidth="5" strokeLinecap="round" />
           <path d="M42 28h6a10 10 0 1 1 0 16h-6" fill="none" stroke="#3b82f6" strokeWidth="5" strokeLinecap="round" />
           <rect x="28" y="33" width="16" height="6" rx="3" fill="#f59e0b" />
@@ -124,14 +124,14 @@ export function LabIcon({ id }: { id: string }) {
       )
     case 'bayes-theorem':
       return (
-        <IconFrame label="Bayes density">
+        <IconFrame size={size} label="Bayes density">
           <path d="M10 50 C20 50 22 18 36 18 C50 18 52 50 62 50" fill="none" stroke="#8b5cf6" strokeWidth="3.5" />
           <path d="M10 50 C20 50 22 18 36 18 C50 18 52 50 62 50 V54 H10 Z" fill="#ddd6fe" opacity="0.85" />
         </IconFrame>
       )
     case 'law-of-total-probability':
       return (
-        <IconFrame label="Branching paths">
+        <IconFrame size={size} label="Branching paths">
           <circle cx="18" cy="36" r="5" fill="#22c55e" />
           <circle cx="40" cy="20" r="5" fill="#86efac" />
           <circle cx="40" cy="36" r="5" fill="#4ade80" />
@@ -143,7 +143,7 @@ export function LabIcon({ id }: { id: string }) {
       )
     case 'counting-techniques':
       return (
-        <IconFrame label="Counting bars">
+        <IconFrame size={size} label="Counting bars">
           <rect x="16" y="38" width="10" height="18" rx="3" fill="#fdba74" />
           <rect x="31" y="26" width="10" height="30" rx="3" fill="#fb923c" />
           <rect x="46" y="16" width="10" height="40" rx="3" fill="#f97316" />
@@ -151,7 +151,7 @@ export function LabIcon({ id }: { id: string }) {
       )
     case 'probability-tree-venn':
       return (
-        <IconFrame label="Probability tree">
+        <IconFrame size={size} label="Probability tree">
           <circle cx="16" cy="36" r="5" fill="#fb923c" />
           <circle cx="36" cy="22" r="5" fill="#60a5fa" />
           <circle cx="36" cy="50" r="5" fill="#f87171" />
@@ -164,7 +164,7 @@ export function LabIcon({ id }: { id: string }) {
       )
     default:
       return (
-        <IconFrame label="Lab">
+        <IconFrame size={size} label="Lab">
           <circle cx="36" cy="36" r="16" fill="#dbeafe" />
         </IconFrame>
       )

@@ -20,7 +20,7 @@ export function StudioCard({ studio }: { studio: Studio }) {
       className={`group flex h-full flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-lg dark:border-slate-800 dark:bg-slate-900 ${accent.ring} ${FOCUS_RING}`}
     >
       <div className="flex items-start gap-3">
-        <span className={`flex h-14 w-16 shrink-0 items-center justify-center rounded-xl p-2 ${accent.wash}`}>
+        <span className={`flex h-16 w-[4.5rem] shrink-0 items-center justify-center rounded-2xl p-2 ${accent.wash}`}>
           <StudioIcon icon={studio.icon} active={hovered} />
         </span>
         <span className="min-w-0 flex-1">

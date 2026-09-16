@@ -10,7 +10,7 @@ import {
   loadAnovaProgress,
   nextIncompleteAnovaLab,
 } from '../../lib/anovaStudio'
-import { AnovaHeroArt, AppIcon, FeatureIcon, LabCardArt } from './icons'
+import { AnovaHeroArt, AppIcon, FeatureIcon, LabCardArt, LabIcon } from './icons'
 import { AnovaChrome } from './shell'
 
 const FEATURES = [
@@ -82,14 +82,17 @@ export function AnovaStudioHome() {
             return (
               <article key={lab.slug} className="anova-card anova-home-card flex h-full flex-col p-5">
                 <div className="flex items-start justify-between gap-3">
-                  <span className="grid h-7 w-7 place-items-center rounded-full bg-slate-50 text-xs font-black text-slate-400 dark:bg-slate-800">
-                    {index + 1}
-                  </span>
-                  {complete && (
-                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
-                      Done
+                  <LabIcon id={lab.slug} />
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="grid h-7 w-7 place-items-center rounded-full bg-slate-50 text-xs font-black text-slate-400 dark:bg-slate-800">
+                      {index + 1}
                     </span>
-                  )}
+                    {complete && (
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                        Done
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <h3 className="mt-3 text-[15px] font-black leading-snug text-slate-950 dark:text-white">{lab.title}</h3>
                 <p className="mt-1 text-sm leading-5 text-slate-500">{ANOVA_HOME_COPY[lab.slug]?.blurb ?? lab.summary}</p>

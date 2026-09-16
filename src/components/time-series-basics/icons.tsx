@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-function Frame({ children, label, size = 56 }: { children: ReactNode; label: string; size?: number }) {
+function Frame({ children, label, size = 72 }: { children: ReactNode; label: string; size?: number }) {
   return (
     <svg viewBox="0 0 72 72" width={size} height={size} role="img" aria-label={label}>
       {children}
@@ -45,7 +45,7 @@ export function FeatureIcon({ name }: { name: 'labs' | 'world' | 'steps' | 'visu
   )
 }
 
-export function LabIcon({ id, size = 40 }: { id: string; size?: number }) {
+export function LabIcon({ id, size = 72 }: { id: string; size?: number }) {
   switch (id) {
     case 'time-plot':
       return (

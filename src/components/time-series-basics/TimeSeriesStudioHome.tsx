@@ -11,7 +11,7 @@ import {
   tsNextStudioPath,
   valuesOf,
 } from '../../lib/timeSeriesBasics'
-import { DomainIcon, FeatureIcon, TimeSeriesHeroArt } from './icons'
+import { DomainIcon, FeatureIcon, LabIcon, TimeSeriesHeroArt } from './icons'
 import { Sparkline } from './plots'
 import { TimeSeriesFrame } from './shell'
 
@@ -105,6 +105,7 @@ export function TimeSeriesStudioHome() {
           {TS_STUDIO.labs.map((lab, index) => (
             <Link key={lab.slug} to={tsLabPath(lab.slug)} className="ts-card ts-home-card flex h-full flex-col p-5">
               <div className="flex items-start justify-between gap-3">
+                <LabIcon id={lab.slug} />
                 <span className="grid h-7 w-7 place-items-center rounded-full bg-slate-50 text-xs font-black text-slate-400 dark:bg-slate-800">
                   {index + 1}
                 </span>

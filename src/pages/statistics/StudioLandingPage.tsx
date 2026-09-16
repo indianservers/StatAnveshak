@@ -23,6 +23,7 @@ import { CorrelationStudioHome } from '../../components/correlation-association/
 import { RegressionStudioHome } from '../../components/regression-studio/RegressionStudioHome'
 import { TimeSeriesStudioHome } from '../../components/time-series-basics/TimeSeriesStudioHome'
 import { AnovaStudioHome } from '../../components/anova-studio/AnovaStudioHome'
+import { StudioHomeScreen } from '../../components/statistics/StudioHomeScreen'
 import { PF_STUDIO_SLUG } from '../../lib/probabilityFoundations'
 import { RV_STUDIO_SLUG } from '../../lib/randomVariables'
 import { DS_STUDIO_SLUG } from '../../lib/descriptiveStatistics'
@@ -50,6 +51,17 @@ export function StudioLandingPage() {
   if (studio.slug === REG_STUDIO_SLUG) return <RegressionStudioHome />
   if (studio.slug === TS_STUDIO_SLUG) return <TimeSeriesStudioHome />
   if (studio.slug === ANOVA_STUDIO_SLUG) return <AnovaStudioHome />
+  if (
+    studio.slug === 'estimation' ||
+    studio.slug === 'hypothesis-testing' ||
+    studio.slug === 'nonparametric-statistics' ||
+    studio.slug === 'reliability-survival' ||
+    studio.slug === 'multivariate-statistics' ||
+    studio.slug === 'statistical-simulation' ||
+    studio.slug === 'quality-decision-making'
+  ) {
+    return <StudioHomeScreen studio={studio} />
+  }
 
   const accent = ACCENTS[studio.accent]
   const category = STUDIO_CATEGORIES.find((item) => item.id === studio.category)
