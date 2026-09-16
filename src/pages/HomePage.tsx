@@ -32,7 +32,9 @@ import { SAMPLE_DATASETS } from '../lib/sampleData'
 import { sampleToDataset } from '../lib/dataset'
 import { saveDataset } from '../lib/storage'
 import type { Dataset, Project, SampleDataset } from '../types'
-import { LearnHome } from './LearnHome'
+import { StudiosHomePage } from './statistics/StudiosHomePage'
+import { AllStudiosSection } from '../components/statistics/AllStudiosSection'
+import { HomeWelcome } from '../components/home/HomeWelcome'
 
 type HomeMode = 'overview' | 'datasets' | 'guided' | 'recent'
 type DatasetSort = 'popular' | 'name' | 'rows' | 'columns'
@@ -174,7 +176,7 @@ export function HomePage() {
     setPage(1)
   }
 
-  if (workspaceMode === 'learn') return <LearnHome />
+  if (workspaceMode === 'learn') return <StudiosHomePage />
 
   return (
     <main className="min-w-0 bg-slate-50/70 px-4 py-5 text-slate-900 dark:bg-slate-950 dark:text-slate-100 sm:px-6 lg:px-8">
@@ -295,21 +297,8 @@ function OverviewMode({
 }) {
   return (
     <>
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h1 className="text-3xl font-black tracking-tight text-slate-950 dark:text-white sm:text-4xl">
-              Stat <span className="text-indigo-600 dark:text-indigo-400">Anveshak</span>
-            </h1>
-            <p className="mt-1 text-base font-bold text-slate-700 dark:text-slate-300">Statistics Studio</p>
-          </div>
-          <p className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-2 text-sm font-medium text-slate-600 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700">
-            <ShieldCheck size={16} className="text-indigo-500" />
-            Your data stays on your device.
-          </p>
-        </div>
-        <WorkspaceStatus activeDataset={activeDataset} datasetCount={datasets.length} />
-      </section>
+      <HomeWelcome />
+      <WorkspaceStatus activeDataset={activeDataset} datasetCount={datasets.length} />
 
       {activeDataset && <LoadedDatasetPanel dataset={activeDataset} profile={datasetStats} onOpenDataset={onOpenDataset} />}
 
@@ -324,6 +313,8 @@ function OverviewMode({
         <RecentWorkPanel projects={projects} datasets={datasets} recentPages={recentPages} onOpenDataset={onOpenDataset} onLoadSample={onLoadSample} />
         <InsightPreview dataset={previewDataset} labelledAsSample={!activeDataset} />
       </div>
+
+      <AllStudiosSection />
 
       <section className="rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50 via-white to-cyan-50 p-4 shadow-sm dark:border-indigo-900/60 dark:from-indigo-950/30 dark:via-slate-900 dark:to-cyan-950/20">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -349,7 +340,7 @@ function WorkspaceStatus({ activeDataset, datasetCount }: { activeDataset: Datas
   ]
 
   return (
-    <div className="mt-5 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/50 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/50 sm:grid-cols-2 xl:grid-cols-4">
       {items.map(({ icon: Icon, label, value }) => (
         <div key={label} className="flex items-center gap-3 rounded-xl bg-white p-3 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-300">

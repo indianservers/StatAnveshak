@@ -27,6 +27,7 @@ import {
   Search,
   Settings,
   Sigma,
+  Sparkles,
   GraduationCap,
   Star,
   Table2,
@@ -40,6 +41,7 @@ import {
 } from 'lucide-react'
 import { useStore } from '../../store/useStore'
 import { LEARN_CHAPTERS } from '../../lib/learnChapters'
+import { searchLearning, STUDIOS_ROOT } from '../../lib/statisticsStudios'
 
 const NAV_GROUPS = [
   {
@@ -124,6 +126,8 @@ const CHAPTER_ICONS = {
 
 const LEARN_NAV = [
   { to: '/', icon: Home, label: 'Chapters' },
+  { to: STUDIOS_ROOT, icon: Layers, label: 'Studios' },
+  { to: '/distributions', icon: Activity, label: 'Distributions Studio' },
   { to: '/learn', icon: BookOpen, label: 'Core labs' },
   ...LEARN_CHAPTERS.map((chapter) => ({
     to: chapter.href,
@@ -166,8 +170,18 @@ export function Sidebar() {
   const filteredGroups = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (workspaceMode === 'learn') {
-      const items = q ? LEARN_NAV.filter((item) => item.label.toLowerCase().includes(q)) : LEARN_NAV
-      return [{ label: 'Learn', items }]
+      if (!q) return [{ label: 'Learn', items: LEARN_NAV }]
+      const items = LEARN_NAV.filter((item) => item.label.toLowerCase().includes(q))
+      // Learning search is scoped to the studio config so it never touches dataset/column search.
+      const learningItems = searchLearning(q, 8).map((hit) => ({
+        to: hit.path,
+        icon: hit.kind === 'studio' ? Layers : hit.kind === 'lab' ? FlaskConical : Sparkles,
+        label: hit.kind === 'concept' ? `${hit.label} — ${hit.context}` : hit.label,
+      }))
+      return [
+        { label: 'Learn', items },
+        { label: 'Studios & labs', items: learningItems },
+      ].filter((group) => group.items.length > 0)
     }
     const groups = NAV_GROUPS.map((group) => ({
       ...group,

@@ -25,6 +25,9 @@ const ComputingModulesPage = lazy(() => import('./pages/ComputingModulesPage').t
 const SyllabusModulesPage = lazy(() => import('./pages/SyllabusModulesPage').then((m) => ({ default: m.SyllabusModulesPage })))
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })))
 const ReportsPage = lazy(() => import('./pages/ReportsPage').then((m) => ({ default: m.ReportsPage })))
+const StudiosHomePage = lazy(() => import('./pages/statistics/StudiosHomePage').then((m) => ({ default: m.StudiosHomePage })))
+const StudioLandingPage = lazy(() => import('./pages/statistics/StudioLandingPage').then((m) => ({ default: m.StudioLandingPage })))
+const LabPage = lazy(() => import('./pages/statistics/LabPage').then((m) => ({ default: m.LabPage })))
 const LearnPage = lazy(() => import('./pages/LearnPage').then((m) => ({ default: m.LearnPage })))
 const ChapterPage = lazy(() => import('./pages/ChapterPage').then((m) => ({ default: m.ChapterPage })))
 const ClassroomPage = lazy(() => import('./pages/ClassroomPage').then((m) => ({ default: m.ClassroomPage })))
@@ -78,6 +81,9 @@ function App() {
               <Route path="syllabus/:moduleKey" element={<SyllabusModulesPage />} />
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="reports" element={<ReportsPage />} />
+              <Route path="statistics" element={<StudiosHomePage />} />
+              <Route path="statistics/:studioSlug" element={<StudioLandingPage />} />
+              <Route path="statistics/:studioSlug/:labSlug" element={<LabPage />} />
               <Route path="learn" element={<LearnPage />} />
               <Route path="learn/:chapterId" element={<ChapterPage />} />
               <Route path="classroom" element={<ClassroomPage />} />

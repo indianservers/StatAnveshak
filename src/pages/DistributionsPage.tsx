@@ -320,7 +320,10 @@ export function DistributionsPage() {
   const suggestedFitColumn = useMemo(() => preferredNumericColumn(fitDataset, numericColumns, dist), [dist, fitDataset, numericColumns])
   const effectiveFitColumn = fitColumn || suggestedFitColumn || numericColumns[0] || ''
   const automaticFitValues = useMemo(() => valuesForColumn(fitDataset, effectiveFitColumn), [effectiveFitColumn, fitDataset])
-  const visibleFitValues = fitValues.length ? fitValues : automaticFitValues
+  const visibleFitValues = fitValues
+  const overlayData = dist.id === 'empirical'
+    ? (fitValues.length ? fitValues : automaticFitValues)
+    : (studioMode === 'explore' && stageTool === 'shape' ? [] : visibleFitValues)
   const visibleFitResult = useMemo(() => fitResult ?? (visibleFitValues.length > 1 ? goodnessOfFit(dist, cleanParams, visibleFitValues) : null), [cleanParams, dist, fitResult, visibleFitValues])
   const fitSummary = useMemo(() => summarizeFit(visibleFitValues, fitDataset, effectiveFitColumn), [effectiveFitColumn, fitDataset, visibleFitValues])
   const probability = probabilityAnswer(dist, cleanParams, questionType, Number(x1), Number(x2), Number(q), visibleFitValues)
@@ -455,65 +458,31 @@ export function DistributionsPage() {
 
       <main className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-3 p-3 sm:p-4 lg:p-4">
-          {!activeDataset && (
-            <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-800 dark:border-indigo-900/60 dark:bg-indigo-950/30 dark:text-indigo-200 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-3">
-                <Upload size={18} className="mt-0.5 shrink-0" />
-                <div>
-                  <p className="font-bold">Explore, learn and simulate without uploading data.</p>
-                  <p className="text-xs opacity-80">Use Fit Data mode when you want real diagnostics from a loaded or sample dataset.</p>
-                </div>
-              </div>
-              <Link to="/data/upload" className="rounded-xl bg-indigo-600 px-3 py-2 text-center text-xs font-bold text-white hover:bg-indigo-700">Open datasets</Link>
+          <div className="flex flex-col gap-3 rounded-2xl border border-indigo-100 bg-indigo-50/80 p-4 text-sm text-indigo-900 dark:border-indigo-900/60 dark:bg-indigo-950/30 dark:text-indigo-200 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-bold">Learning tools are ready without a dataset</p>
+              <p className="mt-0.5 text-xs opacity-80">Upload data only when you want to fit a distribution or compare goodness-of-fit against your own column.</p>
             </div>
-          )}
+            <Link to="/data/upload" className="rounded-xl bg-indigo-600 px-4 py-2.5 text-center text-sm font-bold text-white hover:bg-indigo-700">Upload Data</Link>
+          </div>
 
-          <header className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:flex-row lg:items-center lg:justify-between">
+          <header className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-300">
-                  <FlaskConical size={16} />
-                </span>
-                <h1 className="text-xl font-black tracking-tight text-slate-950 dark:text-white">{dist.name} Distribution</h1>
+                <h1 className="text-3xl font-black tracking-tight text-slate-950 dark:text-white">{dist.name} Distribution</h1>
                 <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-300">{groupLabel(dist)}</span>
               </div>
-              <p className="mt-1 max-w-4xl text-xs leading-5 text-slate-500 dark:text-slate-400">{experience.tagline}</p>
-              <p className="text-xs font-semibold text-slate-400">Support: {dist.support}</p>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500 dark:text-slate-400">{experience.tagline}</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link to="/learn/distributions" className="inline-flex min-h-9 items-center rounded-lg border border-indigo-200 px-3 text-sm font-bold text-indigo-700 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-300">
-                CLT lab
-              </Link>
-              <button type="button" onClick={exportCurve} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800">
-                <Download size={15} /> Export
+              <button type="button" onClick={exportCurve} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800">
+                <Download size={15} /> Curve CSV
               </button>
-              <button type="button" onClick={saveModule} className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-indigo-600 px-3 text-sm font-bold text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                <Save size={15} /> Save Module
+              <button type="button" onClick={saveModule} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-indigo-600 px-3 text-sm font-bold text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <Save size={15} /> Modulate JSON
               </button>
             </div>
           </header>
-
-          <DistributionDataSource
-            datasets={allDatasets}
-            fitDatasetId={fitDataset?.id ?? ''}
-            setFitDatasetId={selectFitDataset}
-            numericColumns={numericColumns}
-            fitColumn={effectiveFitColumn}
-            setFitColumn={(column) => {
-              setFitColumn(column)
-              setFitValues([])
-              setFitComparison([])
-              setFitResult(null)
-            }}
-            loadedCount={visibleFitValues.length}
-            onLoadData={loadFitData}
-            onOpenFit={() => {
-              setStudioMode('fit')
-              setStageTool('fit')
-            }}
-          />
-
-          <ModeTabs tool={stageTool} onPick={pickStage} />
 
           {studioMode === 'explore' && (
             <ExploreMode
@@ -533,11 +502,39 @@ export function DistributionsPage() {
               probability={probability}
               updateParam={updateParam}
               resetParams={resetParams}
-              loadedData={visibleFitValues}
+              loadedData={overlayData}
               binCount={binCount}
               setBinCount={setBinCount}
+              shadeArea={stageTool !== 'shape'}
+              extrasOpen={stageTool !== 'shape'}
             />
           )}
+
+          <details className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <summary className="cursor-pointer text-sm font-black text-slate-950 dark:text-white">Fit, simulate, and extras</summary>
+            <div className="mt-4 space-y-4">
+              <DistributionDataSource
+                datasets={allDatasets}
+                fitDatasetId={fitDataset?.id ?? ''}
+                setFitDatasetId={selectFitDataset}
+                numericColumns={numericColumns}
+                fitColumn={effectiveFitColumn}
+                setFitColumn={(column) => {
+                  setFitColumn(column)
+                  setFitValues([])
+                  setFitComparison([])
+                  setFitResult(null)
+                }}
+                loadedCount={visibleFitValues.length}
+                onLoadData={loadFitData}
+                onOpenFit={() => {
+                  setStudioMode('fit')
+                  setStageTool('fit')
+                }}
+              />
+              <ModeTabs tool={stageTool} onPick={pickStage} />
+            </div>
+          </details>
 
           {studioMode === 'learn' && <LearnMode dist={dist} experience={experience} params={cleanParams} />}
 
@@ -723,6 +720,8 @@ function ExploreMode({
   loadedData,
   binCount,
   setBinCount,
+  shadeArea,
+  extrasOpen,
 }: {
   dist: Distribution
   params: Record<string, number>
@@ -743,9 +742,11 @@ function ExploreMode({
   loadedData: number[]
   binCount: number
   setBinCount: (value: number) => void
+  shadeArea: boolean
+  extrasOpen: boolean
 }) {
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_350px]">
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
       <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div className="flex gap-2">
@@ -754,51 +755,69 @@ function ExploreMode({
             </button>
             <button type="button" onClick={() => setCurveMode('cdf')} className={`rounded-xl px-4 py-2 text-sm font-black ${curveMode === 'cdf' ? 'bg-indigo-600 text-white' : 'border border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300'}`}>CDF</button>
           </div>
-          <div className="flex gap-2">
-            <IconButton label="Zoom in" />
-            <IconButton label="Zoom out" />
-            <IconButton label="Reset view" />
-          </div>
+          <p className="text-xs font-semibold text-slate-400">Support: {dist.support}</p>
         </div>
-        <DistributionVisual dist={dist} params={params} experience={experience} curveMode={curveMode} questionType={questionType} x1={Number(x1)} x2={Number(x2)} q={Number(q)} loadedData={loadedData} binCount={binCount} />
+        <DistributionVisual dist={dist} params={params} experience={experience} curveMode={curveMode} questionType={questionType} x1={Number(x1)} x2={Number(x2)} q={Number(q)} loadedData={loadedData} binCount={binCount} shadeArea={shadeArea} />
       </section>
 
       <ParameterControls dist={dist} params={params} updateParam={updateParam} resetParams={resetParams} />
 
-      <ProbabilityComposer
-        dist={dist}
-        questionType={questionType}
-        setQuestionType={setQuestionType}
-        x1={x1}
-        setX1={setX1}
-        x2={x2}
-        setX2={setX2}
-        q={q}
-        setQ={setQ}
-        probability={probability}
-      />
-
-      <section className="grid gap-4 xl:col-span-2 lg:grid-cols-3">
-        <FormulaCard dist={dist} />
-        <IntuitionCard experience={experience} dist={dist} />
-        <TryItCard dist={dist} params={params} loadedData={loadedData} />
-      </section>
+      {extrasOpen && (
+        <>
+          <ProbabilityComposer
+            dist={dist}
+            questionType={questionType}
+            setQuestionType={setQuestionType}
+            x1={x1}
+            setX1={setX1}
+            x2={x2}
+            setX2={setX2}
+            q={q}
+            setQ={setQ}
+            probability={probability}
+          />
+          <section className="grid gap-4 xl:col-span-2 lg:grid-cols-3">
+            <FormulaCard dist={dist} />
+            <IntuitionCard experience={experience} dist={dist} />
+            <TryItCard dist={dist} params={params} loadedData={loadedData} />
+          </section>
+        </>
+      )}
 
       <details className="xl:col-span-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <summary className="cursor-pointer text-sm font-black text-slate-950 dark:text-white">More tools for this family</summary>
-        <p className="mt-2 text-sm text-slate-500">Calculators and extras live here so the stage stays the lesson.</p>
+        <summary className="cursor-pointer text-sm font-black text-slate-950 dark:text-white">Notes, formulas, and family tools</summary>
         <div className="mt-4 space-y-4">
+          {!extrasOpen && (
+            <>
+              <ProbabilityComposer
+                dist={dist}
+                questionType={questionType}
+                setQuestionType={setQuestionType}
+                x1={x1}
+                setX1={setX1}
+                x2={x2}
+                setX2={setX2}
+                q={q}
+                setQ={setQ}
+                probability={probability}
+              />
+              <section className="grid gap-4 lg:grid-cols-3">
+                <FormulaCard dist={dist} />
+                <IntuitionCard experience={experience} dist={dist} />
+                <TryItCard dist={dist} params={params} loadedData={loadedData} />
+              </section>
+            </>
+          )}
+          <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <InfoStrip icon={Info} title="Assumptions" items={experience.assumptions} />
+            <InfoStrip icon={AlertTriangle} title="Common mistakes" items={experience.mistakes} />
+            <InfoStrip icon={Layers3} title="Related distributions" items={experience.related.map((item) => `${DISTRIBUTION_BY_ID[item.id].name}: ${item.note}`)} />
+            <InfoStrip icon={BookOpen} title="Parameter meaning" items={dist.params.length ? dist.params.map((param) => `${param.key}: ${param.label}`) : ['Fixed or data-driven distribution.']} />
+          </section>
           <DistributionDepthPanel dist={dist} params={params} loadedData={loadedData} probability={probability} />
           <DistributionSpecificToolsPanel dist={dist} params={params} loadedData={loadedData} />
         </div>
       </details>
-
-      <section className="grid gap-3 xl:col-span-2 md:grid-cols-2 xl:grid-cols-4">
-        <InfoStrip icon={Info} title="Assumptions" items={experience.assumptions} />
-        <InfoStrip icon={AlertTriangle} title="Common mistakes" items={experience.mistakes} />
-        <InfoStrip icon={Layers3} title="Related distributions" items={experience.related.map((item) => `${DISTRIBUTION_BY_ID[item.id].name}: ${item.note}`)} />
-        <InfoStrip icon={BookOpen} title="Parameter meaning" items={dist.params.length ? dist.params.map((param) => `${param.key}: ${param.label}`) : ['Fixed or data-driven distribution.']} />
-      </section>
 
       {dist.id === 'empirical' && (
         <section className="xl:col-span-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -825,7 +844,7 @@ function ParameterControls({ dist, params, updateParam, resetParams }: { dist: D
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="font-black text-slate-950 dark:text-white">Distribution Controls</h2>
+        <h2 className="font-black text-slate-950 dark:text-white">Parameters</h2>
         <button type="button" onClick={resetParams} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-indigo-600 dark:hover:bg-slate-800" aria-label="Reset parameters">
           <RefreshCw size={16} />
         </button>
@@ -861,16 +880,15 @@ function ParameterControls({ dist, params, updateParam, resetParams }: { dist: D
           ))}
         </div>
       )}
-      <div className={`mt-5 grid gap-2 ${dist.family === 'multivariate' ? 'grid-cols-1' : 'grid-cols-3'}`}>
+      <div className={`mt-5 grid gap-2 ${dist.family === 'multivariate' ? 'grid-cols-1' : 'grid-cols-2'}`}>
         <Metric label="E[X]" value={controlExpectedValue(dist, params)} />
         <Metric label="Var(X)" value={controlVarianceValue(dist, params)} />
-        <Metric label="Support" value={controlSupportValue(dist)} />
       </div>
     </section>
   )
 }
 
-function DistributionVisual({ dist, params, experience, curveMode, questionType, x1, x2, q, loadedData, binCount }: { dist: Distribution; params: Record<string, number>; experience: DistributionExperience; curveMode: CurveMode; questionType: QuestionType; x1: number; x2: number; q: number; loadedData: number[]; binCount: number }) {
+function DistributionVisual({ dist, params, experience, curveMode, questionType, x1, x2, q, loadedData, binCount, shadeArea }: { dist: Distribution; params: Record<string, number>; experience: DistributionExperience; curveMode: CurveMode; questionType: QuestionType; x1: number; x2: number; q: number; loadedData: number[]; binCount: number; shadeArea: boolean }) {
   if (dist.id === 'bernoulli') return <BernoulliVisual params={params} />
   if (dist.id === 'hypergeometric') return <HypergeometricVisual dist={dist} params={params} />
   if (dist.id === 'poisson') return <PoissonVisual dist={dist} params={params} questionType={questionType} x1={x1} x2={x2} />
@@ -884,10 +902,10 @@ function DistributionVisual({ dist, params, experience, curveMode, questionType,
   if (dist.id === 'dirichlet') return <DirichletVisual params={params} />
   if (dist.id === 'empirical') return <EmpiricalVisual values={loadedData} binCount={binCount} />
   if (dist.family === 'discrete') return <DiscreteBarsVisual dist={dist} params={params} questionType={questionType} x1={x1} x2={x2} title={experience.intuition} />
-  return <ContinuousCurveVisual dist={dist} params={params} curveMode={curveMode} questionType={questionType} x1={x1} x2={x2} q={q} loadedData={loadedData} />
+  return <ContinuousCurveVisual dist={dist} params={params} curveMode={curveMode} questionType={questionType} x1={x1} x2={x2} q={q} loadedData={loadedData} shadeArea={shadeArea} />
 }
 
-function ContinuousCurveVisual({ dist, params, curveMode, questionType, x1, x2, q, loadedData }: { dist: Distribution; params: Record<string, number>; curveMode: CurveMode; questionType: QuestionType; x1: number; x2: number; q: number; loadedData: number[] }) {
+function ContinuousCurveVisual({ dist, params, curveMode, questionType, x1, x2, q, loadedData, shadeArea = false }: { dist: Distribution; params: Record<string, number>; curveMode: CurveMode; questionType: QuestionType; x1: number; x2: number; q: number; loadedData: number[]; shadeArea?: boolean }) {
   const curve = curvePoints(dist, params, curveMode === 'density' ? 'density' : 'cdf', loadedData)
   const points = curve.x.map((x, index) => ({ x, y: curve.y[index] })).filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y))
   const dataValues = loadedData.filter(Number.isFinite)
@@ -914,10 +932,15 @@ function ContinuousCurveVisual({ dist, params, curveMode, questionType, x1, x2, 
   const baseline = height - bottom
   const shadeLow = questionType === 'right' ? x1 : questionType === 'inverse' ? dist.inv(clamp(q, 0.001, 0.999), params, loadedData) : Math.min(x1, x2)
   const shadeHigh = questionType === 'left' || questionType === 'inverse' ? x1 : Math.max(x1, x2)
-  const shadePoints = points.filter((point) => questionType === 'right' ? point.x >= shadeLow : point.x >= shadeLow && point.x <= shadeHigh)
+  const shadePoints = shadeArea ? points.filter((point) => questionType === 'right' ? point.x >= shadeLow : point.x >= shadeLow && point.x <= shadeHigh) : []
   const shadePath = shadePoints.length ? `${shadePoints.map((point, index) => `${index ? 'L' : 'M'} ${px(point.x).toFixed(1)} ${py(point.y).toFixed(1)}`).join(' ')} L ${px(shadePoints[shadePoints.length - 1].x).toFixed(1)} ${baseline} L ${px(shadePoints[0].x).toFixed(1)} ${baseline} Z` : ''
   const mu = params.mu ?? 0
-  const sigma = params.sigma ?? params.s ?? 1
+  const splitAt = dist.id === 'standard_normal' ? 0 : mu
+  const leftFillPoints = !shadeArea && curveMode === 'density' ? points.filter((point) => point.x <= splitAt) : []
+  const rightFillPoints = !shadeArea && curveMode === 'density' ? points.filter((point) => point.x >= splitAt) : []
+  const fillPath = (fillPoints: Array<{ x: number; y: number }>) => fillPoints.length
+    ? `${fillPoints.map((point, index) => `${index ? 'L' : 'M'} ${px(point.x).toFixed(1)} ${py(point.y).toFixed(1)}`).join(' ')} L ${px(fillPoints[fillPoints.length - 1].x).toFixed(1)} ${baseline} L ${px(fillPoints[0].x).toFixed(1)} ${baseline} Z`
+    : ''
 
   return (
     <div className="relative">
@@ -928,8 +951,10 @@ function ContinuousCurveVisual({ dist, params, curveMode, questionType, x1, x2, 
         {Array.from({ length: 5 }, (_, index) => (
           <line key={`h-${index}`} x1={left} x2={width - right} y1={top + index * ((baseline - top) / 4)} y2={top + index * ((baseline - top) / 4)} stroke="#e2e8f0" strokeDasharray="4 4" />
         ))}
+        {fillPath(leftFillPoints) && <path d={fillPath(leftFillPoints)} fill="#10b981" opacity="0.22" />}
+        {fillPath(rightFillPoints) && <path d={fillPath(rightFillPoints)} fill="#6366f1" opacity="0.18" />}
         {shadePath && <path d={shadePath} fill="url(#probFill)" opacity="0.85" />}
-        <path d={`${path} L ${px(maxX)} ${baseline} L ${px(minX)} ${baseline} Z`} fill="rgba(99,102,241,0.12)" />
+        {shadeArea && <path d={`${path} L ${px(maxX)} ${baseline} L ${px(minX)} ${baseline} Z`} fill="rgba(99,102,241,0.08)" />}
         {dataBins.map((bin, index) => {
           const density = histogramDensities[index]
           const x = px(bin.start)
@@ -950,9 +975,9 @@ function ContinuousCurveVisual({ dist, params, curveMode, questionType, x1, x2, 
           <line key={`${value}-${index}`} x1={px(value)} x2={px(value)} y1={baseline - 12} y2={baseline} stroke="#059669" strokeOpacity="0.28" />
         ))}
         <path d={path} fill="none" stroke="#4f46e5" strokeWidth="3" />
-        {dist.id === 'normal' && curveMode === 'density' && [-2, -1, 0, 1, 2].map((z) => (
-          <line key={z} x1={px(mu + z * sigma)} x2={px(mu + z * sigma)} y1={top + 16} y2={baseline} stroke={z === 0 ? '#64748b' : '#10b981'} strokeDasharray={z === 0 ? '2 2' : '5 5'} />
-        ))}
+        {dist.id === 'normal' && curveMode === 'density' && (
+          <line x1={px(mu)} x2={px(mu)} y1={top + 16} y2={baseline} stroke="#10b981" strokeWidth="2" />
+        )}
         {dist.id === 'standard_normal' && [-3, -2, -1, 0, 1, 2, 3].map((z) => (
           <text key={z} x={px(z)} y={height - 14} textAnchor="middle" fill="#475569" fontSize="12">{z > 0 ? `+${z}` : z}</text>
         ))}
@@ -972,13 +997,6 @@ function ContinuousCurveVisual({ dist, params, curveMode, questionType, x1, x2, 
           <span className="rounded-lg bg-emerald-50 px-2.5 py-1 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">{dataValues.length.toLocaleString()} loaded values</span>
           <span className="rounded-lg bg-indigo-50 px-2.5 py-1 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">Purple = model</span>
           <span className="rounded-lg bg-emerald-50 px-2.5 py-1 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">Green = data</span>
-        </div>
-      )}
-      {dist.id === 'normal' && (
-        <div className="mt-3 grid gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 sm:grid-cols-3">
-          <span className="rounded-xl bg-indigo-50 px-3 py-2 dark:bg-indigo-950/40">68% within +/-1 sigma</span>
-          <span className="rounded-xl bg-violet-50 px-3 py-2 dark:bg-violet-950/40">95% within +/-2 sigma</span>
-          <span className="rounded-xl bg-emerald-50 px-3 py-2 dark:bg-emerald-950/40">99.7% within +/-3 sigma</span>
         </div>
       )}
     </div>
@@ -2421,10 +2439,6 @@ function FitDiagnosticVisual({ dist, params, values }: { dist: Distribution; par
   )
 }
 
-function IconButton({ label }: { label: string }) {
-  return <button type="button" className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800" aria-label={label}><Gauge size={15} /></button>
-}
-
 function controlExpectedValue(dist: Distribution, params: Record<string, number>) {
   if (dist.id === 'dirichlet') {
     const alpha1 = params.alpha1 ?? 2
@@ -2443,12 +2457,6 @@ function controlVarianceValue(dist: Distribution, params: Record<string, number>
   if (dist.id === 'multinomial') return 'covariance matrix'
   const value = numberFormat(dist.variance(params))
   return value === '-' || value.toLowerCase() === 'undefined' ? 'not defined' : value
-}
-
-function controlSupportValue(dist: Distribution) {
-  if (dist.id === 'dirichlet') return 'probability simplex'
-  if (dist.id === 'multinomial') return 'count vectors summing to n'
-  return dist.support
 }
 
 function Metric({ label, value }: { label: string; value: string | number }) {

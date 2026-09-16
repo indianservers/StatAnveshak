@@ -1,8 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search } from 'lucide-react'
+import {
+  labPath,
+  searchLearning,
+  STATISTICS_STUDIOS,
+  STUDIOS_ROOT,
+  studioPath,
+} from '../../lib/statisticsStudios'
 
-const COMMANDS = [
+type Command = { label: string; path: string; category: string }
+
+const BASE_COMMANDS: Command[] = [
   { label: 'Home', path: '/', category: 'Workspace' },
   { label: 'Upload Data', path: '/data/upload', category: 'Data' },
   { label: 'Preview Data', path: '/data/preview', category: 'Data' },
@@ -83,6 +92,25 @@ const COMMANDS = [
   { label: 'Settings', path: '/settings', category: 'Learn' },
 ]
 
+/** Studios and their labs, derived from the learning config so the two never drift apart. */
+const STUDIO_COMMANDS: Command[] = [
+  { label: 'Probability & Statistics Studios', path: STUDIOS_ROOT, category: 'Studios' },
+  ...STATISTICS_STUDIOS.map((studio) => ({
+    label: `${studio.title} Studio`,
+    path: studioPath(studio),
+    category: 'Studios',
+  })),
+  ...STATISTICS_STUDIOS.flatMap((studio) =>
+    studio.labs.map((lab) => ({
+      label: `${lab.title} — ${studio.title}`,
+      path: labPath(studio.slug, lab.slug),
+      category: 'Labs',
+    })),
+  ),
+]
+
+const COMMANDS: Command[] = [...BASE_COMMANDS, ...STUDIO_COMMANDS]
+
 function highlight(text: string, query: string) {
   const q = query.trim()
   if (!q) return text
@@ -117,12 +145,18 @@ export function CommandPalette() {
   const results = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return COMMANDS
-    return COMMANDS.filter((item) => item.label.toLowerCase().includes(q) || item.path.includes(q) || item.category.toLowerCase().includes(q))
+    const matches = COMMANDS.filter(
+      (item) => item.label.toLowerCase().includes(q) || item.path.includes(q) || item.category.toLowerCase().includes(q),
+    )
+    const concepts: Command[] = searchLearning(q, 12)
+      .filter((hit) => hit.kind === 'concept')
+      .map((hit) => ({ label: `${hit.label} — ${hit.context}`, path: hit.path, category: 'Concepts' }))
+    return [...matches, ...concepts]
   }, [query])
   const grouped = useMemo(() => results.reduce((acc, item) => {
     acc[item.category] = [...(acc[item.category] ?? []), item]
     return acc
-  }, {} as Record<string, typeof COMMANDS>), [results])
+  }, {} as Record<string, Command[]>), [results])
 
   if (!open) return null
 
@@ -152,7 +186,7 @@ export function CommandPalette() {
               <p className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{category}</p>
               {items.map((item) => (
                 <button
-                  key={item.path}
+                  key={`${item.category}-${item.path}-${item.label}`}
                   onClick={() => {
                     navigate(item.path)
                     setOpen(false)

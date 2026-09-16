@@ -55,6 +55,7 @@ const PAGE_NAMES: Record<string, string> = {
   '/modules': 'CS Modules',
   '/dashboard': 'Dashboard',
   '/reports': 'Reports',
+  '/statistics': 'Statistics Studios',
   '/learn': 'Core Statistics',
   '/learn/chance': 'Chance',
   '/learn/compound': 'Compound probability',
