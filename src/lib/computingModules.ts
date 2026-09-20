@@ -46,7 +46,7 @@ export const COMPUTING_MODULES: ComputingModule[] = [
     title: 'Hashing',
     category: 'Data Systems',
     purpose: 'Teach fast lookup, hash buckets, collisions, and why hashes are useful in tables and integrity checks.',
-    concepts: ['Hash function', 'Bucket', 'Collision', 'Load factor', 'Lookup'],
+    concepts: ['Hash function', 'Division method', 'Multiplication method', 'Mid-square', 'Folding', 'Universal hashing', 'Separate chaining', 'Linear probing', 'Quadratic probing', 'Double hashing'],
     steps: ['Enter words or numbers.', 'Map each value to a bucket.', 'Inspect collisions.', 'Change bucket count.', 'Discuss lookup speed versus collision risk.'],
   },
   {

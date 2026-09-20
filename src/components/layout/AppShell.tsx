@@ -10,12 +10,13 @@ import { OnboardingTour } from '../ui/OnboardingTour'
 import { TestRecommenderDrawer } from '../ui/TestRecommenderDrawer'
 import { SeoMetadata } from '../ui/SeoMetadata'
 import { ErrorBoundary } from '../ui/ErrorBoundary'
+import { LoadingState } from '../ui/AppStates'
 import { defaultTeachingSample } from '../../lib/dataset'
 import { saveDataset } from '../../lib/storage'
 
 export function AppShell() {
   const location = useLocation()
-  const { theme, highContrast, largeText, zoomLevel, density, hydrateStorage, addDataset, setActiveDataset, motion, colorblindPalette, captionSize } = useStore()
+  const { theme, highContrast, largeText, zoomLevel, density, hydrateStorage, addDataset, setActiveDataset, motion, colorblindPalette, captionSize, storageStatus } = useStore()
   const darkSurface = theme === 'dark' || theme === 'midnight' || theme === 'forest'
 
   useEffect(() => {
@@ -26,7 +27,11 @@ export function AppShell() {
         const sample = defaultTeachingSample()
         addDataset(sample)
         if (!activeDataset) setActiveDataset(sample)
-        await saveDataset(sample)
+        try {
+          await saveDataset(sample)
+        } catch (error) {
+          console.error('Failed to persist the teaching sample:', error)
+        }
       })
       .catch((error) => {
         console.error('Failed to hydrate browser storage:', error)
@@ -53,7 +58,7 @@ export function AppShell() {
               <div className="flex min-h-full flex-col">
                 <div className="flex-1">
                   <ErrorBoundary resetKey={location.pathname}>
-                    <Outlet />
+                    {storageStatus === 'loading' ? <LoadingState /> : <Outlet />}
                   </ErrorBoundary>
                 </div>
                 <AimerFooter />

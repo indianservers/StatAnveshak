@@ -15,6 +15,7 @@ const descriptives: AnalysisDef[] = [
       { key: 'variables', kind: 'variables', label: 'Variables', role: 'numeric', multiple: true, required: true },
       { key: 'splitBy', kind: 'select', label: 'Split by', role: 'categorical', required: false },
       { key: 'categorical', kind: 'variables', label: 'Frequency tables', role: 'categorical', multiple: true, required: false },
+      { key: 'spreadKind', kind: 'choice', label: 'Variance / SD', required: true, options: [{ value: 'sample', label: 'Sample (n − 1)' }, { value: 'population', label: 'Population (n)' }] },
       { key: 'ciLevel', kind: 'number', label: 'Mean CI level', min: 0.8, max: 0.99, step: 0.01, required: false },
     ],
   },
@@ -108,6 +109,7 @@ const phase2: AnalysisDef[] = [
       { key: 'alternative', kind: 'choice', label: 'Alternative', required: true, options: alt },
       { key: 'equalVariance', kind: 'toggle', label: 'Equal variances (Student t)', default: false },
       { key: 'mannWhitney', kind: 'toggle', label: 'Mann–Whitney U', default: true },
+      { key: 'alpha', kind: 'choice', label: 'α', required: true, options: [{ value: '0.10', label: '0.10' }, { value: '0.05', label: '0.05' }, { value: '0.01', label: '0.01' }] },
     ],
   },
   {
@@ -125,6 +127,7 @@ const phase2: AnalysisDef[] = [
       { key: 'measure2', kind: 'select', label: 'Measure 2', role: 'numeric', required: true },
       { key: 'alternative', kind: 'choice', label: 'Alternative', required: true, options: alt },
       { key: 'wilcoxon', kind: 'toggle', label: 'Wilcoxon signed-rank', default: true },
+      { key: 'alpha', kind: 'choice', label: 'α', required: true, options: [{ value: '0.10', label: '0.10' }, { value: '0.05', label: '0.05' }, { value: '0.01', label: '0.01' }] },
     ],
   },
   {
@@ -142,6 +145,7 @@ const phase2: AnalysisDef[] = [
       { key: 'mu0', kind: 'number', label: 'Test value', required: true, default: 0, step: 0.1 },
       { key: 'alternative', kind: 'choice', label: 'Alternative', required: true, options: alt },
       { key: 'wilcoxon', kind: 'toggle', label: 'Wilcoxon signed-rank', default: true },
+      { key: 'alpha', kind: 'choice', label: 'α', required: true, options: [{ value: '0.10', label: '0.10' }, { value: '0.05', label: '0.05' }, { value: '0.01', label: '0.01' }] },
     ],
   },
   {

@@ -4,6 +4,8 @@ import type { AppTheme } from '../store/useStore'
 import { loadDatasets, deleteDataset, loadProjects, deleteProject } from '../lib/storage'
 import { Trash2, Database, RefreshCw, Check } from 'lucide-react'
 import { LEARN_CHAPTERS } from '../lib/learnChapters'
+import { PageBack } from '../components/ui/PageBack'
+import { removeLocal } from '../lib/safeStorage'
 
 const THEMES: Array<{ key: AppTheme; label: string; swatches: string[] }> = [
   { key: 'light', label: 'Light', swatches: ['#f8fafc', '#ffffff', '#4f46e5'] },
@@ -79,14 +81,15 @@ export function SettingsPage() {
       'sandbox-history',
       'stat-module-favorites',
       'stat-module-recents',
-    ].forEach((key) => localStorage.removeItem(key))
+    ].forEach((key) => removeLocal(key))
     resetZoom()
     setStatus('Local preferences and tutorial progress were reset.')
   }
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold text-slate-800 dark:text-white mb-6">Settings</h1>
+      <PageBack fallback="/" label="Back" />
+      <h1 className="mt-2 text-2xl font-bold text-slate-800 dark:text-white mb-6">Settings</h1>
 
       <div className="space-y-4">
         {/* Theme */}

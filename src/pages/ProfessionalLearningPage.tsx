@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import {
   AlertTriangle,
   BookOpen,
@@ -46,6 +46,7 @@ import {
   type SampleDesign,
   type VariableShape,
 } from '../lib/professionalLearning'
+import { learningPathHref } from '../lib/learningPaths'
 import type { AnalysisLogEntry } from '../types'
 
 type TabKey = 'paths' | 'practice' | 'wizard' | 'assumptions' | 'formulas' | 'datasets' | 'instructor' | 'templates' | 'notebook' | 'share'
@@ -273,6 +274,9 @@ export function ProfessionalLearningPage() {
                   <BookOpen className="text-slate-300" size={22} />
                 </div>
                 <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">{path.outcome}</p>
+                <Link to={learningPathHref(path.id === 'student-foundations' ? 'beginner' : path.id === 'research-methods' ? 'research' : path.id === 'business-analytics' ? 'data' : 'inference')} className="mb-4 inline-flex text-sm font-bold text-indigo-600">
+                  Open interactive flowchart
+                </Link>
                 <div className="mb-4 flex flex-wrap gap-2">
                   {path.modules.map((module) => <span key={module} className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600 dark:bg-slate-700 dark:text-slate-300">{module}</span>)}
                 </div>

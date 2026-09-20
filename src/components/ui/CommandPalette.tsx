@@ -8,6 +8,7 @@ import {
   STUDIOS_ROOT,
   studioPath,
 } from '../../lib/statisticsStudios'
+import { searchGlossary } from '../../lib/glossary'
 
 type Command = { label: string; path: string; category: string }
 
@@ -71,7 +72,12 @@ const BASE_COMMANDS: Command[] = [
   { label: 'Computer Science Modules', path: '/modules', category: 'CS Modules' },
   { label: 'Dashboard', path: '/dashboard', category: 'Output' },
   { label: 'Reports', path: '/reports', category: 'Output' },
-  { label: 'Lesson wall', path: '/dashboard', category: 'Learn' },
+  { label: 'Lesson wall', path: '/learn/wall', category: 'Learn' },
+  { label: 'Curriculum Map', path: '/learn/curriculum', category: 'Learn' },
+  { label: 'Learning Paths', path: '/learn/paths/beginner', category: 'Learn' },
+  { label: 'Beginner Learning Path', path: '/learn/paths/beginner', category: 'Learn' },
+  { label: 'Inference Learning Path', path: '/learn/paths/inference', category: 'Learn' },
+  { label: 'Hashing Lab', path: '/modules/hashing', category: 'CS Modules' },
   { label: 'Classroom', path: '/classroom', category: 'Learn' },
   { label: 'Core Statistics', path: '/learn', category: 'Learn' },
   { label: 'Professional Learning', path: '/professional-learning', category: 'Learn' },
@@ -153,7 +159,12 @@ export function CommandPalette() {
     const concepts: Command[] = searchLearning(q, 12)
       .filter((hit) => hit.kind === 'concept')
       .map((hit) => ({ label: `${hit.label} — ${hit.context}`, path: hit.path, category: 'Concepts' }))
-    return [...matches, ...concepts]
+    const glossary: Command[] = searchGlossary(q).slice(0, 8).map((item) => ({
+      label: item.term,
+      path: `/glossary#${item.slug}`,
+      category: 'Glossary',
+    }))
+    return [...matches, ...concepts, ...glossary]
   }, [query])
   const grouped = useMemo(() => results.reduce((acc, item) => {
     acc[item.category] = [...(acc[item.category] ?? []), item]

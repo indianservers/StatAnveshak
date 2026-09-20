@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Binary, Braces, KeyRound, ListOrdered, Network, Search, ShieldCheck } from 'lucide-react'
 import { COMPUTING_MODULE_BY_KEY, COMPUTING_MODULES, type ComputingModuleKey } from '../lib/computingModules'
+import { HashingLab } from '../components/computing/HashingLab'
 
 const ICONS: Record<ComputingModuleKey, typeof KeyRound> = {
   cryptography: KeyRound,
@@ -209,6 +210,10 @@ function ModuleDemo({ activeKey }: { activeKey: ComputingModuleKey }) {
         ]} />
       </DemoShell>
     )
+  }
+
+  if (activeKey === 'hashing') {
+    return <HashingLab />
   }
 
   return (

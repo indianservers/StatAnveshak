@@ -25,6 +25,7 @@ import { CorrelationLabScreen } from '../../components/correlation-association/C
 import { RegressionLabScreen } from '../../components/regression-studio/RegressionLabScreen'
 import { TimeSeriesLabScreen } from '../../components/time-series-basics/TimeSeriesLabScreen'
 import { AnovaLabScreen } from '../../components/anova-studio/AnovaLabScreen'
+import { RelatedLearning } from '../../components/learning/RelatedLearning'
 import { PF_STUDIO_SLUG } from '../../lib/probabilityFoundations'
 import { RV_STUDIO_SLUG } from '../../lib/randomVariables'
 import { DS_STUDIO_SLUG } from '../../lib/descriptiveStatistics'
@@ -35,11 +36,13 @@ import { CA_STUDIO_SLUG } from '../../lib/correlationAssociation'
 import { REG_STUDIO_SLUG } from '../../lib/regressionStudio'
 import { TS_STUDIO_SLUG } from '../../lib/timeSeriesBasics'
 import { ANOVA_STUDIO_SLUG } from '../../lib/anovaStudio'
+import { useStore } from '../../store/useStore'
 
 export function LabPage() {
   const { studioSlug, labSlug } = useParams()
   const found = getLab(studioSlug, labSlug)
   const [iconActive, setIconActive] = useState(false)
+  const hasDataset = Boolean(useStore((state) => state.activeDataset))
 
   if (!found) return <LabNotFound studioSlug={studioSlug} labSlug={labSlug} />
 
@@ -193,6 +196,19 @@ export function LabPage() {
             </Link>
           )}
         </nav>
+
+        <RelatedLearning
+          items={[
+            next
+              ? { kind: 'next', label: next.title, to: labPath(studio.slug, next.slug), detail: 'Next lab in this studio' }
+              : { kind: 'next', label: studio.title, to: studioPath(studio), detail: 'Back to studio' },
+            { kind: 'studio', label: studio.title, to: studioPath(studio), detail: 'All labs in this studio' },
+            { kind: 'related', label: 'Curriculum Map', to: '/learn/curriculum', detail: 'See where this topic sits' },
+            ...(hasDataset
+              ? [{ kind: 'data' as const, label: 'Try with your data', to: '/analysis/descriptives.statistics', detail: 'Open the analysis workspace' }]
+              : []),
+          ]}
+        />
       </div>
     </main>
   )

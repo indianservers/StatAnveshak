@@ -40,6 +40,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { PageBack } from '../components/ui/PageBack'
 import { DistributionLesson } from '../components/distributions/DistributionLesson'
 import { useReducedMotion } from '../components/visual/useReducedMotion'
 import {
@@ -152,9 +153,12 @@ export function DistributionsPage() {
   return (
     <div className="flex min-h-full flex-col bg-[#f7f8fc] dark:bg-slate-950 lg:flex-row">
       <aside className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95 lg:static lg:z-0 lg:h-auto lg:w-60 lg:shrink-0 lg:overflow-y-auto lg:border-b-0 lg:border-r">
-        <div className="flex items-center gap-2 px-3 pt-3">
-          <FlaskConical size={18} className="text-indigo-500" />
-          <h2 className="font-black text-slate-900 dark:text-white">Distributions Studio</h2>
+        <div className="px-3 pt-3">
+          <PageBack fallback="/statistics" label="Back to Learning" />
+          <div className="mt-2 flex items-center gap-2">
+            <FlaskConical size={18} className="text-indigo-500" />
+            <h2 className="font-black text-slate-900 dark:text-white">Distributions Studio</h2>
+          </div>
         </div>
 
         <label className="block px-3 pb-2 pt-2 lg:hidden">

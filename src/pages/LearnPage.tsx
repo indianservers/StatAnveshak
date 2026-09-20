@@ -22,10 +22,12 @@ import { useStore } from '../store/useStore'
 import { MathText } from '../components/ui/MathText'
 import { CoreLabStudio } from '../components/visual/CoreLabStudio'
 import type { CoreLabId } from '../lib/coreLabs'
+import { readStringArray, writeLocalJson } from '../lib/safeStorage'
+import { PageBack } from '../components/ui/PageBack'
+import { ContinueLearningCard } from '../components/learning/ContinueLearning'
 
 type Level = 'beginner' | 'intermediate' | 'advanced'
 type LabId = CoreLabId
-type StudyMode = 'self-study' | 'exam-prep' | 'classroom'
 
 type Theorem = {
   id: string
@@ -430,24 +432,6 @@ const CASE_STUDIES = [
   ['Finance Risk', 'Model heavy tails, VaR thresholds, bootstrapped uncertainty, and stress scenarios.'],
 ]
 
-const COURSE_MAP = [
-  { title: 'Probability', prereq: 'None', time: '4h', topics: ['Sample spaces', 'Events', 'Conditional probability', 'Counting'] },
-  { title: 'Distributions', prereq: 'Probability', time: '5h', topics: ['PMF/PDF/CDF', 'Expectation', 'Variance', 'Quantiles'] },
-  { title: 'Sampling', prereq: 'Distributions', time: '3h', topics: ['Sampling bias', 'CLT', 'LLN', 'Standard error'] },
-  { title: 'Inference', prereq: 'Sampling', time: '6h', topics: ['Tests', 'p-values', 'Confidence intervals', 'Power'] },
-  { title: 'Regression', prereq: 'Inference', time: '5h', topics: ['OLS', 'Diagnostics', 'Logistic models', 'Confounding'] },
-  { title: 'Bayesian', prereq: 'Probability', time: '4h', topics: ['Prior', 'Likelihood', 'Posterior', 'Decision theory'] },
-  { title: 'Theorems', prereq: 'All tracks', time: '6h', topics: ['Proofs', 'Assumptions', 'Counterexamples', 'Applications'] },
-]
-
-const DAILY_PLAN = [
-  'Read the theorem statement and assumptions.',
-  'Run one simulation with default settings.',
-  'Change one assumption and compare the result.',
-  'Answer two practice questions.',
-  'Write one sentence explaining the idea without formulas.',
-]
-
 const PROBABILITY_PUZZLES = [
   { title: 'Two dice sum', prompt: 'What is P(sum = 7)?', answer: '6 / 36 = 1 / 6' },
   { title: 'At least one head', prompt: 'Two fair coins: P(at least one head)?', answer: '3 / 4' },
@@ -677,10 +661,8 @@ export function LearnPage() {
   const [simulation] = useState<number[]>([])
   const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({})
   const [lessonNotes, setLessonNotes] = useState('')
-  const [completed, setCompleted] = useState<string[]>(() => JSON.parse(localStorage.getItem('learn-progress') ?? '[]') as string[])
-  const [sandboxHistory] = useState<string[]>(() => JSON.parse(localStorage.getItem('sandbox-history') ?? '[]') as string[])
-  const [studyMode, setStudyMode] = useState<StudyMode>('self-study')
-  const [activeTrack, setActiveTrack] = useState('Probability')
+  const [completed, setCompleted] = useState<string[]>(() => readStringArray('learn-progress'))
+  const [sandboxHistory] = useState<string[]>(() => readStringArray('sandbox-history'))
   const [eventA, setEventA] = useState(0.4)
   const [eventB, setEventB] = useState(0.5)
   const [eventAB, setEventAB] = useState(0.2)
@@ -727,15 +709,12 @@ export function LearnPage() {
   const markComplete = (id: string) => {
     const next = completed.includes(id) ? completed.filter((item) => item !== id) : [...completed, id]
     setCompleted(next)
-    localStorage.setItem('learn-progress', JSON.stringify(next))
+    writeLocalJson('learn-progress', next)
   }
 
-  const quizScore = Object.entries(quizAnswers).filter(([index, answer]) => QUIZZES[Number(index)].answer === answer).length
+  const quizScore = Object.entries(quizAnswers).filter(([index, answer]) => QUIZZES[Number(index)]?.answer === answer).length
   const labMean = simulation.length ? mean(simulation) : 0
   const labSd = simulation.length ? sd(simulation) : 0
-  const activeCourse = COURSE_MAP.find((course) => course.title === activeTrack) ?? COURSE_MAP[0]
-  const trackIndex = COURSE_MAP.findIndex((course) => course.title === activeCourse.title)
-  const trackMastery = Math.round(((completed.length / Math.max(THEOREMS.length, 1)) * 45) + ((trackIndex + 1) / COURSE_MAP.length) * 35 + (quizScore / QUIZZES.length) * 20)
   const conditional = eventB > 0 ? eventAB / eventB : 0
   const independent = Math.abs(eventAB - eventA * eventB) < 0.02
   const drillData = [4, 6, 8, 10, outlierValue]
@@ -784,13 +763,21 @@ export function LearnPage() {
       <div className="mx-auto max-w-7xl">
         <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="mb-2 flex items-center gap-2">
+            <PageBack fallback="/" label="Back to Learning" />
+            <div className="mb-2 mt-2 flex items-center gap-2">
               <GraduationCap size={26} className="text-indigo-500" />
               <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Statistics Learning Studio</h1>
             </div>
             <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">
               Core Statistics page for theorems, probability labs, inference simulators, quizzes, proof notes, case studies, and mistake checks in one teaching workspace.
             </p>
+            {completed.length === 0 && (
+              <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
+                <p className="text-sm font-semibold text-slate-800 dark:text-white">No learning activity yet</p>
+                <p className="mt-1 text-sm text-slate-500">Start a learning path to see your progress here.</p>
+                <Link to="/learn/paths/beginner" className="mt-3 inline-flex text-sm font-bold text-indigo-600 hover:text-indigo-700">Open beginner path</Link>
+              </div>
+            )}
           </div>
           <div className="grid grid-cols-4 gap-2 text-center">
             <Metric label="Theorems" value={THEOREMS.length} />
@@ -801,6 +788,10 @@ export function LearnPage() {
           <button onClick={exportLearningReport} className="rounded-md bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 dark:bg-slate-700">
             Export learning report
           </button>
+        </div>
+
+        <div className="mb-6">
+          <ContinueLearningCard />
         </div>
 
         <section className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
@@ -818,8 +809,9 @@ export function LearnPage() {
           <section className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
             <div className="mb-3 flex items-center gap-2">
               <Network size={16} className="text-indigo-500" />
-              <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Learning Paths</h2>
+              <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Theorem tracks</h2>
             </div>
+            <p className="mb-3 text-xs text-slate-500">Filter the theorem cards on this page. For a full flowchart, open Learning Paths.</p>
             <div className="space-y-2">
               {paths.map((path) => (
                 <button
@@ -831,6 +823,9 @@ export function LearnPage() {
                 </button>
               ))}
             </div>
+            <Link to="/learn/paths/beginner" className="mt-3 inline-flex text-sm font-bold text-indigo-600">
+              Open Learning Paths →
+            </Link>
           </section>
 
           <section className="rounded-lg border border-slate-200 bg-white p-4 lg:col-span-3 dark:border-slate-700 dark:bg-slate-800">
@@ -867,46 +862,29 @@ export function LearnPage() {
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-bold text-slate-800 dark:text-white">Complete Curriculum Map</h2>
-              <p className="text-sm text-slate-500">Tracks, prerequisites, study mode, daily plan, estimated time, mastery, and progression.</p>
+              <p className="text-sm text-slate-500">Each topic opens a real page with labs, tools, and a continue button.</p>
             </div>
-            <select value={studyMode} onChange={(event) => setStudyMode(event.target.value as StudyMode)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100">
-              <option value="self-study">Self-study mode</option>
-              <option value="exam-prep">Exam prep mode</option>
-              <option value="classroom">Teacher/classroom mode</option>
-            </select>
+            <Link to="/learn/curriculum" className="inline-flex min-h-10 items-center rounded-xl bg-indigo-600 px-4 text-sm font-bold text-white hover:bg-indigo-700">
+              Open full map
+            </Link>
           </div>
-          <div className="grid gap-3 lg:grid-cols-[1fr_280px]">
-            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-              {COURSE_MAP.map((course, index) => {
-                const locked = index > trackIndex + 1
-                return (
-                  <button
-                    key={course.title}
-                    onClick={() => setActiveTrack(course.title)}
-                    className={`rounded-lg border p-3 text-left ${activeTrack === course.title ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-200 dark:border-slate-700'} ${locked ? 'opacity-60' : ''}`}
-                  >
-                    <div className="mb-1 flex items-center justify-between gap-2">
-                      <span className="font-semibold text-slate-800 dark:text-slate-100">{course.title}</span>
-                      <span className="text-xs text-slate-400">{locked ? 'Locked soon' : course.time}</span>
-                    </div>
-                    <p className="text-xs text-slate-500">Prereq: {course.prereq}</p>
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {course.topics.slice(0, 3).map((topic) => <span key={topic} className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500 dark:bg-slate-700">{topic}</span>)}
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-            <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-900/60">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Active plan</p>
-              <h3 className="mt-1 font-bold text-slate-800 dark:text-white">{activeCourse.title}</h3>
-              <p className="text-xs text-slate-500">Mode: {studyMode.replace('-', ' ')}</p>
-              <div className="my-3 h-2 rounded bg-slate-200 dark:bg-slate-700"><div className="h-2 rounded bg-indigo-500" style={{ width: `${Math.min(100, trackMastery)}%` }} /></div>
-              <p className="text-xs text-slate-500">Mastery estimate: {trackMastery}%</p>
-              <ol className="mt-3 space-y-1 text-xs text-slate-600 dark:text-slate-300">
-                {DAILY_PLAN.map((step, index) => <li key={step}>{index + 1}. {step}</li>)}
-              </ol>
-            </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {[
+              ['Foundations', '/learn/curriculum/foundations', 'Probability, random variables, descriptives, sampling'],
+              ['Inference', '/learn/curriculum/inference', 'CLT, intervals, tests, chi-square, ANOVA'],
+              ['Regression', '/learn/curriculum/regression', 'Correlation, simple and multiple regression'],
+              ['Time Series', '/learn/curriculum/time-series', 'Trend, seasonality, ACF/PACF, ARIMA intuition'],
+              ['Advanced', '/learn/curriculum/advanced', 'Bayesian studios, computing, hashing lab'],
+            ].map(([title, href, detail]) => (
+              <Link
+                key={title}
+                to={href}
+                className="rounded-xl border border-slate-200 p-3 hover:border-indigo-200 hover:bg-indigo-50/50 dark:border-slate-700 dark:hover:border-indigo-800"
+              >
+                <span className="font-semibold text-slate-800 dark:text-white">{title}</span>
+                <span className="mt-1 block text-xs text-slate-500">{detail}</span>
+              </Link>
+            ))}
           </div>
         </section>
 

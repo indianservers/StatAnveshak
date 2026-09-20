@@ -11,11 +11,14 @@ import {
   meanOf,
   medianOf,
   normalApproxOk,
+  parseCltSampleSize,
   percentileInterval,
   runningMeans,
   sampleStatistic,
+  samplingMomentsFor,
   seVsN,
   simulateSampling,
+  specFromParent,
   theoreticalSE,
 } from './samplingDistributionsClt'
 
@@ -148,5 +151,21 @@ describe('SamplingDistributionEngine', () => {
     expect(result.histogram.reduce((sum, bin) => sum + bin.count, 0)).toBe(10000)
     expect(medianOf([1, 3, 8])).toBe(3)
     expect(buildHistogram([1, 1, 2], 2, [1, 3])[0]?.count).toBeGreaterThan(0)
+  })
+
+  it('accepts arbitrary sample sizes instead of a hardcoded list', () => {
+    expect(parseCltSampleSize(7).ok).toBe(true)
+    expect(parseCltSampleSize(43).ok).toBe(true)
+    expect(parseCltSampleSize(0).ok).toBe(false)
+    expect(parseCltSampleSize(-2).ok).toBe(false)
+    expect(parseCltSampleSize(1.5).ok).toBe(false)
+    const exponential = createPopulation(specFromParent('exponential', { lambda: 2 }))
+    const n7 = samplingMomentsFor(exponential, 7)
+    const n43 = samplingMomentsFor(exponential, 43)
+    expect(exponential.mean).toBeCloseTo(0.5, 10)
+    expect(exponential.sd).toBeCloseTo(0.5, 10)
+    expect(n7.se).toBeCloseTo(0.5 / Math.sqrt(7), 10)
+    expect(n43.se).toBeCloseTo(0.5 / Math.sqrt(43), 10)
+    expect(n43.varOfMean).toBeCloseTo((0.5 * 0.5) / 43, 10)
   })
 })

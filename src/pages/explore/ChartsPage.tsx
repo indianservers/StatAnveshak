@@ -6,6 +6,9 @@ import { fdBinCount, scottBinCount } from '../../lib/visualMath'
 import { Download, Save, MessageSquarePlus } from 'lucide-react'
 import * as ss from 'simple-statistics'
 import { DatasetEmptyState } from '../../components/ui/DatasetEmptyState'
+import { NoNumericColumnsState } from '../../components/ui/AppStates'
+import { PageBack } from '../../components/ui/PageBack'
+import { validObservationCount } from '../../lib/datasetGuard'
 
 type ChartType = 'histogram' | 'bar' | 'scatter' | 'box' | 'line' | 'violin'
 type PaletteName = 'Viridis' | 'Cool' | 'Warm' | 'Colorblind-safe'
@@ -76,6 +79,11 @@ export function ChartsPage() {
     const traces: any[] = []
     const xData = numericColumn(activeDataset.data, effectiveXCol)
     const resolvedBins = binRule === 'scott' ? scottBinCount(xData) : binRule === 'fd' ? fdBinCount(xData) : binCount
+    const needsNumeric = chartType !== 'bar'
+    if (needsNumeric && xData.length < 2) {
+      Plotly.purge(plotRef.current)
+      return
+    }
 
     if (chartType === 'histogram') {
       traces.push({ type: 'histogram', x: xData, name: effectiveXCol, marker: { color: PALETTES[palette][0] }, nbinsx: resolvedBins })
@@ -112,11 +120,13 @@ export function ChartsPage() {
         traces.push({ type: 'scatter', mode: 'markers', x: xSlice, y: ySlice, text: pairedRows.map(([, , label]) => label), marker: { color: PALETTES[palette][0], opacity: 0.7, size: 6 } })
       } else {
         const pairs = xSlice.map((x, i) => [x, ySlice[i]] as [number, number])
-        const reg = ss.linearRegression(pairs)
-        const lineFn = ss.linearRegressionLine(reg)
-        const sortedX = [...xSlice].sort((a, b) => a - b)
         traces.push({ type: 'scatter', mode: 'markers', x: xSlice, y: ySlice, name: 'Data', marker: { color: PALETTES[palette][0], opacity: 0.7, size: 5 } })
-        traces.push({ type: 'scatter', mode: 'lines', x: sortedX, y: sortedX.map(lineFn), name: 'Regression', line: { color: PALETTES[palette][2], width: 2 } })
+        if (pairs.length >= 2) {
+          const reg = ss.linearRegression(pairs)
+          const lineFn = ss.linearRegressionLine(reg)
+          const sortedX = [...xSlice].sort((a, b) => a - b)
+          traces.push({ type: 'scatter', mode: 'lines', x: sortedX, y: sortedX.map(lineFn), name: 'Regression', line: { color: PALETTES[palette][2], width: 2 } })
+        }
       }
       layout.xaxis = makeAxis(effectiveXCol, dark)
       layout.yaxis = makeAxis(effectiveYCol, dark)
@@ -136,17 +146,28 @@ export function ChartsPage() {
     }
 
     if (traces.length > 0) {
-      Plotly.react(plotRef.current, traces as Plotly.Data[], layout, { responsive: true, displayModeBar: true })
+      try {
+        Plotly.react(plotRef.current, traces as Plotly.Data[], layout, { responsive: true, displayModeBar: true })
+      } catch (error) {
+        console.error('Chart render failed:', error)
+        Plotly.purge(plotRef.current)
+      }
+    } else {
+      Plotly.purge(plotRef.current)
     }
   }, [activeDataset, chartType, effectiveXCol, effectiveYCol, colorCol, theme, palette, annotation, binRule, binCount])
 
   const downloadPNG = async () => {
     if (!plotRef.current) return
-    const url = await Plotly.toImage(plotRef.current as unknown as Plotly.PlotlyHTMLElement, { format: 'png', width: 1200, height: 700 })
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `chart-${chartType}.png`
-    a.click()
+    try {
+      const url = await Plotly.toImage(plotRef.current as unknown as Plotly.PlotlyHTMLElement, { format: 'png', width: 1200, height: 700 })
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `chart-${chartType}.png`
+      a.click()
+    } catch (error) {
+      console.error('Chart export failed:', error)
+    }
   }
   const recommendation = useMemo(() => {
     if (chartType === 'histogram' && effectiveXCol) return `Box plot suits this distribution when you need outlier and quartile checks for ${effectiveXCol}.`
@@ -176,6 +197,9 @@ export function ChartsPage() {
     return <DatasetEmptyState preferredPath="/explore/charts" description="Load a dataset to create histograms, scatter plots, box plots, and saved visualization snapshots." />
   }
 
+  const needsNumeric = chartType !== 'bar'
+  const numericReady = numCols.length > 0 && validObservationCount(activeDataset, effectiveXCol || numCols[0] || '') >= 2
+
   const CHART_TYPES: { type: ChartType; label: string }[] = [
     { type: 'histogram', label: 'Histogram' },
     { type: 'bar', label: 'Bar Chart' },
@@ -187,7 +211,8 @@ export function ChartsPage() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      <h1 className="text-2xl font-bold text-slate-800 dark:text-white mb-6">Charts</h1>
+      <PageBack fallback="/data/preview" label="Back to Data" />
+      <h1 className="mt-2 text-2xl font-bold text-slate-800 dark:text-white mb-6">Charts</h1>
 
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 mb-4">
         <div className="flex flex-wrap gap-3 items-center">
@@ -274,7 +299,11 @@ export function ChartsPage() {
       </div>
 
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-2">
-        <div ref={plotRef} className="w-full" style={{ minHeight: 420 }} />
+        {needsNumeric && !numericReady ? (
+          <NoNumericColumnsState analysis="this chart" />
+        ) : (
+          <div ref={plotRef} className="w-full" style={{ minHeight: 420 }} />
+        )}
       </div>
     </div>
   )

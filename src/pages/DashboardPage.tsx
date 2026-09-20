@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef } from 'react'
 import Plotly from 'plotly.js-dist-min'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useStore } from '../store/useStore'
 import { datasetKpis, numericColumn, numericDescriptiveRows, summaryStats } from '../lib/stats'
 import { BarChart3, Gauge } from 'lucide-react'
 import { DatasetEmptyState } from '../components/ui/DatasetEmptyState'
 import { LessonWall } from '../components/visual/LessonWall'
+import { PageBack } from '../components/ui/PageBack'
 
 function formatBytes(value?: number) {
   if (!value) return '-'
@@ -28,6 +29,7 @@ function formatCell(value: number | string) {
 
 export function DashboardPage() {
   const { activeDataset, theme, workspaceMode } = useStore()
+  const location = useLocation()
   const loadingView = false
   const chart1Ref = useRef<HTMLDivElement>(null)
   const chart2Ref = useRef<HTMLDivElement>(null)
@@ -85,7 +87,7 @@ export function DashboardPage() {
     }
   }, [activeDataset, layoutBase, numCols, catCols, loadingView])
 
-  if (workspaceMode === 'learn') return <LessonWall />
+  if (workspaceMode === 'learn' || location.pathname === '/learn/wall') return <LessonWall />
 
   if (!activeDataset) {
     return <DatasetEmptyState preferredPath="/dashboard" description="Load a dataset to open the dashboard with automatic charts, KPIs, and data-quality cards." />
@@ -107,6 +109,7 @@ export function DashboardPage() {
     <div className="p-6">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
+          <PageBack fallback="/data/preview" label="Back to Data" />
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Dashboard - {activeDataset.name}</h1>
           <p className="text-xs text-slate-400">KPI overview, descriptive statistics, and quick visual checks.</p>
         </div>

@@ -1,14 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Pause, Play, RotateCcw, SkipForward } from 'lucide-react'
 import {
+  CLT_MAX_N,
+  CLT_PARENT_OPTIONS,
   CLT_SAMPLE_SIZES,
   appendSimulatedStatistics,
   buildHistogram,
+  cltSimulationCount,
   createPopulation,
   createRng,
+  defaultParentParams,
   formatNum,
   histogramRangeForStatistic,
-  theoreticalSE,
+  parseCltSampleSize,
+  samplingMomentsFor,
+  specFromParent,
   type CltTab,
   type HistBin,
   type PopulationKind,
@@ -16,21 +22,17 @@ import {
 import { CltCard, CltSelect, CltSlider, ConceptRow, FormulaBlock, Insight, LabExploreGrid, Metric, QuizBlock } from '../shared'
 import { DensityPreview, HistogramChart } from '../plots'
 
-const PARENTS: Array<{ value: PopulationKind; label: string }> = [
-  { value: 'skewed', label: 'Exponential (right-skewed)' },
-  { value: 'leftSkewed', label: 'Left-skewed' },
-  { value: 'uniform', label: 'Uniform' },
-  { value: 'bimodal', label: 'Bimodal' },
-  { value: 'normal', label: 'Normal' },
-]
-
 export function CltLab({ tab }: { tab: CltTab }) {
-  const [kind, setKind] = useState<PopulationKind>('skewed')
+  const [kind, setKind] = useState<PopulationKind>('exponential')
+  const [parentParams, setParentParams] = useState<Record<string, number>>(() => defaultParentParams('exponential'))
   const [n, setN] = useState(30)
+  const [nText, setNText] = useState('30')
+  const [nError, setNError] = useState<string | null>(null)
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState(40)
   const [seed, setSeed] = useState(41)
-  const population = useMemo(() => createPopulation({ kind, mu: 4, sigma: 2, min: 0, max: 10 }), [kind])
+  const population = useMemo(() => createPopulation(specFromParent(kind, parentParams)), [kind, parentParams])
+  const theoretical = useMemo(() => samplingMomentsFor(population, n), [population, n])
   const range = useMemo(() => histogramRangeForStatistic(population, n, 'mean'), [population, n])
   const [histogram, setHistogram] = useState<HistBin[]>(() => buildHistogram([], 28, range))
   const [stats, setStats] = useState({ R: 0, sum: 0, sumSq: 0, lastStatistic: Number.NaN })
@@ -47,7 +49,7 @@ export function CltLab({ tab }: { tab: CltTab }) {
     const rebuilt = appendSimulatedStatistics({
       population,
       n,
-      add: 800,
+      add: cltSimulationCount(n, 800),
       statistic: 'mean',
       rng: createRng(seed + 5),
       histogram: nextHist,
@@ -100,7 +102,18 @@ export function CltLab({ tab }: { tab: CltTab }) {
 
   const empiricalMean = stats.R > 0 ? stats.sum / stats.R : Number.NaN
   const empiricalSd = stats.R > 1 ? Math.sqrt(Math.max(0, stats.sumSq / stats.R - empiricalMean * empiricalMean)) : Number.NaN
-  const se = theoreticalSE({ sigma: population.sd, n, kind: 'mean' })
+  const se = theoretical.se
+  const option = CLT_PARENT_OPTIONS.find((item) => item.kind === kind)
+  const commitN = (raw: string) => {
+    setNText(raw)
+    const parsed = parseCltSampleSize(raw)
+    if (!parsed.ok) {
+      setNError(parsed.error)
+      return
+    }
+    setNError(null)
+    setN(parsed.n)
+  }
 
   const stepOnce = () => {
     const next = appendSimulatedStatistics({
@@ -193,26 +206,52 @@ export function CltLab({ tab }: { tab: CltTab }) {
               <CltSelect
                 label="Population distribution"
                 value={kind}
-                onChange={(value) => setKind(value as PopulationKind)}
-                options={PARENTS}
-              />
-              <CltSlider
-                label="Sample size (n)"
-                value={n}
-                min={1}
-                max={100}
-                step={1}
                 onChange={(value) => {
-                  const nearest = CLT_SAMPLE_SIZES.reduce((best, item) =>
-                    Math.abs(item - value) < Math.abs(best - value) ? item : best,
-                  )
-                  setN(value < 3 ? value : nearest)
+                  const next = value as PopulationKind
+                  setKind(next)
+                  setParentParams(defaultParentParams(next))
                 }}
-                ticks={[1, 2, 5, 10, 30, 50, 100]}
+                options={CLT_PARENT_OPTIONS.map((item) => ({ value: item.kind, label: item.label }))}
+              />
+              {(option?.params ?? []).map((param) => (
+                <label key={param.key} className="block text-xs font-semibold text-slate-500">
+                  {param.label}
+                  <input
+                    type="number"
+                    min={param.min}
+                    max={param.max}
+                    step={param.step}
+                    value={parentParams[param.key] ?? param.default}
+                    onChange={(event) => setParentParams((current) => ({ ...current, [param.key]: Number(event.target.value) }))}
+                    className="mt-1 min-h-10 w-full rounded-xl border border-slate-200 px-2 text-sm font-bold dark:border-slate-700 dark:bg-slate-950"
+                  />
+                </label>
+              ))}
+              <label className="block text-sm font-semibold text-slate-600 dark:text-slate-300">
+                Sample size (n)
+                <input
+                  type="number"
+                  min={1}
+                  max={CLT_MAX_N}
+                  step={1}
+                  value={nText}
+                  onChange={(event) => commitN(event.target.value)}
+                  className="mt-1 min-h-10 w-full rounded-xl border border-slate-200 px-2 font-mono text-sm dark:border-slate-700 dark:bg-slate-950"
+                />
+                {nError ? <span className="mt-1 block text-xs font-normal text-rose-600">{nError}</span> : <span className="mt-1 block text-xs font-normal text-slate-400">Any positive integer up to {CLT_MAX_N}.</span>}
+              </label>
+              <CltSlider
+                label="Sample size slider"
+                value={Math.min(n, 200)}
+                min={1}
+                max={200}
+                step={1}
+                onChange={(value) => commitN(String(value))}
+                ticks={[1, 7, 30, 43, 100, 200]}
               />
               <div className="flex flex-wrap gap-2">
                 {CLT_SAMPLE_SIZES.map((size) => (
-                  <button key={size} type="button" className={`clt-btn ${n === size ? '' : 'clt-btn-ghost'}`} onClick={() => setN(size)}>
+                  <button key={size} type="button" className={`clt-btn ${n === size ? '' : 'clt-btn-ghost'}`} onClick={() => commitN(String(size))}>
                     {size}
                   </button>
                 ))}
@@ -227,24 +266,30 @@ export function CltLab({ tab }: { tab: CltTab }) {
                   <SkipForward size={14} aria-hidden /> Step
                 </button>
                 <button type="button" className="clt-btn clt-btn-ghost" onClick={generate}>
-                  Generate 1,000
+                  Run simulation
                 </button>
               </div>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-400">Population distribution</p>
+                <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-400">Parent distribution</p>
                 <DensityPreview points={population.density} label={`${kind} parent`} />
-                <p className="text-xs text-slate-400">μ = {formatNum(population.mean)} · σ = {formatNum(population.sd)}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Metric label="μ" value={formatNum(theoretical.mu)} />
+                  <Metric label="σ²" value={formatNum(theoretical.variance)} />
+                  <Metric label="σ" value={formatNum(theoretical.sd)} />
+                </div>
               </div>
               <div>
                 <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-400">Sampling distribution of x̄</p>
                 <HistogramChart bins={histogram} mean={population.mean} xLabel="Sample mean (x̄)" height={180} ariaLabel="Sampling distribution of the mean under the CLT" />
                 <div className="mt-2 flex flex-wrap gap-2">
+                  <Metric label="n" value={String(n)} />
+                  <Metric label="μx̄" value={formatNum(theoretical.meanOfMean)} />
+                  <Metric label="SE (σ/√n)" value={formatNum(se)} />
                   <Metric label="Samples" value={String(stats.R)} />
-                  <Metric label="Mean of x̄" value={formatNum(empiricalMean)} />
-                  <Metric label="SD of x̄" value={formatNum(empiricalSd)} />
-                  <Metric label="SE" value={formatNum(se)} />
+                  <Metric label="Simulated mean" value={formatNum(empiricalMean)} />
+                  <Metric label="Simulated SD" value={formatNum(empiricalSd)} />
                 </div>
               </div>
             </div>

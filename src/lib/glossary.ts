@@ -396,3 +396,37 @@ export function searchGlossary(query: string, category?: GlossaryCategory | 'All
     return hay.includes(needle)
   })
 }
+
+export const GLOSSARY_FORMULAS: Record<string, string> = {
+  mean: '\\bar{x} = \\frac{\\sum x_i}{n}',
+  variance: 's^2 = \\frac{\\sum (x_i - \\bar{x})^2}{n-1}',
+  'standard-deviation': 's = \\sqrt{s^2}',
+  'z-score': 'z = \\frac{x - \\mu}{\\sigma}',
+  'standard-error-of-the-mean': '\\mathrm{SE} = \\frac{s}{\\sqrt{n}}',
+  'central-limit-theorem': '\\bar{X}_n \\xrightarrow{d} N(\\mu,\\,\\sigma^2/n)',
+  'confidence-interval': '\\bar{x} \\pm t^* \\cdot \\mathrm{SE}',
+  'p-value': 'p = P(\\text{result at least as extreme} \\mid H_0)',
+  correlation: 'r = \\frac{\\sum (x_i-\\bar{x})(y_i-\\bar{y})}{\\sqrt{\\sum (x_i-\\bar{x})^2 \\sum (y_i-\\bar{y})^2}}',
+  'least-squares': '\\hat{y} = \\hat{\\beta}_0 + \\hat{\\beta}_1 x',
+  'bayes-theorem': 'P(H\\mid D) = \\frac{P(D\\mid H)P(H)}{P(D)}',
+}
+
+export const GLOSSARY_LEARN: Record<string, { label: string; path: string }> = {
+  mean: { label: 'Descriptive Statistics', path: '/statistics/descriptive-statistics' },
+  'standard-deviation': { label: 'Descriptive Statistics', path: '/statistics/descriptive-statistics' },
+  variance: { label: 'Descriptive Statistics', path: '/statistics/descriptive-statistics' },
+  'central-limit-theorem': { label: 'CLT simulator', path: '/statistics/sampling-distributions-clt/central-limit-theorem' },
+  'normal-distribution': { label: 'Distributions Studio', path: '/distributions/normal' },
+  correlation: { label: 'Correlation studio', path: '/statistics/correlation-association' },
+  'least-squares': { label: 'Regression studio', path: '/statistics/regression' },
+  'confidence-interval': { label: 'Estimation studio', path: '/statistics/estimation' },
+  'p-value': { label: 'Hypothesis testing', path: '/statistics/hypothesis-testing' },
+  anova: { label: 'ANOVA studio', path: '/statistics/anova' },
+  'bayes-theorem': { label: 'Probability Foundations', path: '/statistics/probability-foundations/bayes-theorem' },
+  'chi-square-test': { label: 'Chi-square lab', path: '/statistics/hypothesis-testing/chi-square-tests' },
+}
+
+export function relatedGlossaryTerms(term: GlossaryTerm, limit = 3): GlossaryTerm[] {
+  return GLOSSARY_TERMS.filter((item) => item.category === term.category && item.slug !== term.slug).slice(0, limit)
+}
+

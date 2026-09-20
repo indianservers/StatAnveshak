@@ -2,6 +2,7 @@ import type { AnalysisOptions, AnalysisResult, PlotSpec } from '../../types'
 import { pnorm, pTailT, pf } from './dists'
 import { groupedNumeric, mean, median, numericValues, pairedComplete, round, sampleSd, sampleVariance } from './numeric'
 import { shapiroWilk } from './shapiroWilk'
+import { significanceStatement } from '../../../lib/statEngine'
 
 export type Alternative = 'two-sided' | 'greater' | 'less'
 
@@ -12,6 +13,11 @@ export function asAlternative(value: unknown): Alternative {
 
 function empty(analysisId: string, title: string, message: string): AnalysisResult {
   return { analysisId, title, interpretation: message, assumptions: [], footnotes: [], tables: [], plots: [] }
+}
+
+function alphaOf(options: AnalysisOptions): number {
+  const alpha = Number(options.alpha ?? 0.05)
+  return Number.isFinite(alpha) && alpha > 0 && alpha < 1 ? alpha : 0.05
 }
 
 export function cohensDIndependent(a: number[], b: number[]): number {
@@ -226,6 +232,7 @@ export function runIndependentT(rows: Record<string, unknown>[], options: Analys
   const lev = leveneMedian([a, b])
   const mw = mannWhitney(a, b, alternative)
   const method = welch ? 'Welch' : 'Student'
+  const alpha = alphaOf(options)
   const assumptions = [
     lev.p < 0.05 ? `Levene (median-center) p = ${round(lev.p)}: variances appear unequal; Welch is the default.` : `Levene (median-center) p = ${round(lev.p)}: no strong evidence of unequal variances.`,
     a.length < 30 || b.length < 30 ? 'Small samples: check Shapiro–Wilk and the raincloud before relying on the t-test.' : 'n is moderate; t-test is reasonably robust to mild non-normality.',
@@ -264,8 +271,8 @@ export function runIndependentT(rows: Record<string, unknown>[], options: Analys
     analysisId: 't.independent',
     title: 'Independent Samples T-Test',
     interpretation: nonparametric
-      ? `${method} t = ${round(param.t)}, p = ${round(p)} (${alternative}). Mann–Whitney U = ${round(mw.U)}, p = ${round(mw.p)}. Cohen's d = ${round(d)}.`
-      : `${method} t(${round(param.df, 3)}) = ${round(param.t)}, p = ${round(p)} (${alternative}). Mean difference ${groups[0].name} − ${groups[1].name} = ${round(param.diff)}. Cohen's d = ${round(d)}.`,
+      ? `${method} t = ${round(param.t)}, p = ${round(p)} (${alternative}). Mann–Whitney U = ${round(mw.U)}, p = ${round(mw.p)}. ${significanceStatement(p, alpha)} Cohen's d = ${round(d)}.`
+      : `${method} t(${round(param.df, 3)}) = ${round(param.t)}, p = ${round(p)} (${alternative}). Mean difference ${groups[0].name} − ${groups[1].name} = ${round(param.diff)}. ${significanceStatement(p, alpha)} Cohen's d = ${round(d)}.`,
     assumptions,
     footnotes: [
       'Student uses a pooled variance; Welch uses separate variances and Satterthwaite df (JASP default).',
@@ -283,6 +290,7 @@ export function runPairedT(rows: Record<string, unknown>[], options: AnalysisOpt
   const m2 = String(options.measure2 ?? '')
   const alternative = asAlternative(options.alternative)
   const nonparametric = Boolean(options.wilcoxon)
+  const alpha = alphaOf(options)
   const pairs = pairedComplete(rows, m1, m2)
   if (!m1 || !m2) return empty('t.paired', 'Paired Samples T-Test', 'Assign two numeric measures observed on the same cases.')
   if (pairs.length < 2) return empty('t.paired', 'Paired Samples T-Test', 'Need at least two complete pairs.')
@@ -320,7 +328,7 @@ export function runPairedT(rows: Record<string, unknown>[], options: AnalysisOpt
   return {
     analysisId: 't.paired',
     title: 'Paired Samples T-Test',
-    interpretation: `Paired t(${test.df}) = ${round(test.t)}, p = ${round(p)} (${alternative}). Mean of ${m1} − ${m2} = ${round(test.mean)}. Cohen's dz = ${round(d)}.`,
+    interpretation: `Paired t(${test.df}) = ${round(test.t)}, p = ${round(p)} (${alternative}). Mean of ${m1} − ${m2} = ${round(test.mean)}. ${significanceStatement(p, alpha)} Cohen's dz = ${round(d)}.`,
     assumptions: [
       'Pairs are the same observational units; differences are assumed i.i.d.',
       diffs.length < 30 ? 'Small sample of differences: inspect Shapiro–Wilk on the difference scores.' : 't on differences is reasonably robust for moderate n.',
@@ -339,6 +347,7 @@ export function runOneSampleT(rows: Record<string, unknown>[], options: Analysis
   const mu0 = Number(options.mu0 ?? 0)
   const alternative = asAlternative(options.alternative)
   const nonparametric = Boolean(options.wilcoxon)
+  const alpha = alphaOf(options)
   const x = numericValues(rows, variable)
   if (!variable) return empty('t.oneSample', 'One Sample T-Test', 'Assign a numeric variable.')
   if (x.length < 2) return empty('t.oneSample', 'One Sample T-Test', 'Need at least two observations.')
@@ -371,7 +380,7 @@ export function runOneSampleT(rows: Record<string, unknown>[], options: Analysis
   return {
     analysisId: 't.oneSample',
     title: 'One Sample T-Test',
-    interpretation: `t(${test.df}) = ${round(test.t)}, p = ${round(p)} (${alternative}) for H0: mean = ${mu0}. Observed mean = ${round(test.mean)}. Cohen's d = ${round(d)}.`,
+    interpretation: `t(${test.df}) = ${round(test.t)}, p = ${round(p)} (${alternative}) for H0: mean = ${mu0}. Observed mean = ${round(test.mean)}. ${significanceStatement(p, alpha)} Cohen's d = ${round(d)}.`,
     assumptions: [
       x.length < 30 ? 'Small sample: inspect Shapiro–Wilk and the raincloud before relying on the t-test.' : 't-test is reasonably robust to mild non-normality at this sample size.',
     ],

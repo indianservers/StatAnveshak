@@ -15,6 +15,7 @@ import {
 } from '../lib/classroom'
 import { PracticeGate } from '../components/visual/PracticeGate'
 import { useToast } from '../components/ui/toastContext'
+import { PageBack } from '../components/ui/PageBack'
 
 export function ClassroomPage() {
   const { notify } = useToast()
@@ -40,12 +41,26 @@ export function ClassroomPage() {
     <main className="min-w-0 bg-slate-50/70 px-4 py-6 text-slate-900 dark:bg-slate-950 dark:text-slate-100 sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
         <header>
-          <p className="text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-300">Classroom</p>
+          <PageBack fallback="/learn" label="Back to Learning" />
+          <p className="mt-3 text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-300">Classroom</p>
           <h1 className="mt-1 text-3xl font-black tracking-tight">Assign a chapter. Collect a replay. Hide the picture until they try.</h1>
           <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-            The pack is JSON: chapter, dataset id, and the lab sliders. Students open the hash link; you paste their download back here.
+            There is no live class roster in this browser app. Assignments are hash links and JSON replays you copy yourself.
           </p>
         </header>
+
+        <section className="grid gap-3 sm:grid-cols-3">
+          {[
+            ['Curriculum Map', '/learn/curriculum', 'Class resources by topic'],
+            ['Learning Paths', '/learn/paths/beginner', 'Suggested sequences'],
+            ['Studios', '/statistics', 'Interactive labs to assign'],
+          ].map(([title, href, detail]) => (
+            <Link key={title} to={href} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+              <p className="font-bold">{title}</p>
+              <p className="mt-1 text-sm text-slate-500">{detail}</p>
+            </Link>
+          ))}
+        </section>
 
         <div className="flex flex-wrap gap-2">
           {([
@@ -161,6 +176,9 @@ export function ClassroomPage() {
               placeholder='{"version":1,"kind":"statanveshak.lab-replay",...}'
             />
             {parsed?.ok === false && <p className="mt-2 text-sm text-amber-700">{parsed.error}</p>}
+            {!paste.trim() && (
+              <p className="mt-3 text-sm text-slate-500">No classroom activities yet. Paste a replay JSON from a student lab download.</p>
+            )}
             {parsed?.ok && (
               <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm dark:border-emerald-900 dark:bg-emerald-950/40">
                 <p className="font-bold">{parsed.replay.chapterId} · dataset {parsed.replay.datasetId}</p>

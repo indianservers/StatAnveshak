@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { AlertTriangle, ChevronRight, Clock, Columns3, Contrast, Database, FileText, HelpCircle, LogOut, Minus, Moon, Palette, Plus, RotateCcw, Save, Search, Sun, Target, Type } from 'lucide-react'
+import { AlertTriangle, ChevronRight, Clock, Columns3, Contrast, Database, FileText, HelpCircle, LogOut, Minus, Moon, MoreHorizontal, Palette, Plus, RotateCcw, Save, Search, Sun, Target, Type } from 'lucide-react'
 import { useStore } from '../../store/useStore'
 import { saveDataset } from '../../lib/storage'
 import { useToast } from '../ui/toastContext'
@@ -24,28 +24,6 @@ const PAGE_NAMES: Record<string, string> = {
   '/analysis/regression.correlation': 'Correlation',
   '/analysis/frequencies.contingency': 'Contingency Tables',
   '/analysis/regression.linear': 'Linear Regression',
-  '/analysis/bff.general': 'Bayes Factor Functions',
-  '/analysis/learnBayes.labs': 'Learn Bayes',
-  '/analysis/learnStats.labs': 'Learn Stats',
-  '/analysis/summaryStats.fromPublished': 'Summary Statistics',
-  '/analysis/robustT.modelAveraged': 'Robust T-Tests',
-  '/analysis/mixed.lmm': 'Linear Mixed Models',
-  '/analysis/timeSeries.arima': 'ARIMA',
-  '/analysis/survival.nonparametric': 'Kaplan–Meier',
-  '/analysis/process.model': 'PROCESS',
-  '/analysis/prophet.forecast': 'Prophet',
-  '/analysis/factor.cfa': 'Confirmatory Factor Analysis',
-  '/analysis/sem.sem': 'Structural Equation Modeling',
-  '/analysis/meta.analysis': 'Meta-Analysis',
-  '/analysis/network.psych': 'Network Analysis',
-  '/analysis/jags.model': 'JAGS',
-  '/analysis/bain.tests': 'Bain',
-  '/analysis/ml.regression': 'ML Regression',
-  '/analysis/ml.clustering': 'ML Clustering',
-  '/analysis/qc.charts': 'Control Charts',
-  '/analysis/qc.capability': 'Process Capability',
-  '/analysis/audit.data': 'Data Auditing',
-  '/analysis/distributions.explorer': 'Distribution Families',
   '/distributions': 'Distributions Studio',
   '/inference': 'Inference Tests',
   '/regression': 'Regression',
@@ -56,13 +34,8 @@ const PAGE_NAMES: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/reports': 'Reports',
   '/statistics': 'Statistics Studios',
-  '/learn': 'Core Statistics',
-  '/learn/chance': 'Chance',
-  '/learn/compound': 'Compound probability',
-  '/learn/distributions': 'Distributions Studio',
-  '/learn/frequentist': 'Frequentist inference',
-  '/learn/bayesian': 'Bayesian inference',
-  '/learn/regression': 'Regression',
+  '/learn': 'Continue Learning',
+  '/learn/wall': 'Lesson Wall',
   '/classroom': 'Classroom',
   '/professional-learning': 'Professional Learning',
   '/solver': 'Solver',
@@ -99,6 +72,7 @@ export function TopBar() {
   } = useStore()
   const [showHelp, setShowHelp] = useState(false)
   const [showHealth, setShowHealth] = useState(false)
+  const [showMore, setShowMore] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
   const { notify } = useToast()
@@ -133,9 +107,13 @@ export function TopBar() {
 
   const handleSave = async () => {
     if (!activeDataset) return
-    await saveDataset(activeDataset)
-    setLastSavedAt(Date.now())
-    notify('Dataset saved to browser storage.', 'success')
+    try {
+      await saveDataset(activeDataset)
+      setLastSavedAt(Date.now())
+      notify('Dataset saved to browser storage.', 'success')
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'The dataset was read, but could not be stored in this browser.', 'error')
+    }
   }
 
   const unloadDataset = () => {
@@ -146,12 +124,14 @@ export function TopBar() {
 
   const openCommandPalette = () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))
+    setShowMore(false)
   }
   const lastSavedLabel = lastSavedAt ? relativeTime(lastSavedAt) : null
+  const iconBtn = 'flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'
 
   return (
-    <header className="h-12 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2 pl-14 pr-2 shrink-0 sm:gap-3 sm:pr-4 md:px-4">
-      <div className="flex items-center rounded-lg border border-slate-200 p-0.5 dark:border-slate-600" role="tablist" aria-label="Workspace mode">
+    <header className="relative z-20 flex min-h-12 shrink-0 items-center gap-2 border-b border-slate-200 bg-white py-1.5 pl-14 pr-2 dark:border-slate-700 dark:bg-slate-800 sm:gap-3 sm:pr-3 md:px-4">
+      <div className="flex shrink-0 items-center rounded-lg border border-slate-200 p-0.5 dark:border-slate-600" role="tablist" aria-label="Workspace mode">
         {(['learn', 'analyze'] as const).map((mode) => (
           <button
             key={mode}
@@ -168,51 +148,51 @@ export function TopBar() {
         ))}
       </div>
 
-      <div className="flex-1 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 min-w-0">
-        <nav className="hidden lg:flex items-center gap-1 text-xs min-w-0" aria-label="Breadcrumb">
+      <div className="flex min-w-0 flex-1 items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+        <nav className="hidden min-w-0 items-center gap-1 text-xs xl:flex" aria-label="Breadcrumb">
           {breadcrumb.map((part, index) => (
-            <span key={`${part}-${index}`} className="inline-flex items-center gap-1 min-w-0">
+            <span key={`${part}-${index}`} className="inline-flex min-w-0 items-center gap-1">
               {index === 0 ? (
                 <Link to="/" className="text-slate-400 hover:text-indigo-600">{part}</Link>
               ) : (
                 <span className={`truncate ${index === breadcrumb.length - 1 ? 'font-medium text-slate-700 dark:text-slate-200' : 'text-slate-400'}`}>{part}</span>
               )}
-              {index < breadcrumb.length - 1 && <ChevronRight size={12} className="text-slate-300 dark:text-slate-600" />}
+              {index < breadcrumb.length - 1 && <ChevronRight size={12} className="shrink-0 text-slate-300 dark:text-slate-600" />}
             </span>
           ))}
         </nav>
 
         {activeProject && (
-          <>
-            <FolderIcon className="w-4 h-4 text-indigo-500" />
-            <span className="font-medium">{activeProject.name}</span>
+          <span className="hidden min-w-0 items-center gap-1.5 truncate 2xl:inline-flex">
+            <FolderIcon className="h-4 w-4 shrink-0 text-indigo-500" />
+            <span className="truncate font-medium">{activeProject.name}</span>
             <span className="text-slate-400">/</span>
-          </>
+          </span>
         )}
 
         {workspaceMode === 'learn' ? (
           <TeachingDatasetChip compact />
         ) : activeDataset ? (
-          <div className="flex items-center gap-1.5 min-w-0">
-            <Database size={14} className="text-green-500 shrink-0" />
+          <div className="flex min-w-0 items-center gap-1.5">
+            <Database size={14} className="shrink-0 text-green-500" />
             <select
               value={activeDataset.id}
               onChange={(event) => {
                 const selected = datasets.find((item) => item.id === event.target.value)
                 if (selected) setActiveDataset(selected)
               }}
-              className="max-w-44 bg-transparent text-sm font-medium text-slate-700 outline-none dark:text-slate-200"
+              className="max-w-[9.5rem] truncate bg-transparent text-sm font-medium text-slate-700 outline-none sm:max-w-[12rem] dark:text-slate-200"
               title="Global dataset selector"
             >
               {recentDatasets.map((dataset) => (
                 <option key={dataset.id} value={dataset.id}>{dataset.name}</option>
               ))}
             </select>
-            <span className="hidden sm:inline text-xs text-slate-400 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">
-              {activeDataset.rows.toLocaleString()} rows x {activeDataset.cols} cols
+            <span className="hidden truncate text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded lg:inline dark:bg-slate-700">
+              {activeDataset.rows.toLocaleString()} × {activeDataset.cols}
             </span>
             {typeCounts && (
-              <span className="hidden sm:inline text-xs font-semibold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 dark:text-indigo-300 px-1.5 py-0.5 rounded" title="Numeric and categorical/text column counts">
+              <span className="hidden text-xs font-semibold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded xl:inline dark:bg-indigo-900/30 dark:text-indigo-300" title="Numeric and categorical/text column counts">
                 {typeCounts}
               </span>
             )}
@@ -222,225 +202,152 @@ export function TopBar() {
             to="/data/upload"
             className="truncate rounded-md border border-dashed border-indigo-200 bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-300"
           >
-            No dataset loaded - go to datasets
+            No dataset loaded
           </Link>
         )}
       </div>
 
-      <div className="hidden md:flex items-center gap-1 text-xs text-green-600 bg-green-50 dark:bg-green-900/30 dark:text-green-400 px-2 py-1 rounded-full border border-green-200 dark:border-green-700">
-        <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-        Browser only
-      </div>
+      <div className="flex shrink-0 items-center gap-1">
+        {workspaceMode === 'analyze' && activeDataset && (
+          <button
+            onClick={handleSave}
+            className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-2.5 py-1.5 text-xs text-white hover:bg-indigo-700"
+          >
+            <Save size={12} />
+            <span className="hidden sm:inline">Save</span>
+          </button>
+        )}
+        {workspaceMode === 'analyze' && activeDataset && (
+          <button
+            onClick={unloadDataset}
+            className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+            title="Unload current dataset without deleting it"
+          >
+            <LogOut size={12} />
+            <span className="hidden sm:inline">Unload</span>
+          </button>
+        )}
 
-      {dataHealth && (
-        <div className="relative hidden xl:block">
+        <div className="relative">
           <button
             type="button"
-            onClick={() => setShowHealth((value) => !value)}
-            className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors ${
-            dataHealth.tone === 'ok'
-              ? 'text-emerald-600 bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800'
-              : 'text-amber-700 bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800'
-            }`}
-            aria-expanded={showHealth}
-            title="Show missing data by column"
+            onClick={() => { setShowMore((value) => !value); setShowHelp(false); setShowHealth(false) }}
+            className={iconBtn}
+            title="More workspace controls"
+            aria-expanded={showMore}
           >
-            <span className={`w-1.5 h-1.5 rounded-full ${dataHealth.tone === 'ok' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-            Health {dataHealth.missingPct.toFixed(1)}% missing
+            <MoreHorizontal size={16} />
           </button>
-          {showHealth && (
-            <div className="absolute right-0 top-8 z-30 w-72 rounded-lg border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-800">
-              <p className="mb-2 text-xs font-semibold text-slate-500">Missing data breakdown</p>
-              {dataHealth.missingColumns.length === 0 ? (
-                <p className="text-xs text-emerald-600 dark:text-emerald-300">No missing values detected.</p>
-              ) : (
-                <div className="max-h-56 overflow-auto space-y-2">
-                  {dataHealth.missingColumns.slice(0, 12).map((col) => (
-                    <div key={col.name}>
-                      <div className="flex justify-between gap-2 text-xs">
-                        <span className="truncate text-slate-600 dark:text-slate-300">{col.name}</span>
-                        <span className="font-medium text-slate-500">{col.missing} ({col.missingPct.toFixed(1)}%)</span>
-                      </div>
-                      <div className="mt-1 h-1.5 rounded bg-slate-100 dark:bg-slate-700">
-                        <div className="h-1.5 rounded bg-amber-400" style={{ width: `${Math.min(100, col.missingPct)}%` }} />
-                      </div>
+          {showMore && (
+            <div className="absolute right-0 top-10 z-40 w-72 rounded-lg border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-800">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Workspace</p>
+              <div className="grid grid-cols-2 gap-2">
+                <MoreAction icon={Search} label="Command palette" hint="Ctrl K" onClick={openCommandPalette} />
+                {workspaceMode === 'analyze' && (
+                  <MoreAction icon={Database} label="Datasets" onClick={() => { navigate('/data/upload'); setShowMore(false) }} />
+                )}
+                {workspaceMode === 'analyze' && (
+                  <MoreAction icon={Target} label={guardrails.length ? `Wizard (${guardrails.length})` : 'Wizard'} onClick={() => { window.dispatchEvent(new Event('open-test-recommender')); setShowMore(false) }} />
+                )}
+                {workspaceMode === 'analyze' && (
+                  <MoreAction icon={Columns3} label={density === 'compact' ? 'Compact' : 'Comfort'} onClick={toggleDensity} />
+                )}
+                {workspaceMode === 'analyze' && (
+                  <MoreAction icon={FileText} label="Report preview" onClick={() => { setReportPreviewOpen(true); setShowMore(false) }} />
+                )}
+                <MoreAction icon={Type} label={largeText ? 'Large text on' : 'Large text'} onClick={toggleLargeText} />
+                <MoreAction icon={Contrast} label={highContrast ? 'High contrast on' : 'High contrast'} onClick={toggleHighContrast} />
+              </div>
+              <div className="mt-3 flex items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 dark:bg-slate-900">
+                <button type="button" onClick={zoomOut} disabled={zoomLevel <= 0.8} className="rounded p-1 text-slate-500 hover:bg-white disabled:opacity-40 dark:hover:bg-slate-800" title="Zoom out"><Minus size={14} /></button>
+                <button type="button" onClick={resetZoom} className="text-xs font-medium text-slate-600 dark:text-slate-300" title="Reset zoom">{Math.round(zoomLevel * 100)}%</button>
+                <button type="button" onClick={zoomIn} disabled={zoomLevel >= 1.5} className="rounded p-1 text-slate-500 hover:bg-white disabled:opacity-40 dark:hover:bg-slate-800" title="Zoom in"><Plus size={14} /></button>
+              </div>
+              {dataHealth && (
+                <button
+                  type="button"
+                  onClick={() => setShowHealth((value) => !value)}
+                  className={`mt-2 flex w-full items-center justify-between rounded-md border px-2 py-1.5 text-xs ${
+                    dataHealth.tone === 'ok'
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300'
+                      : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300'
+                  }`}
+                >
+                  <span>Health {dataHealth.missingPct.toFixed(1)}% missing</span>
+                  {guardrails.length > 0 && <AlertTriangle size={12} />}
+                </button>
+              )}
+              {showHealth && dataHealth && (
+                <div className="mt-2 max-h-40 overflow-auto text-xs">
+                  {dataHealth.missingColumns.length === 0 ? (
+                    <p className="text-emerald-600 dark:text-emerald-300">No missing values detected.</p>
+                  ) : dataHealth.missingColumns.slice(0, 12).map((col) => (
+                    <div key={col.name} className="flex justify-between gap-2 py-0.5">
+                      <span className="truncate text-slate-600 dark:text-slate-300">{col.name}</span>
+                      <span className="text-slate-500">{col.missingPct.toFixed(1)}%</span>
                     </div>
                   ))}
                 </div>
               )}
+              {lastSavedAt && (
+                <p className="mt-2 flex items-center gap-1 text-xs text-slate-400">
+                  <Clock size={12} /> Saved {lastSavedLabel}
+                </p>
+              )}
+              <p className="mt-2 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">Browser only · data stays on this device</p>
             </div>
           )}
         </div>
-      )}
 
-      {workspaceMode === 'analyze' && (
-        <>
-      <button
-        onClick={() => navigate('/data/upload')}
-        className="hidden md:flex items-center gap-1.5 text-xs border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-md transition-colors"
-        title="Load sample data or upload a file"
-      >
-        <Database size={12} />
-        Dataset
-      </button>
-
-      <button
-        onClick={() => window.dispatchEvent(new Event('open-test-recommender'))}
-        className="hidden lg:flex items-center gap-1.5 text-xs border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-md transition-colors"
-        title="Open test recommender and data guardrails"
-      >
-        <Target size={12} />
-        Wizard
-        {guardrails.length > 0 && (
-          <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-1 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-            <AlertTriangle size={10} />
-            {guardrails.length}
-          </span>
-        )}
-      </button>
-        </>
-      )}
-
-      <button
-        onClick={openCommandPalette}
-        className="hidden md:flex items-center gap-1.5 text-xs border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-md transition-colors"
-        title="Open command palette"
-      >
-        <Search size={12} />
-        Ctrl K
-      </button>
-
-      {workspaceMode === 'analyze' && (
-        <>
-      <button
-        onClick={toggleDensity}
-        className={`hidden lg:flex items-center gap-1.5 text-xs border px-3 py-1.5 rounded-md transition-colors ${
-          density === 'compact'
-            ? 'border-indigo-200 bg-indigo-50 text-indigo-600 dark:border-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-300'
-            : 'border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700'
-        }`}
-        title="Toggle compact mode"
-      >
-        <Columns3 size={12} />
-        {density === 'compact' ? 'Compact' : 'Comfort'}
-      </button>
-
-      <button
-        onClick={() => setReportPreviewOpen(true)}
-        className="hidden lg:flex items-center gap-1.5 text-xs border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-md transition-colors"
-        title="Open report preview drawer"
-      >
-        <FileText size={12} />
-        Report
-      </button>
-        </>
-      )}
-
-      {workspaceMode === 'analyze' && activeDataset && (
         <button
-          onClick={handleSave}
-          className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 rounded-md transition-colors sm:px-3"
+          onClick={toggleTheme}
+          className={iconBtn}
+          title={`Toggle theme (${theme})`}
         >
-          <Save size={12} />
-          <span className="hidden sm:inline">Save</span>
+          {theme === 'light' ? <Moon size={16} /> : theme === 'dark' ? <Sun size={16} /> : <Palette size={16} />}
         </button>
-      )}
 
-      {workspaceMode === 'analyze' && activeDataset && (
-        <button
-          onClick={unloadDataset}
-          className="flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
-          title="Unload current dataset without deleting it"
-        >
-          <LogOut size={12} />
-          <span className="hidden sm:inline">Unload</span>
-        </button>
-      )}
-
-      {lastSavedAt && (
-        <div className="hidden lg:flex items-center gap-1 text-xs text-slate-400" title={new Date(lastSavedAt).toLocaleString()}>
-          <Clock size={12} />
-          Saved {lastSavedLabel}
+        <div className="relative">
+          <button
+            onClick={() => { setShowHelp((value) => !value); setShowMore(false) }}
+            className={iconBtn}
+            title="Keyboard shortcuts"
+          >
+            <HelpCircle size={16} />
+          </button>
+          {showHelp && (
+            <div className="absolute right-0 top-10 z-40 w-64 rounded-lg border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-800">
+              <p className="mb-2 text-xs font-semibold text-slate-500">Keyboard Shortcuts</p>
+              {[
+                ['Ctrl K', 'Command palette'],
+                ['Esc', 'Close dialogs'],
+                ['/', 'Use page search boxes'],
+                ['Click column', 'Select or analyze column'],
+              ].map(([keys, label]) => (
+                <div key={keys} className="flex items-center justify-between py-1 text-xs">
+                  <span className="text-slate-600 dark:text-slate-300">{label}</span>
+                  <kbd className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-500 dark:bg-slate-700">{keys}</kbd>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      )}
-
-      <button
-        onClick={zoomOut}
-        disabled={zoomLevel <= 0.8}
-        className="hidden h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 disabled:opacity-40 dark:hover:bg-slate-700 transition-colors sm:flex"
-        title="Zoom out"
-      >
-        <Minus size={16} />
-      </button>
-
-      <button
-        onClick={resetZoom}
-        className="hidden sm:flex h-8 min-w-12 items-center justify-center gap-1 rounded-md px-2 text-xs text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-        title="Reset zoom"
-      >
-        <RotateCcw size={12} />
-        {Math.round(zoomLevel * 100)}%
-      </button>
-
-      <button
-        onClick={zoomIn}
-        disabled={zoomLevel >= 1.5}
-        className="hidden h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 disabled:opacity-40 dark:hover:bg-slate-700 transition-colors sm:flex"
-        title="Zoom in"
-      >
-        <Plus size={16} />
-      </button>
-
-      <button
-        onClick={toggleLargeText}
-        className={`hidden h-8 w-8 items-center justify-center rounded-md transition-colors sm:flex ${largeText ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
-        title="Toggle larger base text"
-      >
-        <Type size={16} />
-      </button>
-
-      <button
-        onClick={toggleHighContrast}
-        className={`hidden h-8 w-8 items-center justify-center rounded-md transition-colors sm:flex ${highContrast ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
-        title="Toggle high contrast"
-      >
-        <Contrast size={16} />
-      </button>
-
-      <button
-        onClick={toggleTheme}
-        className="w-8 h-8 flex items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-        title={`Toggle theme (${theme})`}
-      >
-        {theme === 'light' ? <Moon size={16} /> : theme === 'dark' ? <Sun size={16} /> : <Palette size={16} />}
-      </button>
-
-      <div className="relative">
-        <button
-          onClick={() => setShowHelp((value) => !value)}
-          className="w-8 h-8 flex items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-          title="Keyboard shortcuts"
-        >
-          <HelpCircle size={16} />
-        </button>
-        {showHelp && (
-          <div className="absolute right-0 top-10 z-30 w-64 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 shadow-xl">
-            <p className="text-xs font-semibold text-slate-500 mb-2">Keyboard Shortcuts</p>
-            {[
-              ['Ctrl K', 'Command palette'],
-              ['Esc', 'Close dialogs'],
-              ['/', 'Use page search boxes'],
-              ['Click column', 'Select or analyze column'],
-            ].map(([keys, label]) => (
-              <div key={keys} className="flex items-center justify-between py-1 text-xs">
-                <span className="text-slate-600 dark:text-slate-300">{label}</span>
-                <kbd className="rounded bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 text-slate-500">{keys}</kbd>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </header>
+  )
+}
+
+function MoreAction({ icon: Icon, label, hint, onClick }: { icon: typeof Search; label: string; hint?: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex min-h-10 items-center gap-2 rounded-md border border-slate-200 px-2 text-left text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700"
+    >
+      <Icon size={13} className="shrink-0" />
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      {hint && <span className="text-[10px] text-slate-400">{hint}</span>}
+    </button>
   )
 }
 

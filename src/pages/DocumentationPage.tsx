@@ -1,8 +1,10 @@
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { BookOpen, Database, FileText, GraduationCap, Link2, Search, ShieldCheck, Sigma } from 'lucide-react'
 import { CORE_SITE_LINKS, MODULE_SITE_LINKS, SITE_CATALOG, type SiteCatalogEntry } from '../lib/siteCatalog'
 import { ANALYSIS_CATALOG, JASP_MODULE_ORDER, analysesForModule } from '../analysis/catalog'
 import { useSeoMetadata } from '../lib/seo'
+import { PageBack } from '../components/ui/PageBack'
 
 const WORKFLOWS = [
   ['Import data', 'Upload CSV, Excel, JSON, TSV, or load a sample dataset, then preview schema and missingness.', '/data/upload'],
@@ -12,15 +14,19 @@ const WORKFLOWS = [
   ['Report results', 'Review dashboard outputs and export report-ready tables, charts, and summaries.', '/reports'],
 ]
 
-const groupedCore = CORE_SITE_LINKS.reduce((acc, item) => {
-  acc[item.section] = [...(acc[item.section] ?? []), item]
-  return acc
-}, {} as Record<string, typeof CORE_SITE_LINKS>)
-
 const groupedModules = MODULE_SITE_LINKS.reduce((acc, item) => {
   acc[item.section] = [...(acc[item.section] ?? []), item]
   return acc
 }, {} as Record<string, typeof MODULE_SITE_LINKS>)
+
+const DOC_NAV = [
+  ['getting-started', 'Getting Started'],
+  ['data-analysis', 'Data Analysis'],
+  ['statistics-tools', 'Statistics Tools'],
+  ['learning', 'Learning'],
+  ['studios', 'Studios'],
+  ['faq', 'FAQ / Troubleshooting'],
+] as const
 
 export function DocumentationPage() {
   useSeoMetadata({
@@ -29,20 +35,52 @@ export function DocumentationPage() {
     path: '/documentation',
     keywords: ['Anveshak documentation', 'statistics workbench guide', 'all module links', 'data analytics documentation'],
   })
+  const [query, setQuery] = useState('')
+  const needle = query.trim().toLowerCase()
+  const filterLinks = (links: SiteCatalogEntry[]) =>
+    needle ? links.filter((item) => `${item.title} ${item.description} ${item.path}`.toLowerCase().includes(needle)) : links
+  const coreGroups = useMemo(() => {
+    const grouped = CORE_SITE_LINKS.reduce((acc, item) => {
+      acc[item.section] = [...(acc[item.section] ?? []), item]
+      return acc
+    }, {} as Record<string, typeof CORE_SITE_LINKS>)
+    return Object.entries(grouped).map(([section, links]) => [section, filterLinks(links)] as const).filter(([, links]) => links.length > 0)
+  }, [needle])
 
   return (
     <div className="p-6">
       <div className="mx-auto max-w-7xl">
         <header className="mb-6">
-          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-indigo-600 dark:text-indigo-300">
+          <PageBack fallback="/" label="Back" />
+          <div className="mb-3 mt-2 flex items-center gap-2 text-sm font-semibold text-indigo-600 dark:text-indigo-300">
             <BookOpen size={16} />
             Reference
           </div>
           <h1 className="text-3xl font-bold text-slate-800 dark:text-white">Documentation</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500 dark:text-slate-400">
-            Anveshak is a browser-only statistics and data analytics workbench. This page collects every main route,
-            module family, and reference link in one place for learners, analysts, teachers, and search engines.
+            Anveshak is a browser-only statistics and data analytics workbench. Jump to a section, search pages, or open the matching tool.
           </p>
+          <label className="mt-4 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
+            <Search size={16} className="text-slate-400" />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search documentation…"
+              className="w-full bg-transparent text-sm outline-none dark:text-slate-100"
+            />
+          </label>
+          <nav className="mt-3 flex flex-wrap gap-2" aria-label="Documentation sections">
+            {DOC_NAV.map(([id, label]) => (
+              <a
+                key={id}
+                href={`#${id}`}
+                className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 hover:border-indigo-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+              >
+                {label}
+              </a>
+            ))}
+          </nav>
         </header>
 
         <section className="mb-6 grid gap-4 md:grid-cols-4">
@@ -52,10 +90,10 @@ export function DocumentationPage() {
           <Metric icon={Database} label="Distribution pages" value={MODULE_SITE_LINKS.filter((item) => item.path.startsWith('/distributions/')).length} />
         </section>
 
-        <section className="mb-6 rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
+        <section id="getting-started" className="mb-6 scroll-mt-24 rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
           <div className="mb-4 flex items-center gap-2">
             <ShieldCheck size={16} className="text-indigo-500" />
-            <h2 className="text-lg font-bold text-slate-800 dark:text-white">What Anveshak Includes</h2>
+            <h2 className="text-lg font-bold text-slate-800 dark:text-white">Getting Started</h2>
           </div>
           <div className="grid gap-4 lg:grid-cols-5">
             {WORKFLOWS.map(([title, detail, path]) => (
@@ -67,10 +105,10 @@ export function DocumentationPage() {
           </div>
         </section>
 
-        <section className="mb-6 rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
+        <section id="statistics-tools" className="mb-6 scroll-mt-24 rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
           <div className="mb-4 flex items-center gap-2">
             <Sigma size={16} className="text-indigo-500" />
-            <h2 className="text-lg font-bold text-slate-800 dark:text-white">JASP modules</h2>
+            <h2 className="text-lg font-bold text-slate-800 dark:text-white">Statistics Tools</h2>
           </div>
           <p className="mb-4 max-w-3xl text-sm text-slate-500">
             Each JASP module maps to one or more analysis IDs in the workspace. Frequentist and Bayesian share the same ID.
@@ -94,19 +132,47 @@ export function DocumentationPage() {
           <p className="mt-3 text-xs text-slate-400">{ANALYSIS_CATALOG.length} analyses · {JASP_MODULE_ORDER.length} modules · all implemented</p>
         </section>
 
-        <section className="mb-6 rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
+        <section id="data-analysis" className="mb-6 scroll-mt-24 rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
           <div className="mb-4 flex items-center gap-2">
             <FileText size={16} className="text-indigo-500" />
             <h2 className="text-lg font-bold text-slate-800 dark:text-white">Core Pages</h2>
           </div>
           <div className="grid gap-5 lg:grid-cols-2">
-            {Object.entries(groupedCore).map(([section, links]) => (
+            {coreGroups.map(([section, links]) => (
               <LinkGroup key={section} title={section} links={links} />
+            ))}
+          </div>
+          {coreGroups.length === 0 && (
+            <p className="text-sm text-slate-500">No results for “{query}”.</p>
+          )}
+        </section>
+
+        <section id="learning" className="mb-6 scroll-mt-24 rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-white">Learning</h2>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              ['Curriculum Map', '/learn/curriculum'],
+              ['Learning Paths', '/learn/paths/beginner'],
+              ['Studios', '/statistics'],
+              ['Classroom', '/classroom'],
+            ].map(([title, href]) => (
+              <Link key={title} to={href} className="rounded-lg border border-slate-100 p-3 text-sm font-semibold hover:border-indigo-200 dark:border-slate-700">
+                {title}
+              </Link>
             ))}
           </div>
         </section>
 
-        <section className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
+        <section id="faq" className="mb-6 scroll-mt-24 rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-white">FAQ / Troubleshooting</h2>
+          <ul className="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
+            <li>Data stays in this browser unless you export a project bundle.</li>
+            <li>If a page is blank after refresh, reopen the hash URL (for example <code>/#/learn/curriculum</code>).</li>
+            <li>Missing dataset messages are expected on analysis pages until you upload or load a sample.</li>
+          </ul>
+        </section>
+
+        <section id="studios" className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Search size={16} className="text-indigo-500" />

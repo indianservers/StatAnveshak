@@ -17,14 +17,23 @@ export function runLinearRegression(rows: Record<string, unknown>[], options: An
   const ci = Number(options.ciLevel ?? 0.95)
   if (!dependent) return empty('Assign a numeric dependent variable.')
   if (!covariates.length && !factors.length) return empty('Assign at least one covariate or factor.')
+  if (covariates.length === 1 && covariates[0] === dependent && !factors.length) {
+    return empty('The dependent variable and the predictor cannot be the same column.')
+  }
 
   const design = buildDesign(rows, covariates, factors, interact)
   const y = design.keep.map((row) => asFiniteNumber(row[dependent]))
   if (y.some((v) => v === null)) return empty('Dependent variable must be numeric on the same complete cases as the predictors.')
   const yy = y as number[]
   if (yy.length < design.X[0].length + 2) return empty('Not enough complete cases for this design.')
+  if (covariates.length === 1 && !factors.length) {
+    const xs = design.X.map((row) => row[1] ?? 0)
+    const xmin = Math.min(...xs)
+    const xmax = Math.max(...xs)
+    if (xmin === xmax) return empty('The predictor is constant, so a unique slope cannot be estimated.')
+  }
   const fit = lm(yy, design.X)
-  if (!fit) return empty('Design matrix is rank-deficient. Drop collinear predictors.')
+  if (!fit) return empty('The design matrix is rank-deficient. A constant predictor or collinear columns cannot produce a unique slope.')
   const n = yy.length
   const p = design.names.length
   const mse = fit.sse / fit.dfResidual

@@ -4,6 +4,7 @@ import { LEARN_CHAPTERS, GUIDED_QUESTIONS } from '../lib/learnChapters'
 import { InteractiveBookStack, InteractiveChapterIcon, InteractiveHeroArt } from '../components/visual/InteractiveLearnIcons'
 import { TeachingDatasetChip } from '../components/visual/TeachingDatasetChip'
 import { HomeWelcome } from '../components/home/HomeWelcome'
+import { ContinueLearningCard } from '../components/learning/ContinueLearning'
 import { useStore } from '../store/useStore'
 import { useState } from 'react'
 
@@ -26,6 +27,24 @@ export function LearnHome() {
     <main className="min-w-0 bg-[#f7f8fb] px-4 py-6 text-slate-900 dark:bg-slate-950 dark:text-slate-100 sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-6">
         <HomeWelcome />
+        <ContinueLearningCard />
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            ['Learning Paths', 'Interactive sequences for beginners, inference, and regression.', '/learn/paths/beginner'],
+            ['Curriculum Map', 'Areas, studios, and labs that actually navigate.', '/learn/curriculum'],
+            ['Studios / Labs', 'Interactive statistical workspaces.', '/statistics'],
+            ['Classroom', 'Assign a chapter and collect a replay.', '/classroom'],
+          ].map(([title, detail, href]) => (
+            <Link
+              key={title}
+              to={href}
+              className="rounded-2xl border border-slate-200 bg-white p-4 hover:border-indigo-200 dark:border-slate-800 dark:bg-slate-900"
+            >
+              <p className="font-black text-slate-950 dark:text-white">{title}</p>
+              <p className="mt-1 text-sm text-slate-500">{detail}</p>
+            </Link>
+          ))}
+        </section>
 
         <section className="grid items-center gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]">
           <div>
@@ -46,7 +65,7 @@ export function LearnHome() {
               </Link>
               <Link to="/analysis/learnStats.labs" className="inline-flex min-h-11 items-center justify-center rounded-full border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">Learn Stats</Link>
               <Link to="/classroom" className="inline-flex min-h-11 items-center justify-center rounded-full border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">Classroom</Link>
-              <Link to="/dashboard" className="inline-flex min-h-11 items-center justify-center rounded-full border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">Lesson wall</Link>
+              <Link to="/learn/wall" className="inline-flex min-h-11 items-center justify-center rounded-full border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">Lesson wall</Link>
               <button
                 type="button"
                 onClick={() => {

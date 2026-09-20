@@ -42,6 +42,7 @@ import {
 import { numericColumn } from '../../lib/stats'
 import type { Dataset } from '../../types'
 import { DatasetEmptyState } from '../../components/ui/DatasetEmptyState'
+import { PageBack } from '../../components/ui/PageBack'
 
 type Tab = 'wizard' | 'variables' | 'dictionary' | 'quality' | 'transform' | 'statistics' | 'log'
 
@@ -137,7 +138,8 @@ export function WorkbenchPage() {
     <div className="p-6">
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div className="mb-2 flex items-center gap-2">
+          <PageBack fallback="/data/preview" label="Back to Data" />
+          <div className="mb-2 mt-2 flex items-center gap-2">
             <Database size={22} className="text-indigo-500" />
             <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Statistics Workbench</h1>
           </div>

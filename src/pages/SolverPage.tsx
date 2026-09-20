@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { BookOpenCheck, Calculator, CheckCircle2, ChevronDown, ChevronRight, ClipboardList, Grid3X3, RotateCcw, Sigma } from 'lucide-react'
+import { StatisticsCalculator } from '../components/stats/StatisticsCalculator'
 
 type SolverMode =
   | 'pearson'
@@ -447,6 +448,10 @@ export function SolverPage() {
             </div>
           </div>
         </header>
+
+        <div className="mb-6">
+          <StatisticsCalculator />
+        </div>
 
         <section className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/30">
           <div className="flex items-start gap-3">

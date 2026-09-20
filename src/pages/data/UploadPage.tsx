@@ -11,6 +11,9 @@ import { sampleToDataset } from '../../lib/dataset'
 import type { ColumnSchema, Dataset } from '../../types'
 import { DATASET_FILE_LIMIT_BYTES, uniqueColumnNames } from '../../lib/validation'
 import { detectSchemaInWorker } from '../../lib/workerClient'
+import { useToast } from '../../components/ui/toastContext'
+import { PageBack } from '../../components/ui/PageBack'
+import { storageFailureMessage } from '../../lib/safeStorage'
 
 type PendingImport = {
   id: string
@@ -51,7 +54,7 @@ function detectFile(file: File) {
   if (file.name.match(/\.(tsv|txt)$/i)) return { sourceType: 'csv' as const, details: 'Delimited text detected, delimiter: tab/auto', confidence: 88 }
   if (file.name.match(/\.xlsx?$/i)) return { sourceType: 'excel' as const, details: 'Excel workbook detected, first sheet selected', confidence: 94 }
   if (file.name.match(/\.json$/i)) return { sourceType: 'json' as const, details: 'JSON detected, object array expected', confidence: 92 }
-  throw new Error(`${file.name}: unsupported file type. Please upload CSV, Excel, or JSON.`)
+  throw new Error('This file format is not supported.')
 }
 
 function typeIcon(type: string) {
@@ -72,6 +75,7 @@ export function UploadPage() {
   const [samplePage, setSamplePage] = useState(1)
   const { addDataset, setActiveDataset, datasets } = useStore()
   const navigate = useNavigate()
+  const { notify } = useToast()
 
   const parseFile = useCallback(async (file: File): Promise<PendingImport> => {
     const detected = detectFile(file)
@@ -108,7 +112,9 @@ export function UploadPage() {
           skipEmptyLines: true,
           delimiter: file.name.match(/\.tsv$/i) ? '\t' : undefined,
         })
-        if (result.errors.length > 0) console.warn('CSV parse warnings:', result.errors.slice(0, 3))
+        if (result.errors.length > 0 && result.data.length === 0) {
+          throw new Error("We couldn't read this dataset. Check the file structure and try again.")
+        }
         data = result.data
       } else if (detected.sourceType === 'excel') {
         const buf = await file.arrayBuffer()
@@ -116,11 +122,18 @@ export function UploadPage() {
         const ws = wb.Sheets[wb.SheetNames[0]]
         data = XLSX.utils.sheet_to_json(ws) as Record<string, unknown>[]
       } else {
-        const text = await file.text()
-        const parsed = JSON.parse(text)
-        data = Array.isArray(parsed) ? parsed : [parsed]
+        try {
+          const text = await file.text()
+          const parsed = JSON.parse(text) as unknown
+          data = Array.isArray(parsed) ? parsed as Record<string, unknown>[] : [parsed as Record<string, unknown>]
+        } catch {
+          throw new Error("We couldn't read this dataset. Check the file structure and try again.")
+        }
       }
       if (data.length === 0) throw new Error(`${file.name}: file appears to be empty or has no data rows.`)
+      if (!Array.isArray(data) || typeof data[0] !== 'object') {
+        throw new Error("We couldn't read this dataset. Check the file structure and try again.")
+      }
 
       const schema = data.length > 5000 ? await detectSchemaInWorker(data) : detectSchema(data)
       const warnings = [
@@ -157,11 +170,13 @@ export function UploadPage() {
         await parseFile(file)
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to parse file')
+      const message = e instanceof Error ? e.message : "We couldn't read this dataset. Check the file structure and try again."
+      setError(message)
+      notify(message, /not supported/i.test(message) ? 'error' : 'error')
     } finally {
       setLoading(false)
     }
-  }, [parseFile])
+  }, [parseFile, notify])
 
   const commitImport = async (item: PendingImport) => {
     const columns = uniqueColumnNames(item.columns)
@@ -183,7 +198,15 @@ export function UploadPage() {
     }
     addDataset(ds)
     setActiveDataset(ds)
-    await saveDataset(ds)
+    try {
+      await saveDataset(ds)
+      notify(`Dataset loaded successfully — ${ds.rows.toLocaleString()} rows, ${ds.cols} columns.`, 'success')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : storageFailureMessage(error, 'dataset')
+      setError(message)
+      notify(message, 'error')
+    }
+    if (item.warnings.length > 0) notify(item.warnings[0], 'warning')
     setPending((items) => items.filter((queued) => queued.id !== item.id))
     navigate('/data/preview')
   }
@@ -237,10 +260,19 @@ export function UploadPage() {
       const ds = sampleToDataset(sample)
       addDataset(ds)
       setActiveDataset(ds)
-      await saveDataset(ds)
+      try {
+        await saveDataset(ds)
+        notify(`Dataset loaded successfully — ${ds.rows.toLocaleString()} rows, ${ds.cols} columns.`, 'success')
+      } catch (error) {
+        const message = error instanceof Error ? error.message : storageFailureMessage(error, 'dataset')
+        setError(message)
+        notify(message, 'error')
+      }
       navigate('/data/preview')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load sample data')
+      const message = e instanceof Error ? e.message : "We couldn't read this dataset. Check the file structure and try again."
+      setError(message)
+      notify(message, 'error')
     } finally {
       setLoading(false)
     }
@@ -248,7 +280,8 @@ export function UploadPage() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Upload Data</h1>
+      <PageBack fallback="/" label="Back" />
+      <h1 className="mt-2 text-2xl font-bold text-slate-800 dark:text-white mb-2">Upload Data</h1>
       <p className="text-slate-500 dark:text-slate-400 mb-8">Your data is processed entirely in the browser. Nothing is uploaded to any server.</p>
 
       {recentDatasets.length > 0 && (
@@ -394,7 +427,7 @@ export function UploadPage() {
           <div>
             <div className="flex items-center gap-2">
               <Database size={16} className="text-indigo-500" />
-              <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">Explore Sample Datasets</h2>
+              <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">Load Sample Data</h2>
             </div>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Open a sample dataset to load real rows, schema, charts, and analysis content.</p>
           </div>

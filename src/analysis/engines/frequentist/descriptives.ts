@@ -10,12 +10,13 @@ import {
   quantileType7,
   round,
   sampleKurtosis,
-  sampleSd,
   sampleSkewness,
-  sampleVariance,
   seKurtosis,
   seSkewness,
   tCritical,
+  varianceOf,
+  sdOf,
+  type SpreadKind,
 } from './numeric'
 import { shapiroWilk } from './shapiroWilk'
 
@@ -97,12 +98,12 @@ export type NumericDescription = {
   whiskerHigh: number
 }
 
-export function describeNumeric(values: number[], missing: number, ciLevel = 0.95): Omit<NumericDescription, 'variable' | 'group'> {
+export function describeNumeric(values: number[], missing: number, ciLevel = 0.95, spread: SpreadKind = 'sample'): Omit<NumericDescription, 'variable' | 'group'> {
   const n = values.length
   const sorted = [...values].sort((a, b) => a - b)
   const m = n ? mean(values) : Number.NaN
-  const sd = n > 1 ? sampleSd(values) : Number.NaN
-  const se = n > 1 ? sd / Math.sqrt(n) : Number.NaN
+  const sd = n > 1 || (spread === 'population' && n > 0) ? sdOf(values, spread) : Number.NaN
+  const se = n > 1 && Number.isFinite(sd) ? sd / Math.sqrt(n) : Number.NaN
   const t = n > 1 ? tCritical(n - 1, 1 - ciLevel) : Number.NaN
   const sw = n >= 3 && n <= 5000 ? shapiroWilk(values) : { w: Number.NaN, p: Number.NaN }
   const fences = n ? iqrOutliers(sorted) : { lower: Number.NaN, upper: Number.NaN, outliers: [] }
@@ -117,7 +118,7 @@ export function describeNumeric(values: number[], missing: number, ciLevel = 0.9
     mean: m,
     se,
     sd,
-    variance: n > 1 ? sampleVariance(values) : Number.NaN,
+    variance: n > 0 ? varianceOf(values, spread) : Number.NaN,
     min: n ? sorted[0] : Number.NaN,
     max: n ? sorted[n - 1] : Number.NaN,
     range: n ? sorted[n - 1] - sorted[0] : Number.NaN,
@@ -165,6 +166,7 @@ export function runDescriptiveStatistics(rows: Record<string, unknown>[], option
   const variables = (Array.isArray(options.variables) ? options.variables : options.variables ? [String(options.variables)] : []) as string[]
   const splitBy = typeof options.splitBy === 'string' ? options.splitBy : ''
   const ciLevel = typeof options.ciLevel === 'number' ? options.ciLevel : 0.95
+  const spread: SpreadKind = options.spreadKind === 'population' ? 'population' : 'sample'
   const flags = flagsFromOptions(options)
   const groups = splitRows(rows, splitBy || undefined)
 
@@ -173,7 +175,7 @@ export function runDescriptiveStatistics(rows: Record<string, unknown>[], option
     for (const [group, groupRows] of groups) {
       const values = numericValues(groupRows, variable)
       const missing = groupRows.length - values.length
-      descriptions.push({ variable, group, ...describeNumeric(values, missing, ciLevel) })
+      descriptions.push({ variable, group, ...describeNumeric(values, missing, ciLevel, spread) })
     }
   }
 

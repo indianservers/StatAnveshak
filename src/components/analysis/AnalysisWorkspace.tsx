@@ -7,10 +7,12 @@ import type { AnalysisDef, AnalysisOptions, AnalysisResult, PlotSpec } from '../
 import { runAnalysisInWorker } from '../../lib/workerClient'
 import { useStore } from '../../store/useStore'
 import { DatasetEmptyState } from '../ui/DatasetEmptyState'
+import { PageBack } from '../ui/PageBack'
 import { useToast } from '../ui/toastContext'
 import { SamplingMachine } from '../visual/SamplingMachine'
 import { useReducedMotion } from '../visual/useReducedMotion'
 import { numericColumn } from '../../lib/stats'
+import { formatStat } from '../../lib/statEngine'
 
 type Props = { analysisId: string }
 
@@ -81,14 +83,25 @@ export function AnalysisWorkspace({ analysisId }: Props) {
       if (Array.isArray(value)) return value.length > 0
       return value !== undefined && value !== ''
     })
+    const needsNumeric = analysis.fields.some((field) => 'role' in field && field.role === 'numeric' && 'required' in field && Boolean(field.required))
     const rows = activeDataset?.data ?? []
+    if (needsNumeric && numericPool.length === 0 && !analysis.allowEmptyData) {
+      setError('No suitable numeric columns are available for this analysis.')
+      return
+    }
     if (analysis.implemented && (rows.length || analysis.allowEmptyData) && requiredReady) {
-      void runAnalysisInWorker(analysis.id, rows, next).then(setResult).catch((err) => setError(err instanceof Error ? err.message : 'Analysis failed.'))
+      void runAnalysisInWorker(analysis.id, rows, next).then(setResult).catch((err) => setError(publicError(err)))
     }
   }, [analysis.id, activeDataset?.id]) // eslint-disable-line react-hooks/exhaustive-deps -- seed options only when the analysis or dataset identity changes
 
   const run = async () => {
     if (!activeDataset && !analysis.allowEmptyData) return
+    const needsNumeric = analysis.fields.some((field) => 'role' in field && field.role === 'numeric' && 'required' in field && Boolean(field.required))
+    if (needsNumeric && numericCols.length === 0 && !analysis.allowEmptyData) {
+      setResult(null)
+      setError('No suitable numeric columns are available for this analysis.')
+      return
+    }
     if (!analysis.implemented) {
       setError(null)
       setResult({
@@ -108,7 +121,7 @@ export function AnalysisWorkspace({ analysisId }: Props) {
       const next = await runAnalysisInWorker(analysis.id, activeDataset?.data ?? [], options)
       setResult(next)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Analysis failed.')
+      setError(publicError(err))
     } finally {
       setRunning(false)
     }
@@ -189,8 +202,14 @@ export function AnalysisWorkspace({ analysisId }: Props) {
 
       <section className="flex w-full shrink-0 flex-col border-b border-slate-200 bg-slate-50 lg:w-80 lg:border-b-0 lg:border-r dark:border-slate-700 dark:bg-slate-900">
         <div className="border-b border-slate-200 p-4 dark:border-slate-700">
-          <h1 className="text-lg font-bold text-slate-800 dark:text-white">{analysis.title}</h1>
+          <PageBack fallback="/data/preview" label="Back to Data" />
+          <h1 className="mt-2 text-lg font-bold text-slate-800 dark:text-white">{analysis.title}</h1>
           <p className="mt-1 text-xs leading-5 text-slate-500">{analysis.description}</p>
+          {numericCols.length === 0 && analysis.fields.some((field) => 'role' in field && field.role === 'numeric' && 'required' in field && Boolean(field.required)) && !analysis.allowEmptyData && (
+            <p className="mt-2 rounded-md bg-amber-50 p-2 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+              No suitable numeric columns are available for this analysis.
+            </p>
+          )}
           {analysis.frequentist && analysis.bayesian && (
             <div className="mt-3 flex rounded-md border border-slate-200 p-0.5 text-xs dark:border-slate-600">
               {(['frequentist', 'bayesian'] as const).map((mode) => (
@@ -202,7 +221,7 @@ export function AnalysisWorkspace({ analysisId }: Props) {
                     const next = { ...options, inference: mode }
                     setOptions(next)
                     if (analysis.implemented && (activeDataset?.data.length || analysis.allowEmptyData)) {
-                      void runAnalysisInWorker(analysis.id, activeDataset?.data ?? [], next).then(setResult).catch((err) => setError(err instanceof Error ? err.message : 'Analysis failed.'))
+                      void runAnalysisInWorker(analysis.id, activeDataset?.data ?? [], next).then(setResult).catch((err) => setError(publicError(err)))
                     }
                   }}
                 >
@@ -413,7 +432,7 @@ export function AnalysisWorkspace({ analysisId }: Props) {
                     {shown.map((row, index) => (
                       <tr key={index} className="border-t border-slate-200 odd:bg-white even:bg-slate-50 dark:border-slate-700 dark:odd:bg-slate-950 dark:even:bg-slate-900">
                         {row.map((cell, cellIndex) => (
-                          <td key={cellIndex} className="whitespace-nowrap px-3 py-1.5 text-slate-800 dark:text-slate-100">{String(cell)}</td>
+                          <td key={cellIndex} className="whitespace-nowrap px-3 py-1.5 text-slate-800 dark:text-slate-100">{typeof cell === 'number' ? formatStat(cell, 6) : String(cell)}</td>
                         ))}
                       </tr>
                     ))}
@@ -450,14 +469,18 @@ function PlotPanel({ plot, theme }: { plot: PlotSpec; theme: string }) {
   const dark = theme === 'dark' || theme === 'midnight' || theme === 'forest'
   useEffect(() => {
     if (!ref.current) return
-    void Plotly.react(ref.current, plot.data as Plotly.Data[], {
-      ...plot.layout,
-      title: { text: plot.title, font: { size: 13 } },
-      paper_bgcolor: dark ? '#020617' : '#ffffff',
-      plot_bgcolor: dark ? '#020617' : '#ffffff',
-      font: { color: dark ? '#e2e8f0' : '#334155', size: 11 },
-      autosize: true,
-    }, { responsive: true, displayModeBar: true })
+    try {
+      void Plotly.react(ref.current, plot.data as Plotly.Data[], {
+        ...plot.layout,
+        title: { text: plot.title, font: { size: 13 } },
+        paper_bgcolor: dark ? '#020617' : '#ffffff',
+        plot_bgcolor: dark ? '#020617' : '#ffffff',
+        font: { color: dark ? '#e2e8f0' : '#334155', size: 11 },
+        autosize: true,
+      }, { responsive: true, displayModeBar: true })
+    } catch (error) {
+      console.error('Chart render failed:', error)
+    }
   }, [plot, dark])
   return (
     <figure className="rounded-xl border border-slate-300 dark:border-slate-600">
@@ -465,4 +488,11 @@ function PlotPanel({ plot, theme }: { plot: PlotSpec; theme: string }) {
       <figcaption className="border-t border-slate-200 px-3 py-2 text-xs text-slate-600 dark:border-slate-700 dark:text-slate-300">{plot.title}</figcaption>
     </figure>
   )
+}
+
+function publicError(error: unknown) {
+  const message = error instanceof Error ? error.message : 'Analysis failed.'
+  const first = message.split('\n')[0]?.trim() || 'Analysis failed.'
+  if (first.length > 180 || /at\s+\S+\s+\(/.test(first)) return 'Analysis failed. Check the dataset and try again.'
+  return first
 }

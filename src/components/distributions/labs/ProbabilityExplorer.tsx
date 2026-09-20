@@ -69,7 +69,7 @@ export function ProbabilityExplorer({ dist, params, data }: { dist: Distribution
         <DistChart dist={dist} params={params} data={data} shade={result.shade} highlightX={discrete && dMode === 'eq' ? Math.round(k) : undefined} />
       </div>
       <p className="mt-2 text-center text-sm font-black text-indigo-700 dark:text-indigo-300">
-        {result.label} = {fmt(result.p, 4)}
+        {result.label} = {Number.isFinite(result.p) ? fmt(result.p, 4) : '—'}
       </p>
     </section>
   )

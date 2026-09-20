@@ -1,7 +1,10 @@
-import { useStore } from '../../store/useStore'
 import { Link } from 'react-router-dom'
 import { CheckCircle, AlertTriangle } from 'lucide-react'
 import { DatasetEmptyState } from '../../components/ui/DatasetEmptyState'
+import { ErrorState } from '../../components/ui/AppStates'
+import { PageBack } from '../../components/ui/PageBack'
+import { inspectDataset } from '../../lib/datasetGuard'
+import { useStore } from '../../store/useStore'
 
 const TYPE_COLORS: Record<string, string> = {
   numeric: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
@@ -21,26 +24,38 @@ function formatBytes(value?: number) {
 
 export function PreviewPage() {
   const { activeDataset } = useStore()
+  const inspection = inspectDataset(activeDataset)
 
-  if (!activeDataset) {
+  if (inspection.status === 'empty' || !inspection.dataset) {
     return <DatasetEmptyState preferredPath="/data/preview" description="Load a dataset to preview rows, inspect schema, and choose the next analysis view." />
   }
+  if (inspection.status === 'invalid') {
+    return (
+      <ErrorState
+        title="This dataset cannot be used for this analysis."
+        description={inspection.message}
+        backTo="/data/upload"
+      />
+    )
+  }
 
-  const preview = activeDataset.data.slice(0, 10)
-  const cols = Object.keys(preview[0] || {})
+  const dataset = inspection.dataset
+  const preview = dataset.data.slice(0, 10)
+  const cols = dataset.schema.map((col) => col.name)
   const metadata = [
-    ['File size', formatBytes(activeDataset.fileSize)],
-    ['Row count', activeDataset.rows.toLocaleString()],
-    ['Schema confidence', `${activeDataset.schemaConfidence ?? 92}%`],
+    ['File size', formatBytes(dataset.fileSize)],
+    ['Row count', dataset.rows.toLocaleString()],
+    ['Schema confidence', `${dataset.schemaConfidence ?? 92}%`],
   ]
 
   return (
     <div className="p-6">
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-white mb-1">{activeDataset.name}</h1>
+          <PageBack fallback="/data/upload" label="Back to Data" />
+          <h1 className="mt-2 text-2xl font-bold text-slate-800 dark:text-white mb-1">{dataset.name}</h1>
           <p className="text-slate-500 dark:text-slate-400">
-            {activeDataset.rows.toLocaleString()} rows · {activeDataset.cols} columns · {activeDataset.sourceType}
+            {dataset.rows.toLocaleString()} rows · {dataset.cols} columns · {dataset.sourceType}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -56,7 +71,7 @@ export function PreviewPage() {
           <div key={label} className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
             <p className="mt-1 text-xl font-bold text-slate-800 dark:text-white">{value}</p>
-            {label === 'Schema confidence' && <p className="text-xs text-slate-400">{activeDataset.parseDetails ?? 'Detected from values and missingness'}</p>}
+            {label === 'Schema confidence' && <p className="text-xs text-slate-400">{dataset.parseDetails ?? 'Detected from values and missingness'}</p>}
           </div>
         ))}
       </div>
@@ -65,7 +80,7 @@ export function PreviewPage() {
       <section className="mb-8">
         <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Column Schema</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-          {activeDataset.schema.map((col) => (
+          {dataset.schema.map((col) => (
             <div
               key={col.name}
               className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3"
@@ -138,7 +153,13 @@ export function PreviewPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-              {preview.map((row, i) => (
+              {preview.length === 0 ? (
+                <tr>
+                  <td className="px-3 py-6 text-center text-slate-400" colSpan={Math.max(cols.length + 1, 1)}>
+                    This dataset has no rows to preview.
+                  </td>
+                </tr>
+              ) : preview.map((row, i) => (
                 <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
                   <td className="px-3 py-2 text-slate-400">{i + 1}</td>
                   {cols.map((c) => (

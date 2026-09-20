@@ -6,6 +6,8 @@ import { useReducedMotion } from '../components/visual/useReducedMotion'
 import { numericColumn } from '../lib/stats'
 import { useStore } from '../store/useStore'
 import { DatasetEmptyState } from '../components/ui/DatasetEmptyState'
+import { NoNumericColumnsState } from '../components/ui/AppStates'
+import { PageBack } from '../components/ui/PageBack'
 
 export function InferencePage() {
   const activeDataset = useStore((state) => state.activeDataset)
@@ -30,21 +32,28 @@ export function InferencePage() {
     )
   }
 
+  if (numCols.length === 0) {
+    return <NoNumericColumnsState analysis="inference tests" />
+  }
+
   return (
     <div className="pb-8">
       <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-3 px-3 pt-4 sm:px-5">
-        <label className="text-sm font-semibold text-slate-600 dark:text-slate-300">
-          Column
-          <select
-            value={effective}
-            onChange={(event) => setColumn(event.target.value)}
-            className="ml-2 rounded-md border border-slate-200 bg-white px-2 py-1.5 text-sm font-normal dark:border-slate-600 dark:bg-slate-800"
-          >
-            {numCols.map((name) => (
-              <option key={name}>{name}</option>
-            ))}
-          </select>
-        </label>
+        <div className="flex items-center gap-3">
+          <PageBack fallback="/analysis/t.oneSample" label="Back" />
+          <label className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+            Column
+            <select
+              value={effective}
+              onChange={(event) => setColumn(event.target.value)}
+              className="ml-2 rounded-md border border-slate-200 bg-white px-2 py-1.5 text-sm font-normal dark:border-slate-600 dark:bg-slate-800"
+            >
+              {numCols.map((name) => (
+                <option key={name}>{name}</option>
+              ))}
+            </select>
+          </label>
+        </div>
         <div className="flex items-center gap-3">
           <TeachingDatasetChip compact />
           <Link to="/analysis/t.oneSample" className="text-sm font-bold text-indigo-600 hover:underline">

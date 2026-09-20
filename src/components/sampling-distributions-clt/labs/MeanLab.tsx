@@ -121,7 +121,22 @@ export function MeanLab({ tab }: { tab: CltTab }) {
                 ))}
               </div>
               <p className="text-xs font-bold uppercase tracking-wide text-slate-400">2. Set parameters</p>
-              <CltSlider label="Sample size (n)" value={n} min={2} max={120} step={1} onChange={setN} ticks={[5, 30, 60, 120]} />
+              <label className="block text-xs font-semibold text-slate-500">
+                Sample size n
+                <input
+                  type="number"
+                  min={1}
+                  max={2000}
+                  step={1}
+                  value={n}
+                  onChange={(event) => {
+                    const next = Number(event.target.value)
+                    if (Number.isInteger(next) && next > 0) setN(next)
+                  }}
+                  className="mt-1 min-h-10 w-full rounded-xl border border-slate-200 px-2 font-mono text-sm dark:border-slate-700 dark:bg-slate-950"
+                />
+              </label>
+              <CltSlider label="Sample size (n)" value={Math.min(n, 120)} min={1} max={120} step={1} onChange={setN} ticks={[5, 30, 60, 120]} />
               <CltSlider label="Number of samples" value={R} min={1} max={10000} step={1} onChange={setR} ticks={[1, 100, 1000, 10000]} />
               <div className="flex flex-wrap gap-2">
                 {DRAW_BATCHES.map((count) => (
@@ -144,9 +159,9 @@ export function MeanLab({ tab }: { tab: CltTab }) {
                   <p className="text-center text-[10px] font-semibold text-slate-400">Current sample · x̄ = {formatNum(result.lastStatistic)}</p>
                 </div>
                 <div className="flex flex-wrap content-start gap-2 p-1">
-                  <Metric label="Samples" value={String(result.R)} />
-                  <Metric label="Mean of x̄" value={formatNum(result.empiricalMean)} />
-                  <Metric label="SD of x̄" value={formatNum(result.empiricalSd)} />
+                  <Metric label="Theoretical SE" value={formatNum(se)} />
+                  <Metric label="Simulated mean" value={formatNum(result.empiricalMean)} />
+                  <Metric label="Simulated SD" value={formatNum(result.empiricalSd)} />
                 </div>
               </div>
               <HistogramChart bins={result.histogram} mean={population.mean} xLabel="Sample mean (x̄)" ariaLabel="Sampling distribution of the mean" />

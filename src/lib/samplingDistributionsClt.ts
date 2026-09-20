@@ -1,3 +1,10 @@
+import {
+  DISTRIBUTION_BY_ID,
+  curvePoints,
+  sanitizeParams,
+  type DistributionId,
+} from './distributions'
+import { requirePositiveInteger, theoreticalSamplingMoments } from './statEngine'
 import { STATISTICS_STUDIOS, labPath, studioPath, type Studio, type StudioLab } from './statisticsStudios'
 
 export const CLT_STUDIO_SLUG = 'sampling-distributions-clt'
@@ -15,6 +22,14 @@ export type PopulationKind =
   | 'bimodal'
   | 'discrete'
   | 'bernoulli'
+  | 'binomial'
+  | 'poisson'
+  | 'geometric'
+  | 'discreteUniform'
+  | 'exponential'
+  | 'gamma'
+  | 'beta'
+  | 'lognormal'
   | 'custom'
 
 export type StatisticKind = 'mean' | 'proportion' | 'median'
@@ -28,9 +43,16 @@ export type PopulationSpec = {
   min?: number
   max?: number
   p?: number
+  lambda?: number
+  nTrials?: number
+  shape?: number
+  scale?: number
+  alpha?: number
+  beta?: number
   values?: number[]
   size?: number
   seed?: number
+  params?: Record<string, number>
 }
 
 export type Population = {
@@ -136,9 +158,98 @@ export function nextIncompleteCltLab(completed: string[]): StudioLab {
   return CLT_STUDIO.labs.find((lab) => !completed.includes(lab.slug)) ?? first
 }
 
-export function formatNum(value: number, digits = 2): string {
+export const CLT_MAX_N = 2000
+export const CLT_MAX_REPS = 20000
+export const CLT_COST_CAP = 1_500_000
+
+export type CltParentParam = {
+  key: string
+  label: string
+  min: number
+  max: number
+  step: number
+  default: number
+}
+
+export type CltParentOption = {
+  kind: PopulationKind
+  label: string
+  family: 'discrete' | 'continuous' | 'shape'
+  distId?: DistributionId
+  params: CltParentParam[]
+}
+
+export const CLT_PARENT_OPTIONS: CltParentOption[] = [
+  { kind: 'bernoulli', label: 'Bernoulli', family: 'discrete', distId: 'bernoulli', params: [{ key: 'p', label: 'p', min: 0.01, max: 0.99, step: 0.01, default: 0.4 }] },
+  { kind: 'binomial', label: 'Binomial', family: 'discrete', distId: 'binomial', params: [{ key: 'nTrials', label: 'n trials', min: 1, max: 80, step: 1, default: 10 }, { key: 'p', label: 'p', min: 0.01, max: 0.99, step: 0.01, default: 0.5 }] },
+  { kind: 'poisson', label: 'Poisson', family: 'discrete', distId: 'poisson', params: [{ key: 'lambda', label: 'λ', min: 0.1, max: 20, step: 0.1, default: 3 }] },
+  { kind: 'geometric', label: 'Geometric', family: 'discrete', distId: 'geometric', params: [{ key: 'p', label: 'p', min: 0.05, max: 0.95, step: 0.01, default: 0.3 }] },
+  { kind: 'discreteUniform', label: 'Discrete uniform', family: 'discrete', distId: 'discrete_uniform', params: [{ key: 'min', label: 'a', min: 0, max: 20, step: 1, default: 1 }, { key: 'max', label: 'b', min: 1, max: 40, step: 1, default: 6 }] },
+  { kind: 'uniform', label: 'Uniform', family: 'continuous', distId: 'continuous_uniform', params: [{ key: 'min', label: 'a', min: -20, max: 40, step: 0.5, default: 0 }, { key: 'max', label: 'b', min: -10, max: 80, step: 0.5, default: 10 }] },
+  { kind: 'normal', label: 'Normal', family: 'continuous', distId: 'normal', params: [{ key: 'mu', label: 'μ', min: -20, max: 80, step: 0.5, default: 50 }, { key: 'sigma', label: 'σ', min: 0.2, max: 25, step: 0.1, default: 10 }] },
+  { kind: 'exponential', label: 'Exponential', family: 'continuous', distId: 'exponential', params: [{ key: 'lambda', label: 'λ', min: 0.1, max: 5, step: 0.1, default: 0.5 }] },
+  { kind: 'gamma', label: 'Gamma', family: 'continuous', distId: 'gamma', params: [{ key: 'shape', label: 'shape', min: 0.2, max: 12, step: 0.1, default: 2 }, { key: 'scale', label: 'scale', min: 0.2, max: 8, step: 0.1, default: 2 }] },
+  { kind: 'beta', label: 'Beta', family: 'continuous', distId: 'beta', params: [{ key: 'alpha', label: 'α', min: 0.2, max: 12, step: 0.1, default: 2 }, { key: 'beta', label: 'β', min: 0.2, max: 12, step: 0.1, default: 5 }] },
+  { kind: 'lognormal', label: 'Lognormal', family: 'continuous', distId: 'lognormal', params: [{ key: 'mu', label: 'μ log', min: -2, max: 3, step: 0.1, default: 0 }, { key: 'sigma', label: 'σ log', min: 0.1, max: 1.5, step: 0.05, default: 0.5 }] },
+  { kind: 'skewed', label: 'Right-skewed (teaching)', family: 'shape', params: [{ key: 'sigma', label: 'spread', min: 2, max: 20, step: 0.5, default: 6 }] },
+  { kind: 'leftSkewed', label: 'Left-skewed (teaching)', family: 'shape', params: [{ key: 'sigma', label: 'spread', min: 2, max: 20, step: 0.5, default: 6 }] },
+  { kind: 'bimodal', label: 'Bimodal (teaching)', family: 'shape', params: [{ key: 'mu', label: 'center', min: 20, max: 80, step: 1, default: 50 }, { key: 'sigma', label: 'spread', min: 4, max: 20, step: 0.5, default: 10 }] },
+]
+
+export function formatNum(value: number, digits = 4): string {
   if (!Number.isFinite(value)) return '—'
   return Number(value.toFixed(digits)).toString()
+}
+
+export function parseCltSampleSize(raw: string | number): { ok: true; n: number } | { ok: false; error: string } {
+  const numeric = typeof raw === 'number' ? raw : raw.trim() === '' ? Number.NaN : Number(raw)
+  const error = requirePositiveInteger(Number.isFinite(numeric) ? numeric : '', 'Sample size n', CLT_MAX_N)
+  if (error) return { ok: false, error }
+  return { ok: true, n: numeric }
+}
+
+export function parseCltReps(raw: string | number): { ok: true; R: number } | { ok: false; error: string } {
+  const numeric = typeof raw === 'number' ? raw : raw.trim() === '' ? Number.NaN : Number(raw)
+  const error = requirePositiveInteger(Number.isFinite(numeric) ? numeric : '', 'Number of simulated samples', CLT_MAX_REPS)
+  if (error) return { ok: false, error }
+  return { ok: true, R: numeric }
+}
+
+export function cltSimulationCount(n: number, requested: number): number {
+  const safeN = Math.max(1, n)
+  const cap = Math.max(80, Math.floor(CLT_COST_CAP / safeN))
+  return Math.max(1, Math.min(requested, CLT_MAX_REPS, cap))
+}
+
+export function parentOption(kind: PopulationKind): CltParentOption | undefined {
+  return CLT_PARENT_OPTIONS.find((option) => option.kind === kind)
+}
+
+export function defaultParentParams(kind: PopulationKind): Record<string, number> {
+  const option = parentOption(kind)
+  return Object.fromEntries((option?.params ?? []).map((param) => [param.key, param.default]))
+}
+
+export function specFromParent(kind: PopulationKind, params: Record<string, number>): PopulationSpec {
+  return {
+    kind,
+    mu: params.mu,
+    sigma: params.sigma,
+    min: params.min,
+    max: params.max,
+    p: params.p,
+    nTrials: params.nTrials,
+    lambda: params.lambda,
+    shape: params.shape,
+    scale: params.scale,
+    alpha: params.alpha,
+    beta: params.beta,
+    params,
+  }
+}
+
+export function samplingMomentsFor(population: Population, n: number) {
+  return theoreticalSamplingMoments(population.mean, population.sd ** 2, n)
 }
 
 export function formatPct(value: number, digits = 1): string {
@@ -288,6 +399,60 @@ function materialize(draw: (rng: Rng) => number, size: number, rng: Rng): number
   return Array.from({ length: size }, () => draw(rng))
 }
 
+function asScalar(value: number | number[]): number {
+  return typeof value === 'number' ? value : value[0] ?? Number.NaN
+}
+
+const CATALOG_KIND_TO_DIST: Partial<Record<PopulationKind, DistributionId>> = {
+  binomial: 'binomial',
+  poisson: 'poisson',
+  geometric: 'geometric',
+  discreteUniform: 'discrete_uniform',
+  exponential: 'exponential',
+  gamma: 'gamma',
+  beta: 'beta',
+  lognormal: 'lognormal',
+}
+
+function distParamsFor(kind: PopulationKind, spec: PopulationSpec): Record<string, number> {
+  const extra = spec.params ?? {}
+  if (kind === 'binomial') return { n: spec.nTrials ?? extra.nTrials ?? extra.n ?? 10, p: spec.p ?? extra.p ?? 0.5 }
+  if (kind === 'poisson') return { lambda: spec.lambda ?? extra.lambda ?? 3 }
+  if (kind === 'geometric') return { p: spec.p ?? extra.p ?? 0.3 }
+  if (kind === 'discreteUniform') return { a: spec.min ?? extra.min ?? extra.a ?? 1, b: spec.max ?? extra.max ?? extra.b ?? 6 }
+  if (kind === 'exponential') return { lambda: spec.lambda ?? extra.lambda ?? 0.5 }
+  if (kind === 'gamma') return { shape: spec.shape ?? extra.shape ?? 2, scale: spec.scale ?? extra.scale ?? 2 }
+  if (kind === 'beta') return { alpha: spec.alpha ?? extra.alpha ?? 2, beta: spec.beta ?? extra.beta ?? 5 }
+  if (kind === 'lognormal') return { mu: spec.mu ?? extra.mu ?? 0, sigma: spec.sigma ?? extra.sigma ?? 0.5 }
+  return extra
+}
+
+function catalogPopulation(spec: PopulationSpec, _rng: Rng): Population | null {
+  const distId = CATALOG_KIND_TO_DIST[spec.kind]
+  if (!distId) return null
+  const dist = DISTRIBUTION_BY_ID[distId]
+  const params = sanitizeParams(dist, distParamsFor(spec.kind, spec))
+  const mean = Number(dist.expectedValue(params))
+  const variance = Number(dist.variance(params))
+  const sd = Number.isFinite(variance) ? Math.sqrt(Math.max(0, variance)) : Number.NaN
+  const curve = curvePoints(dist, params, 'density')
+  const density = curve.x.map((x, index) => ({ x, y: curve.y[index] ?? 0 }))
+  return {
+    kind: spec.kind,
+    mean: Number.isFinite(mean) ? mean : 0,
+    sd: Number.isFinite(sd) ? sd : 1,
+    size: Number.POSITIVE_INFINITY,
+    finite: false,
+    p: params.p,
+    draw: (next) => {
+      const sampled = dist.sample(params, next)
+      const value = asScalar(sampled)
+      return Number.isFinite(value) ? value : mean
+    },
+    density,
+  }
+}
+
 export function createPopulation(spec: PopulationSpec, rng: Rng = createRng(spec.seed ?? 17)): Population {
   const kind = spec.kind
   const mu = spec.mu ?? (kind === 'bernoulli' ? spec.p ?? 0.4 : 50)
@@ -333,6 +498,9 @@ export function createPopulation(spec: PopulationSpec, rng: Rng = createRng(spec
       ],
     }
   }
+
+  const catalog = catalogPopulation(spec, rng)
+  if (catalog) return catalog
 
   let draw: (next: Rng) => number
   let mean = mu

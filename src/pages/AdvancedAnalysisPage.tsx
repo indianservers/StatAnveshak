@@ -28,6 +28,7 @@ import { useStore } from '../store/useStore'
 import { detectOutliersIQR, numericColumn, pearsonCorrelation, correlationMatrix } from '../lib/stats'
 import { chiSquareCDF, normalCDF, chiSquareIndependence } from '../lib/inference'
 import { DatasetEmptyState } from '../components/ui/DatasetEmptyState'
+import { PageBack } from '../components/ui/PageBack'
 
 type FeatureGroup = 'Data Prep' | 'EDA' | 'Inference' | 'Modeling' | 'Teaching' | 'Output'
 type Goal = 'describe' | 'compare_means' | 'association' | 'predict_numeric' | 'predict_category' | 'time_series' | 'quality'
@@ -791,7 +792,8 @@ ${firstNum && secondNum ? `lm_fit <- lm(${secondNum} ~ ${firstNum}, data=df)\nsu
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-6">
         <div>
-          <div className="flex items-center gap-2 mb-2">
+          <PageBack fallback="/analysis/descriptives.statistics" label="Back" />
+          <div className="mb-2 mt-2 flex items-center gap-2">
             <FlaskConical size={24} className="text-indigo-500" />
             <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Advanced Analysis</h1>
           </div>

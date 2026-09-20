@@ -5,9 +5,12 @@ import { Download, FileCode, FileText, Printer, Table2 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { escapeHtml } from '../lib/validation'
 import { DatasetEmptyState } from '../components/ui/DatasetEmptyState'
+import { useToast } from '../components/ui/toastContext'
+import { PageBack } from '../components/ui/PageBack'
 
 export function ReportsPage() {
   const { activeDataset, savedStages } = useStore()
+  const { notify } = useToast()
 
   if (!activeDataset) {
     return <DatasetEmptyState preferredPath="/reports" description="Load a dataset to export reports, tables, markdown, HTML, and reproducible scripts." />
@@ -15,34 +18,47 @@ export function ReportsPage() {
 
   const numCols = activeDataset.schema.filter((c) => c.type === 'numeric').map((c) => c.name)
 
+  const withExportFeedback = (filename: string, action: () => void) => {
+    try {
+      action()
+      notify(`Export complete: ${filename}`, 'success')
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Export failed. Try again.', 'error')
+    }
+  }
+
   const exportFullDataCSV = () => {
-    const ws = XLSX.utils.json_to_sheet(activeDataset.data)
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Data')
-    XLSX.writeFile(wb, `${activeDataset.name}_export.csv`, { bookType: 'csv' })
+    withExportFeedback(`${activeDataset.name}_export.csv`, () => {
+      const ws = XLSX.utils.json_to_sheet(activeDataset.data)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Data')
+      XLSX.writeFile(wb, `${activeDataset.name}_export.csv`, { bookType: 'csv' })
+    })
   }
 
   const exportFullDataExcel = () => {
-    const dataWs = XLSX.utils.json_to_sheet(activeDataset.data)
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, dataWs, 'Data')
+    withExportFeedback(`${activeDataset.name}_report.xlsx`, () => {
+      const dataWs = XLSX.utils.json_to_sheet(activeDataset.data)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, dataWs, 'Data')
 
-    // Add summary sheet
-    if (numCols.length > 0) {
-      const summaryRows: Record<string, unknown>[] = numCols.map((col) => {
-        const s = summaryStats(activeDataset.data, col)
-        const row: Record<string, unknown> = { Column: col }
-        s.forEach((stat) => { row[stat.label] = stat.value })
-        return row
-      })
-      const summaryWs = XLSX.utils.json_to_sheet(summaryRows)
-      XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary')
-    }
+      if (numCols.length > 0) {
+        const summaryRows: Record<string, unknown>[] = numCols.map((col) => {
+          const s = summaryStats(activeDataset.data, col)
+          const row: Record<string, unknown> = { Column: col }
+          s.forEach((stat) => { row[stat.label] = stat.value })
+          return row
+        })
+        const summaryWs = XLSX.utils.json_to_sheet(summaryRows)
+        XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary')
+      }
 
-    XLSX.writeFile(wb, `${activeDataset.name}_report.xlsx`)
+      XLSX.writeFile(wb, `${activeDataset.name}_report.xlsx`)
+    })
   }
 
   const exportHTMLReport = () => {
+    withExportFeedback(`${activeDataset.name}_report.html`, () => {
     const stats = numCols.map((col) => ({ col, stats: summaryStats(activeDataset.data, col) }))
     const corr = numCols.length >= 2 ? correlationMatrix(activeDataset.data, numCols) : null
 
@@ -104,6 +120,7 @@ ${corr ? `
     a.download = `${activeDataset.name}_report.html`
     a.click()
     URL.revokeObjectURL(url)
+    })
   }
 
   const reportMarkdown = () => {
@@ -116,23 +133,33 @@ ${corr ? `
   }
 
   const downloadText = (name: string, content: string, type: string) => {
-    const blob = new Blob([content], { type })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = name
-    a.click()
-    URL.revokeObjectURL(url)
+    withExportFeedback(name, () => {
+      const blob = new Blob([content], { type })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = name
+      a.click()
+      URL.revokeObjectURL(url)
+    })
   }
 
   const exportMarkdown = () => downloadText(`${activeDataset.name}_report.md`, reportMarkdown(), 'text/markdown')
   const exportScript = () => downloadText(`${activeDataset.name}_analysis.js`, `// Reproducible Anveshak analysis recipe\nconst dataset = "${activeDataset.name}"\nconst numericColumns = ${JSON.stringify(numCols, null, 2)}\n// 1. Load dataset\n// 2. Validate schema and missingness\n// 3. Run summary statistics for numericColumns\n// 4. Run correlation matrix when numericColumns.length >= 2\n// 5. Export report artifacts\n`, 'text/javascript')
   const exportWordCompatible = () => downloadText(`${activeDataset.name}_report.doc`, `<html><body><pre>${reportMarkdown().replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c] ?? c))}</pre></body></html>`, 'application/msword')
-  const printPdf = () => window.print()
+  const printPdf = () => {
+    try {
+      window.print()
+      notify('Export complete: analysis-report.pdf', 'success')
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Print / PDF export failed.', 'error')
+    }
+  }
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold text-slate-800 dark:text-white mb-6">Export & Reports</h1>
+      <PageBack fallback="/data/preview" label="Back" />
+      <h1 className="mt-2 text-2xl font-bold text-slate-800 dark:text-white mb-6">Export & Reports</h1>
 
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">
         All exports are generated locally in your browser. No data is sent to any server.

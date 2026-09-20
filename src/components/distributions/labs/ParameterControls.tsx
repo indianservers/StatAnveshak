@@ -1,4 +1,5 @@
 import type { Distribution } from '../../../lib/distributions'
+import { validateDistributionParams } from '../../../lib/distributionValidation'
 
 const LABELS: Record<string, string> = {
   p: 'Success probability (p)',
@@ -46,18 +47,20 @@ export function ParameterControls({
   if (!dist.params.length) {
     return <p className="text-xs text-slate-500">This family has no free parameters — the lab uses local controls instead.</p>
   }
+  const errors = validateDistributionParams(dist, params).errors
   return (
     <div className="space-y-4">
       {dist.params.map((param) => {
         const value = params[param.key] ?? param.default
+        const error = errors[param.key]
         return (
           <label key={param.key} className="block">
             <span className="mb-1 flex items-center justify-between text-sm font-semibold text-slate-700 dark:text-slate-300">
               {LABELS[param.key] ?? param.label}
               <input
                 type="number"
-                className="w-20 rounded-lg border border-slate-200 bg-white px-2 py-1 text-right text-sm font-bold dark:border-slate-700 dark:bg-slate-950"
-                value={Number(value.toFixed(4))}
+                className={`w-20 rounded-lg border bg-white px-2 py-1 text-right text-sm font-bold dark:bg-slate-950 ${error ? 'border-rose-400 dark:border-rose-500' : 'border-slate-200 dark:border-slate-700'}`}
+                value={Number.isFinite(value) ? value : ''}
                 min={param.min}
                 max={param.max}
                 step={param.step}
@@ -69,10 +72,11 @@ export function ParameterControls({
               min={param.min}
               max={param.max}
               step={param.step}
-              value={value}
+              value={Number.isFinite(value) ? Math.min(param.max, Math.max(param.min, value)) : param.default}
               onChange={(event) => onParam(param.key, Number(event.target.value))}
               className="w-full accent-indigo-600"
             />
+            {error ? <span className="mt-1 block text-xs font-normal text-rose-600">{error}</span> : null}
           </label>
         )
       })}

@@ -29,6 +29,9 @@ const StudiosHomePage = lazy(() => import('./pages/statistics/StudiosHomePage').
 const StudioLandingPage = lazy(() => import('./pages/statistics/StudioLandingPage').then((m) => ({ default: m.StudioLandingPage })))
 const LabPage = lazy(() => import('./pages/statistics/LabPage').then((m) => ({ default: m.LabPage })))
 const LearnPage = lazy(() => import('./pages/LearnPage').then((m) => ({ default: m.LearnPage })))
+const CurriculumMapPage = lazy(() => import('./pages/CurriculumMapPage').then((m) => ({ default: m.CurriculumMapPage })))
+const CurriculumTopicPage = lazy(() => import('./pages/CurriculumTopicPage').then((m) => ({ default: m.CurriculumTopicPage })))
+const LearningPathsPage = lazy(() => import('./pages/LearningPathsPage').then((m) => ({ default: m.LearningPathsPage })))
 const ChapterPage = lazy(() => import('./pages/ChapterPage').then((m) => ({ default: m.ChapterPage })))
 const ClassroomPage = lazy(() => import('./pages/ClassroomPage').then((m) => ({ default: m.ClassroomPage })))
 const ProfessionalLearningPage = lazy(() => import('./pages/ProfessionalLearningPage').then((m) => ({ default: m.ProfessionalLearningPage })))
@@ -86,6 +89,12 @@ function App() {
               <Route path="statistics/:studioSlug" element={<StudioLandingPage />} />
               <Route path="statistics/:studioSlug/:labSlug" element={<LabPage />} />
               <Route path="learn" element={<LearnPage />} />
+              <Route path="learn/wall" element={<DashboardPage />} />
+              <Route path="learn/curriculum" element={<CurriculumMapPage />} />
+              <Route path="learn/curriculum/:areaId" element={<CurriculumTopicPage />} />
+              <Route path="learn/curriculum/:areaId/:topicId" element={<CurriculumTopicPage />} />
+              <Route path="learn/paths" element={<LearningPathsPage />} />
+              <Route path="learn/paths/:pathId" element={<LearningPathsPage />} />
               <Route path="learn/:chapterId" element={<ChapterPage />} />
               <Route path="classroom" element={<ClassroomPage />} />
               <Route path="professional-learning" element={<ProfessionalLearningPage />} />

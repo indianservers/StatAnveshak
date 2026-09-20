@@ -1,5 +1,6 @@
 import * as ss from 'simple-statistics'
 import { describeNumeric } from '../analysis/engines/frequentist/descriptives'
+import { extractNumericSeries, pairedComplete, pearson } from './statEngine'
 import type { ColumnSchema, StatResult } from '../types'
 
 export interface DatasetKpi {
@@ -44,7 +45,7 @@ export interface CategoricalDescriptiveRow {
 }
 
 export function numericColumn(data: Record<string, unknown>[], col: string): number[] {
-  return data.map((r) => Number(r[col])).filter((n) => !isNaN(n) && isFinite(n))
+  return extractNumericSeries(data, col).values
 }
 
 function finiteOrDash(value: number): number | string {
@@ -190,30 +191,44 @@ export function categoricalDescriptiveRows(data: Record<string, unknown>[], colu
 
 export function frequencyTable(data: Record<string, unknown>[], col: string) {
   const counts: Record<string, number> = {}
+  let missing = 0
   data.forEach((r) => {
-    const val = String(r[col] ?? '(missing)')
+    const raw = r[col]
+    if (raw === null || raw === undefined || raw === '') {
+      missing += 1
+      counts['(missing)'] = (counts['(missing)'] || 0) + 1
+      return
+    }
+    const val = String(raw)
     counts[val] = (counts[val] || 0) + 1
   })
   const total = data.length
-  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1])
+  if (total === 0) return []
+  const entries = Object.entries(counts).sort((a, b) => {
+    if (a[0] === '(missing)') return 1
+    if (b[0] === '(missing)') return -1
+    return b[1] - a[1]
+  })
   let cumFreq = 0
   return entries.map(([value, freq]) => {
     cumFreq += freq
     return {
       value,
       frequency: freq,
+      proportion: freq / total,
       relativeFreq: +((freq / total) * 100).toFixed(2),
       cumulativeFreq: +((cumFreq / total) * 100).toFixed(2),
+      missing: value === '(missing)' ? missing : 0,
     }
   })
 }
 
 export function pearsonCorrelation(data: Record<string, unknown>[], col1: string, col2: string): number {
-  const pairs = data
-    .map((r) => [Number(r[col1]), Number(r[col2])])
-    .filter(([a, b]) => !isNaN(a) && !isNaN(b))
-  if (pairs.length < 2) return NaN
-  return ss.sampleCorrelation(pairs.map((p) => p[0]), pairs.map((p) => p[1]))
+  const pairs = pairedComplete(data, col1, col2)
+  if (pairs.length < 2) return Number.NaN
+  const xs = pairs.map((pair) => pair.x)
+  const ys = pairs.map((pair) => pair.y)
+  return pearson(xs, ys)
 }
 
 export function correlationMatrix(data: Record<string, unknown>[], cols: string[]) {

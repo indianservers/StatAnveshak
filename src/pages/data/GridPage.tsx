@@ -12,6 +12,9 @@ import { useToast } from '../../components/ui/toastContext'
 import { detectSchema } from '../../lib/schema'
 import { saveDataset } from '../../lib/storage'
 import { DatasetEmptyState } from '../../components/ui/DatasetEmptyState'
+import { ErrorState } from '../../components/ui/AppStates'
+import { PageBack } from '../../components/ui/PageBack'
+import { inspectDataset } from '../../lib/datasetGuard'
 
 ModuleRegistry.registerModules([AllCommunityModule])
 
@@ -127,11 +130,34 @@ export function GridPage() {
     return <DatasetEmptyState preferredPath="/data/grid" description="Load a dataset to inspect, edit, filter, and export the full table." />
   }
 
+  const inspection = inspectDataset(activeDataset)
+  if (inspection.status === 'invalid' || !inspection.dataset) {
+    return (
+      <ErrorState
+        title="This dataset cannot be used for this analysis."
+        description={inspection.message || 'The grid could not read this table.'}
+        backTo="/data/upload"
+      />
+    )
+  }
+  const gridDataset = inspection.dataset
+  if (gridDataset.schema.length === 0) {
+    return (
+      <ErrorState
+        title="This dataset cannot be used for this analysis."
+        description="The grid could not find any columns in this table."
+        backTo="/data/upload"
+      />
+    )
+  }
+  const rowData = gridDataset.data.map((row) => (row && typeof row === 'object' ? row : {}))
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* Toolbar */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shrink-0">
-        <h2 className="font-semibold text-slate-700 dark:text-slate-200 mr-2">{activeDataset.name}</h2>
+        <PageBack fallback="/data/preview" label="Back to Data" />
+        <h2 className="font-semibold text-slate-700 dark:text-slate-200 mr-2">{gridDataset.name}</h2>
         <div className="relative flex-1 max-w-xs">
           <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
@@ -233,7 +259,7 @@ export function GridPage() {
         <AgGridReact
           ref={gridRef}
           theme="legacy"
-          rowData={activeDataset.data}
+          rowData={rowData}
           columnDefs={colDefs}
           quickFilterText={quickFilter}
           pagination
@@ -257,7 +283,7 @@ export function GridPage() {
           undoRedoCellEditing
           undoRedoCellEditingLimit={20}
           singleClickEdit
-          stopEditingWhenCellsLoseFocus
+          overlayNoRowsTemplate="<span>This dataset has no rows to display.</span>"
         />
       </div>
     </div>

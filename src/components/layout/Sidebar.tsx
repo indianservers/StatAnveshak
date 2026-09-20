@@ -107,6 +107,8 @@ const NAV_GROUPS = [
     label: 'Learn',
     items: [
       { to: '/learn', icon: BookOpen, label: 'Core Statistics' },
+      { to: '/learn/curriculum', icon: Map, label: 'Curriculum Map' },
+      { to: '/learn/paths/beginner', icon: GitFork, label: 'Learning Paths' },
       { to: '/professional-learning', icon: GraduationCap, label: 'Professional Learning' },
       { to: '/documentation', icon: FileText, label: 'Documentation' },
       { to: '/glossary', icon: BookMarked, label: 'Glossary' },
@@ -127,16 +129,20 @@ const CHAPTER_ICONS = {
 
 const LEARN_NAV = [
   { to: '/', icon: Home, label: 'Chapters' },
+  { to: '/learn', icon: BookOpen, label: 'Continue Learning' },
+  { to: '/learn/paths/beginner', icon: GitFork, label: 'Learning Paths' },
+  { to: '/learn/curriculum', icon: Map, label: 'Curriculum Map' },
   { to: STUDIOS_ROOT, icon: Layers, label: 'Studios' },
   { to: '/distributions', icon: Activity, label: 'Distributions Studio' },
-  { to: '/learn', icon: BookOpen, label: 'Core labs' },
   ...LEARN_CHAPTERS.filter((chapter) => chapter.id !== 'distributions').map((chapter) => ({
     to: chapter.href,
     icon: CHAPTER_ICONS[chapter.id],
     label: chapter.title,
   })),
   { to: '/classroom', icon: Users, label: 'Classroom' },
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Lesson wall' },
+  { to: '/learn/wall', icon: LayoutDashboard, label: 'Lesson wall' },
+  { to: '/documentation', icon: FileText, label: 'Documentation' },
+  { to: '/glossary', icon: BookMarked, label: 'Glossary' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ]
 

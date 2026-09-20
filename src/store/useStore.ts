@@ -3,78 +3,86 @@ import type { AnalysisLogEntry, Dataset, Project, ChartConfig } from '../types'
 import { loadDatasets, loadProjects } from '../lib/storage'
 import { addSavedStage, loadSavedStages, removeSavedStage, type SavedStage } from '../lib/lessonWall'
 import { DEFAULT_LEARN_CHAPTER, type LearnChapterId } from '../lib/learnChapters'
+import { peekLocal, readLocal, readLocalJson, writeLocal } from '../lib/safeStorage'
+import type { DatasetStatus } from '../lib/datasetGuard'
 
 export type WorkspaceMode = 'learn' | 'analyze'
 export type MotionPreference = 'full' | 'reduced'
 export type CaptionSize = 'sm' | 'md' | 'lg'
+export type StorageStatus = DatasetStatus
 
-const loadMode = (): WorkspaceMode => (localStorage.getItem('pref-workspace-mode') === 'analyze' ? 'analyze' : 'learn')
-const loadMotion = (): MotionPreference => (localStorage.getItem('pref-motion') === 'reduced' ? 'reduced' : 'full')
+const ACTIVE_DATASET_KEY = 'pref-active-dataset-id'
+const ACTIVE_PROJECT_KEY = 'pref-active-project-id'
+
+const loadMode = (): WorkspaceMode => (readLocal('pref-workspace-mode') === 'analyze' ? 'analyze' : 'learn')
+const loadMotion = (): MotionPreference => (readLocal('pref-motion') === 'reduced' ? 'reduced' : 'full')
 const loadCaptionSize = (): CaptionSize => {
-  const value = localStorage.getItem('pref-caption-size')
+  const value = readLocal('pref-caption-size')
   return value === 'sm' || value === 'lg' ? value : 'md'
 }
 const loadChapter = (): LearnChapterId => {
-  const value = localStorage.getItem('pref-default-chapter')
+  const value = readLocal('pref-default-chapter')
   return value === 'compound' || value === 'distributions' || value === 'frequentist' || value === 'bayesian' || value === 'regression'
     ? value
     : DEFAULT_LEARN_CHAPTER
 }
 
-const loadBool = (key: string, fallback: boolean) => localStorage.getItem(key) ? localStorage.getItem(key) === 'true' : fallback
-const savePref = (key: string, value: string | boolean | number) => localStorage.setItem(key, String(value))
+const loadBool = (key: string, fallback: boolean) => {
+  const value = readLocal(key)
+  return value ? value === 'true' : fallback
+}
+const savePref = (key: string, value: string | boolean | number) => {
+  writeLocal(key, String(value))
+}
 const loadStringArray = (key: string) => {
-  try {
-    const value = JSON.parse(localStorage.getItem(key) ?? '[]')
-    return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
-  } catch {
-    return []
-  }
+  const value = readLocalJson<unknown>(key, [])
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
 }
 const loadAnalysisHistory = () => {
-  try {
-    const value = JSON.parse(localStorage.getItem('analysis-history') ?? '[]')
-    return Array.isArray(value) ? value.filter((item): item is AnalysisLogEntry => Boolean(item?.id && item?.title)) : []
-  } catch {
-    return []
-  }
+  const value = readLocalJson<unknown>('analysis-history', [])
+  return Array.isArray(value) ? value.filter((item): item is AnalysisLogEntry => Boolean(item && typeof item === 'object' && 'id' in item && 'title' in item)) : []
 }
 const persistAnalysisHistory = (value: AnalysisLogEntry[]) => {
-  localStorage.setItem('analysis-history', JSON.stringify(value.slice(0, 80)))
+  writeLocal('analysis-history', JSON.stringify(value.slice(0, 80)))
   return value.slice(0, 80)
 }
 
 export type AppTheme = 'light' | 'dark' | 'midnight' | 'forest' | 'rose' | 'sepia'
 const THEMES: AppTheme[] = ['light', 'dark', 'midnight', 'forest', 'rose', 'sepia']
 const loadTheme = (): AppTheme => {
-  const value = localStorage.getItem('pref-theme')
+  const value = readLocal('pref-theme')
   return THEMES.includes(value as AppTheme) ? value as AppTheme : 'light'
 }
 
+function restoreById<T extends { id: string }>(items: T[], savedId: string | null) {
+  if (savedId === '') return null
+  if (savedId) return items.find((item) => item.id === savedId) ?? items[0] ?? null
+  return items[0] ?? null
+}
+
 interface AppState {
-  // Active dataset
   activeDataset: Dataset | null
   setActiveDataset: (ds: Dataset | null) => void
 
-  // All loaded datasets in memory
   datasets: Dataset[]
+  storageStatus: StorageStatus
+  storageError: string | null
   hydrateStorage: () => Promise<void>
   addDataset: (ds: Dataset) => void
   removeDataset: (id: string) => void
   updateDataset: (ds: Dataset) => void
 
-  // Projects
   projects: Project[]
   activeProject: Project | null
   setActiveProject: (p: Project | null) => void
   addProject: (p: Project) => void
+  removeProject: (id: string) => void
+  updateProject: (p: Project) => void
 
-  // Charts
   charts: ChartConfig[]
   addChart: (c: ChartConfig) => void
   removeChart: (id: string) => void
 
-  // UI state
   sidebarOpen: boolean
   setSidebarOpen: (v: boolean) => void
   activeModule: string
@@ -119,31 +127,79 @@ interface AppState {
 
 export const useStore = create<AppState>((set) => ({
   activeDataset: null,
-  setActiveDataset: (ds) => set({ activeDataset: ds }),
+  setActiveDataset: (ds) => {
+    savePref(ACTIVE_DATASET_KEY, ds?.id ?? '')
+    set({ activeDataset: ds })
+  },
 
   datasets: [],
+  storageStatus: 'loading',
+  storageError: null,
   hydrateStorage: async () => {
-    const [datasets, projects] = await Promise.all([loadDatasets(), loadProjects()])
-    const sortedDatasets = [...datasets].sort((a, b) => b.createdAt - a.createdAt)
-    const sortedProjects = [...projects].sort((a, b) => b.updatedAt - a.updatedAt)
-    set((state) => ({
-      datasets: sortedDatasets,
-      projects: sortedProjects,
-      activeDataset: state.activeDataset ?? sortedDatasets[0] ?? null,
-      activeProject: state.activeProject ?? sortedProjects[0] ?? null,
-    }))
+    try {
+      const [datasets, projects] = await Promise.all([loadDatasets(), loadProjects()])
+      const sortedDatasets = [...datasets].sort((a, b) => b.createdAt - a.createdAt)
+      const sortedProjects = [...projects].sort((a, b) => b.updatedAt - a.updatedAt)
+      const savedDatasetId = peekLocal(ACTIVE_DATASET_KEY)
+      const savedProjectId = peekLocal(ACTIVE_PROJECT_KEY)
+      set((state) => ({
+        datasets: sortedDatasets,
+        projects: sortedProjects,
+        activeDataset: state.activeDataset ?? restoreById(sortedDatasets, savedDatasetId),
+        activeProject: state.activeProject ?? restoreById(sortedProjects, savedProjectId),
+        storageStatus: 'loaded',
+        storageError: null,
+      }))
+    } catch (error) {
+      set({
+        storageStatus: 'error',
+        storageError: error instanceof Error ? error.message : 'Browser storage could not be read.',
+      })
+    }
   },
-  addDataset: (ds) => set((s) => ({
-    datasets: [...s.datasets.filter((d) => d.id !== ds.id), ds],
-    activeDataset: s.activeDataset?.id === ds.id ? ds : s.activeDataset ?? ds,
+  addDataset: (ds) => set((s) => {
+    const activeDataset = s.activeDataset?.id === ds.id ? ds : s.activeDataset ?? ds
+    if (!s.activeDataset || s.activeDataset.id === ds.id) savePref(ACTIVE_DATASET_KEY, ds.id)
+    return {
+      datasets: [...s.datasets.filter((d) => d.id !== ds.id), ds],
+      activeDataset,
+      storageStatus: 'loaded',
+    }
+  }),
+  removeDataset: (id) => set((s) => {
+    const datasets = s.datasets.filter((d) => d.id !== id)
+    const activeDataset = s.activeDataset?.id === id ? null : s.activeDataset
+    if (activeDataset === null) savePref(ACTIVE_DATASET_KEY, '')
+    return { datasets, activeDataset }
+  }),
+  updateDataset: (ds) => set((s) => ({
+    datasets: s.datasets.map((d) => (d.id === ds.id ? ds : d)),
+    activeDataset: s.activeDataset?.id === ds.id ? ds : s.activeDataset,
   })),
-  removeDataset: (id) => set((s) => ({ datasets: s.datasets.filter((d) => d.id !== id) })),
-  updateDataset: (ds) => set((s) => ({ datasets: s.datasets.map((d) => (d.id === ds.id ? ds : d)) })),
 
   projects: [],
   activeProject: null,
-  setActiveProject: (p) => set({ activeProject: p }),
-  addProject: (p) => set((s) => ({ projects: [...s.projects.filter((item) => item.id !== p.id), p] })),
+  setActiveProject: (p) => {
+    savePref(ACTIVE_PROJECT_KEY, p?.id ?? '')
+    set({ activeProject: p })
+  },
+  addProject: (p) => {
+    savePref(ACTIVE_PROJECT_KEY, p.id)
+    set((s) => ({
+      projects: [...s.projects.filter((item) => item.id !== p.id), p],
+      activeProject: p,
+    }))
+  },
+  removeProject: (id) => set((s) => {
+    const projects = s.projects.filter((item) => item.id !== id)
+    const activeProject = s.activeProject?.id === id ? null : s.activeProject
+    if (activeProject === null) savePref(ACTIVE_PROJECT_KEY, '')
+    return { projects, activeProject }
+  }),
+  updateProject: (p) => set((s) => ({
+    projects: s.projects.map((item) => (item.id === p.id ? p : item)),
+    activeProject: s.activeProject?.id === p.id ? p : s.activeProject,
+  })),
 
   charts: [],
   addChart: (c) => set((s) => ({ charts: [...s.charts, c] })),
@@ -164,11 +220,11 @@ export const useStore = create<AppState>((set) => ({
   toggleHighContrast: () => set((s) => { const highContrast = !s.highContrast; savePref('pref-high-contrast', highContrast); return { highContrast } }),
   largeText: loadBool('pref-large-text', false),
   toggleLargeText: () => set((s) => { const largeText = !s.largeText; savePref('pref-large-text', largeText); return { largeText } }),
-  zoomLevel: Number(localStorage.getItem('pref-zoom-level') ?? 1),
+  zoomLevel: Number(readLocal('pref-zoom-level', '1')) || 1,
   zoomIn: () => set((s) => { const zoomLevel = Math.min(1.5, Number((s.zoomLevel + 0.1).toFixed(2))); savePref('pref-zoom-level', zoomLevel); return { zoomLevel } }),
   zoomOut: () => set((s) => { const zoomLevel = Math.max(0.8, Number((s.zoomLevel - 0.1).toFixed(2))); savePref('pref-zoom-level', zoomLevel); return { zoomLevel } }),
   resetZoom: () => { savePref('pref-zoom-level', 1); set({ zoomLevel: 1 }) },
-  density: localStorage.getItem('pref-density') === 'compact' ? 'compact' : 'comfortable',
+  density: readLocal('pref-density') === 'compact' ? 'compact' : 'comfortable',
   toggleDensity: () => set((s) => { const density = s.density === 'comfortable' ? 'compact' : 'comfortable'; savePref('pref-density', density); return { density } }),
   reportPreviewOpen: false,
   setReportPreviewOpen: (value) => set({ reportPreviewOpen: value }),
@@ -188,7 +244,7 @@ export const useStore = create<AppState>((set) => ({
     analysisHistory: persistAnalysisHistory(s.analysisHistory.filter((item) => item.id !== id)),
   })),
   clearAnalysisHistory: () => {
-    localStorage.removeItem('analysis-history')
+    writeLocal('analysis-history', '[]')
     set({ analysisHistory: [] })
   },
   workspaceMode: loadMode(),
@@ -207,6 +263,6 @@ export const useStore = create<AppState>((set) => ({
 }))
 
 function persistFavorites(value: string[]) {
-  localStorage.setItem('pref-favorite-modules', JSON.stringify(value))
+  writeLocal('pref-favorite-modules', JSON.stringify(value))
   return value
 }

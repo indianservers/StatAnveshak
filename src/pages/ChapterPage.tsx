@@ -1,4 +1,5 @@
 import { Navigate, useParams, useSearchParams } from 'react-router-dom'
+import { PageBack } from '../components/ui/PageBack'
 import { useEffect, useState } from 'react'
 import { BayesTreeLab } from '../components/visual/BayesTreeLab'
 import { BetaPosteriorLab } from '../components/visual/BetaPosteriorLab'
@@ -55,6 +56,9 @@ export function ChapterPage() {
 
   return (
     <div className={colorblindPalette ? 'palette-cb' : undefined}>
+      <div className="mx-auto max-w-[1400px] px-3 pt-4 sm:px-5">
+        <PageBack fallback="/learn" label="Back to Learning" />
+      </div>
       {practice && (
         <div className="mx-auto max-w-[1400px] px-3 pt-4 sm:px-5">
           <PracticeGate item={practice} revealed={revealed} onReveal={() => setRevealed(true)} />

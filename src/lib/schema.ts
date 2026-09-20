@@ -1,16 +1,28 @@
 import type { ColumnSchema, ColumnType } from '../types'
 import * as ss from 'simple-statistics'
 
+function looksLikePaddedIdentifier(values: unknown[]): boolean {
+  const strings = values.map((value) => String(value).trim())
+  if (strings.length === 0) return false
+  return strings.every((value) => /^\d+$/.test(value)) && strings.some((value) => /^0\d+$/.test(value))
+}
+
 function detectType(values: unknown[]): ColumnType {
   const nonNull = values.filter((v) => v !== null && v !== undefined && v !== '')
   if (nonNull.length === 0) return 'text'
 
-  // Boolean check
-  const boolSet = new Set(['true', 'false', '0', '1', 'yes', 'no'])
+  if (looksLikePaddedIdentifier(nonNull)) return 'id'
+
+  // Boolean check (true/false/yes/no only — bare 0/1 stays numeric)
+  const boolSet = new Set(['true', 'false', 'yes', 'no'])
   if (nonNull.every((v) => boolSet.has(String(v).toLowerCase()))) return 'boolean'
 
-  // Numeric check
-  const numericCount = nonNull.filter((v) => !isNaN(Number(v))).length
+  // Numeric check: blanks already removed, so a few missing cells do not force text
+  const numericCount = nonNull.filter((v) => {
+    const text = String(v).trim()
+    if (text === '') return false
+    return Number.isFinite(Number(text))
+  }).length
   if (numericCount / nonNull.length > 0.85) return 'numeric'
 
   // Date check

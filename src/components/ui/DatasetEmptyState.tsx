@@ -38,11 +38,11 @@ export function DatasetEmptyState({
         <div className="mt-5 flex flex-wrap gap-2">
           <Link to="/data/upload" className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
             <Upload size={15} />
-            Go to datasets page
+            Upload Dataset
           </Link>
           <Link to="/data/upload" className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">
             <Database size={15} />
-            Load sample data
+            Go to datasets page
           </Link>
         </div>
 

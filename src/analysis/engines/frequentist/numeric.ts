@@ -29,17 +29,46 @@ export function categoryValues(rows: Record<string, unknown>[], column: string):
 }
 
 export function mean(values: number[]): number {
+  if (values.length === 0) return Number.NaN
   return values.reduce((sum, value) => sum + value, 0) / values.length
+}
+
+export function sum(values: number[]): number {
+  return values.reduce((total, value) => total + value, 0)
+}
+
+export type SpreadKind = 'sample' | 'population'
+
+export function sumOfSquaredDeviations(values: number[]): number {
+  if (values.length === 0) return Number.NaN
+  const m = mean(values)
+  return values.reduce((total, value) => total + (value - m) ** 2, 0)
 }
 
 export function sampleVariance(values: number[]): number {
   if (values.length < 2) return Number.NaN
-  const m = mean(values)
-  return values.reduce((sum, value) => sum + (value - m) ** 2, 0) / (values.length - 1)
+  return sumOfSquaredDeviations(values) / (values.length - 1)
+}
+
+export function populationVariance(values: number[]): number {
+  if (values.length < 1) return Number.NaN
+  return sumOfSquaredDeviations(values) / values.length
+}
+
+export function varianceOf(values: number[], kind: SpreadKind = 'sample'): number {
+  return kind === 'population' ? populationVariance(values) : sampleVariance(values)
 }
 
 export function sampleSd(values: number[]): number {
   return Math.sqrt(sampleVariance(values))
+}
+
+export function populationSd(values: number[]): number {
+  return Math.sqrt(populationVariance(values))
+}
+
+export function sdOf(values: number[], kind: SpreadKind = 'sample'): number {
+  return Math.sqrt(varianceOf(values, kind))
 }
 
 /** R type-7 quantile (JASP / R default). */

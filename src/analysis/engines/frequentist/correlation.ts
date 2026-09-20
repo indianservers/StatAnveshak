@@ -117,14 +117,19 @@ export function runCorrelation(rows: Record<string, unknown>[], options: Analysi
         x = pts.map((p) => p.x)
         y = pts.map((p) => p.y)
       }
-      const r = x.length >= 3 ? corr(x, y) : Number.NaN
+      const r = x.length >= 2 ? corr(x, y) : Number.NaN
       const n = x.length
-      R[i][j] = R[j][i] = r
+      R[i][j] = R[j][i] = Number.isFinite(r) ? r : Number.NaN
       P[i][j] = P[j][i] = method === 'kendall'
         ? 2 * Math.min(pnorm(-Math.abs(r) * Math.sqrt((9 * n * (n - 1)) / (2 * (2 * n + 5)))), 0.5)
         : pearsonP(r, n - controls.length)
       N[i][j] = N[j][i] = n
     }
+  }
+
+  const anyPair = names.some((_, i) => names.some((__, j) => j > i && (N[i]?.[j] ?? 0) >= 2))
+  if (!anyPair) {
+    return empty(`${method === 'spearman' ? 'Spearman' : method === 'kendall' ? 'Kendall' : 'Pearson'} correlation needs two numeric variables with at least two complete paired observations. Missing values are dropped pairwise and are not treated as zero.`)
   }
 
   const pairRows: Array<Array<string | number>> = []
@@ -139,7 +144,7 @@ export function runCorrelation(rows: Record<string, unknown>[], options: Analysi
   return {
     analysisId: 'regression.correlation',
     title: 'Correlation',
-    interpretation: `${method[0].toUpperCase()}${method.slice(1)} correlations for ${names.length} variables${controls.length ? ` controlling for ${controls.join(', ')}` : ''}.`,
+    interpretation: `${method[0].toUpperCase()}${method.slice(1)} correlations for ${names.length} variables${controls.length ? ` controlling for ${controls.join(', ')}` : ''}. Correlation does not imply causation.`,
     assumptions: [
       method === 'pearson' ? 'Pearson assumes linear association and (for p-values) bivariate normality.' : method === 'spearman' ? 'Spearman is Pearson on ranks (monotonic association).' : 'Kendall’s τ-b accounts for ties; p-values use a normal approximation.',
       controls.length ? 'Partial correlations are correlations of residuals after OLS adjustment for the control set.' : 'Listwise deletion is used per pair.',

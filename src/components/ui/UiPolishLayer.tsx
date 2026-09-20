@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Activity, AlertTriangle, CheckCircle2, FileText, Sparkles, X } from 'lucide-react'
 import { useStore } from '../../store/useStore'
+import { readLocalJson, writeLocal, writeLocalJson } from '../../lib/safeStorage'
 
 type RecentPage = { path: string; label: string; at: number }
 
@@ -27,18 +28,25 @@ const PAGE_LABELS: Record<string, string> = {
 export function UiPolishLayer() {
   const { activeDataset, reportPreviewOpen, setReportPreviewOpen, workspaceMode } = useStore()
   const location = useLocation()
-  const [showTour, setShowTour] = useState(() => localStorage.getItem('anveshak-tour-done') !== 'yes')
+  const [showTour, setShowTour] = useState(() => {
+    try {
+      return window.localStorage.getItem('anveshak-tour-done') !== 'yes'
+    } catch {
+      return false
+    }
+  })
 
   const recent = useMemo(() => {
-    const previous = JSON.parse(localStorage.getItem('anveshak-recent-pages') ?? '[]') as RecentPage[]
+    const previous = readLocalJson<unknown>('anveshak-recent-pages', [])
+    const pages = Array.isArray(previous) ? previous.filter((item): item is RecentPage => Boolean(item && typeof item === 'object' && 'path' in item && 'label' in item)) : []
     const label = PAGE_LABELS[location.pathname]
       ?? (location.pathname.startsWith('/distributions/') ? 'Distribution Module' : location.pathname.startsWith('/stat-modules/') ? 'Stat Module' : location.pathname.startsWith('/syllabus/') ? 'Syllabus Module' : location.pathname.startsWith('/modules/') ? 'CS Module' : 'Workspace')
-    const next = [{ path: location.pathname, label, at: previous.find((item) => item.path === location.pathname)?.at ?? 0 }, ...previous.filter((item) => item.path !== location.pathname)].slice(0, 6)
+    const next = [{ path: location.pathname, label, at: pages.find((item) => item.path === location.pathname)?.at ?? 0 }, ...pages.filter((item) => item.path !== location.pathname)].slice(0, 6)
     return next
   }, [location.pathname])
 
   useEffect(() => {
-    localStorage.setItem('anveshak-recent-pages', JSON.stringify(recent))
+    writeLocalJson('anveshak-recent-pages', recent)
   }, [recent])
 
   const health = useMemo(() => {
@@ -51,7 +59,7 @@ export function UiPolishLayer() {
   }, [activeDataset])
 
   const closeTour = () => {
-    localStorage.setItem('anveshak-tour-done', 'yes')
+    writeLocal('anveshak-tour-done', 'yes')
     setShowTour(false)
   }
 

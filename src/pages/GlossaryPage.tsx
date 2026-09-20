@@ -3,12 +3,17 @@ import { Link, useLocation } from 'react-router-dom'
 import { BookMarked, Search } from 'lucide-react'
 import {
   GLOSSARY_CATEGORIES,
+  GLOSSARY_FORMULAS,
+  GLOSSARY_LEARN,
   GLOSSARY_LETTERS,
   GLOSSARY_TERMS,
+  relatedGlossaryTerms,
   searchGlossary,
   type GlossaryCategory,
 } from '../lib/glossary'
+import { MathText } from '../components/ui/MathText'
 import { useSeoMetadata } from '../lib/seo'
+import { PageBack } from '../components/ui/PageBack'
 
 type CategoryFilter = GlossaryCategory | 'All'
 
@@ -48,7 +53,8 @@ export function GlossaryPage() {
     <div className="p-6">
       <div className="mx-auto max-w-6xl">
         <header className="mb-6">
-          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-indigo-600 dark:text-indigo-300">
+          <PageBack fallback="/" label="Back" />
+          <div className="mb-3 mt-2 flex items-center gap-2 text-sm font-semibold text-indigo-600 dark:text-indigo-300">
             <BookMarked size={16} />
             Reference
           </div>
@@ -127,6 +133,33 @@ export function GlossaryPage() {
                   <span className="font-semibold text-slate-800 dark:text-slate-100">Example. </span>
                   {item.example}
                 </p>
+                {GLOSSARY_FORMULAS[item.slug] && (
+                  <div className="mt-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Formula</p>
+                    <MathText value={GLOSSARY_FORMULAS[item.slug]!} block label={`${item.term} formula`} />
+                  </div>
+                )}
+                {relatedGlossaryTerms(item).length > 0 && (
+                  <p className="mt-3 text-xs text-slate-500">
+                    Related:{' '}
+                    {relatedGlossaryTerms(item).map((rel, index) => (
+                      <span key={rel.slug}>
+                        {index > 0 ? ', ' : ''}
+                        <Link to={`/glossary#${rel.slug}`} className="font-semibold text-indigo-600 dark:text-indigo-300">
+                          {rel.term}
+                        </Link>
+                      </span>
+                    ))}
+                  </p>
+                )}
+                {GLOSSARY_LEARN[item.slug] && (
+                  <Link
+                    to={GLOSSARY_LEARN[item.slug]!.path}
+                    className="mt-2 inline-flex text-xs font-bold text-indigo-600 dark:text-indigo-300"
+                  >
+                    Learn: {GLOSSARY_LEARN[item.slug]!.label}
+                  </Link>
+                )}
               </article>
             ))}
           </div>

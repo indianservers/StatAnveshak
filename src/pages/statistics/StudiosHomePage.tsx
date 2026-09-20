@@ -6,6 +6,7 @@ import { HeroPromiseCard, StudiosHeroArt } from '../../components/visual/Studios
 import { AllStudiosSection } from '../../components/statistics/AllStudiosSection'
 import { FOCUS_RING } from '../../components/statistics/studioTheme'
 import { TeachingDatasetChip } from '../../components/visual/TeachingDatasetChip'
+import { PageBack } from '../../components/ui/PageBack'
 import { useStore } from '../../store/useStore'
 
 export function StudiosHomePage() {
@@ -36,7 +37,8 @@ function StudiosHero() {
   return (
     <section className="grid items-center gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]">
       <div>
-        <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-indigo-500">Learn statistics</p>
+        <PageBack fallback="/" label="Back to Learning" />
+        <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.22em] text-indigo-500">Learn statistics</p>
         <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 dark:text-white sm:text-4xl">
           Probability &amp; Statistics{' '}
           <span className="bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-500 bg-clip-text text-transparent">
@@ -44,7 +46,7 @@ function StudiosHero() {
           </span>
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300 sm:text-base">
-          Learn through interactive studios, hands-on labs, simulations, and real-world examples.
+          A studio is a launcher for interactive statistical labs — not a second analysis engine. Open a studio, then a lab, then try the same idea on your dataset.
         </p>
         <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
           Build intuition. Explore concepts. Practice with data. Go from fundamentals to advanced topics.

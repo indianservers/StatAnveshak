@@ -4,6 +4,7 @@ import { detectSchema } from '../../lib/schema'
 import { Trash2, AlertTriangle, CheckCircle, RotateCcw, RotateCw, Plus, ArrowRightLeft } from 'lucide-react'
 import type { Dataset } from '../../types'
 import { DatasetEmptyState } from '../../components/ui/DatasetEmptyState'
+import { PageBack } from '../../components/ui/PageBack'
 
 function evaluateNumericExpression(expression: string): number | '' {
   if (!/^[\d+\-*/^().\s]+$/.test(expression)) return ''
@@ -172,7 +173,8 @@ export function CleanPage() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      <h1 className="text-2xl font-bold text-slate-800 dark:text-white mb-6">Clean & Transform</h1>
+      <PageBack fallback="/data/preview" label="Back to Data" />
+      <h1 className="mt-2 text-2xl font-bold text-slate-800 dark:text-white mb-6">Clean & Transform</h1>
 
       {/* Dataset summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
