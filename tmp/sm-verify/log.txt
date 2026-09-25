@@ -1,0 +1,8 @@
+ROUTE home title=Sampling Methods crashed=0
+ROUTE pvs title=Population vs Sample crashed=0
+ROUTE srs title=Simple Random Sampling crashed=0
+ROUTE strat title=Stratified Sampling crashed=0
+ROUTE cluster title=Cluster Sampling crashed=0
+ROUTE sys title=Systematic Sampling crashed=0
+ROUTE bias title=Sampling Bias crashed=0
+ROUTE error title=Sampling Error vs Non-Sampling Error crashed=0
