@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom'
+import type { ReactNode } from 'react'
 import { getLearnChapter } from '../../lib/learnChapters'
+import type { LearnChapterId } from '../../lib/learnChapters'
 import { STAT_MODULE_HERO, STAT_MODULE_PRESET_HREF } from '../../lib/statModulePresets'
 import { BetaPosteriorLab } from './BetaPosteriorLab'
 import { CoverageLab } from './CoverageLab'
@@ -42,11 +44,12 @@ export function StatModuleHero({
 
   if (!chapter) return null
 
-  const lab = {
+  const labs: Partial<Record<LearnChapterId, ReactNode>> = {
     frequentist: <CoverageLab chapter={chapter} reducedMotion={reducedMotion} />,
     bayesian: <BetaPosteriorLab chapter={chapter} reducedMotion={reducedMotion} />,
     regression: <OlsSquaresLab chapter={chapter} reducedMotion={reducedMotion} />,
-  }[chapter.id]
+  }
+  const lab = labs[chapter.id]
 
   if (!lab) return null
 

@@ -108,7 +108,7 @@ export function gram(X: number[][]): number[][] {
 export function jacobiEigen(Ain: number[][]): { values: number[]; vectors: number[][] } {
   const n = Ain.length
   const A = Ain.map((row) => [...row])
-  const V = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (__, j) => (i === j ? 1 : 0)))
+  const V: number[][] = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (__, j) => (i === j ? 1 : 0)))
   for (let iter = 0; iter < 80; iter++) {
     let p = 0
     let q = 1

@@ -138,7 +138,7 @@ export function glmFit(y: number[], X: number[][], family: GlmFamily, theta = 1)
   const dfResidual = n - p
   const phi = family === 'binomial' || family === 'poisson' || family === 'negbin' ? 1 : deviance / Math.max(1, dfResidual)
   const ll = logLik(y, mu, family, phi, theta)
-  const extra = family === 'gaussian' || family === 'gamma' || family === 'inverse.gaussian' ? 1 : 0
+  const extra = family === 'gamma' || family === 'inverse.gaussian' ? 1 : 0
   return {
     family, beta, fitted, eta, phi, dfResidual, deviance, nullDev,
     aic: -2 * ll + 2 * (p + extra), bic: -2 * ll + Math.log(n) * (p + extra), logLik: ll,

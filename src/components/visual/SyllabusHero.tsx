@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
+import type { ReactNode } from 'react'
 import { SYLLABUS_HERO_CHAPTER, SYLLABUS_STUDIO_HREF } from '../../lib/learnLinks'
 import { getLearnChapter } from '../../lib/learnChapters'
+import type { LearnChapterId } from '../../lib/learnChapters'
 import type { SyllabusModuleKey } from '../../lib/syllabusModules'
 import { BayesTreeLab } from './BayesTreeLab'
 import { BetaPosteriorLab } from './BetaPosteriorLab'
@@ -26,13 +28,15 @@ export function SyllabusHero({ moduleKey }: { moduleKey: SyllabusModuleKey }) {
 
   if (!chapter) return null
 
-  const lab = {
+  const labs: Partial<Record<LearnChapterId, ReactNode>> = {
     chance: <ChanceCoinsLab chapter={chapter} reducedMotion={reducedMotion} />,
     compound: <BayesTreeLab chapter={chapter} reducedMotion={reducedMotion} />,
     distributions: <CltMeansLab chapter={chapter} reducedMotion={reducedMotion} />,
     frequentist: <CoverageLab chapter={chapter} reducedMotion={reducedMotion} />,
     bayesian: <BetaPosteriorLab chapter={chapter} reducedMotion={reducedMotion} />,
-  }[chapter.id]
+  }
+  const lab = labs[chapter.id]
+  if (!lab) return null
 
   return (
     <div className="mb-6">
