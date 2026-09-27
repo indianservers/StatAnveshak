@@ -1,5 +1,6 @@
-const CACHE_NAME = 'statanveshak-v1'
-const APP_SHELL = ['/', '/index.html', '/manifest.json', '/icon.svg']
+const CACHE_NAME = 'statanveshak-v2'
+const LEGACY_CACHE = 'statanveshak-v1'
+const APP_SHELL = ['/index.html', '/manifest.json', '/icon.svg']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -10,20 +11,53 @@ self.addEventListener('install', (event) => {
 })
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
-      .then(() => self.clients.claim()),
-  )
+  event.waitUntil((async () => {
+    const keys = await caches.keys()
+    const hadLegacyCache = keys.includes(LEGACY_CACHE)
+    await Promise.all(keys.filter((key) => key.startsWith('statanveshak-') && key !== CACHE_NAME).map((key) => caches.delete(key)))
+    await self.clients.claim()
+
+    // The old cache can point at deleted build assets. Refresh affected studio tabs once.
+    if (hadLegacyCache) {
+      const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      await Promise.all(windows
+        .filter((client) => client.url.includes('#/statistics/'))
+        .map((client) => client.navigate(client.url).catch(() => undefined)))
+    }
+  })())
 })
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached
-      return fetch(event.request).catch(() => caches.match('/index.html'))
-    }),
-  )
-})
+  const url = new URL(event.request.url)
+  if (url.origin !== self.location.origin || url.pathname === '/sw.js') return
 
+  if (event.request.mode === 'navigate') {
+    event.respondWith((async () => {
+      try {
+        const response = await fetch(event.request, { cache: 'no-store' })
+        if (response.ok) {
+          const cache = await caches.open(CACHE_NAME)
+          await cache.put('/index.html', response.clone())
+        }
+        return response
+      } catch {
+        return (await caches.match('/index.html')) || Response.error()
+      }
+    })())
+    return
+  }
+
+  if (url.pathname.startsWith('/assets/') || APP_SHELL.includes(url.pathname)) {
+    event.respondWith((async () => {
+      const cached = await caches.match(event.request)
+      if (cached) return cached
+      const response = await fetch(event.request)
+      if (response.ok) {
+        const cache = await caches.open(CACHE_NAME)
+        await cache.put(event.request, response.clone())
+      }
+      return response
+    })())
+  }
+})
