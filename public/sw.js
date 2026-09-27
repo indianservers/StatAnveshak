@@ -1,5 +1,5 @@
-const CACHE_NAME = 'statanveshak-v2'
-const LEGACY_CACHE = 'statanveshak-v1'
+const CACHE_NAME = 'statanveshak-v3'
+const LEGACY_CACHES = ['statanveshak-v1', 'statanveshak-v2']
 const APP_SHELL = ['/index.html', '/manifest.json', '/icon.svg']
 
 self.addEventListener('install', (event) => {
@@ -13,16 +13,16 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys()
-    const hadLegacyCache = keys.includes(LEGACY_CACHE)
+    const hadLegacyCache = keys.some((key) => LEGACY_CACHES.includes(key))
     await Promise.all(keys.filter((key) => key.startsWith('statanveshak-') && key !== CACHE_NAME).map((key) => caches.delete(key)))
     await self.clients.claim()
 
     // The old cache can point at deleted build assets. Refresh affected studio tabs once.
     if (hadLegacyCache) {
       const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-      await Promise.all(windows
+      windows
         .filter((client) => client.url.includes('#/statistics/'))
-        .map((client) => client.navigate(client.url).catch(() => undefined)))
+        .forEach((client) => { void client.navigate(client.url).catch(() => undefined) })
     }
   })())
 })

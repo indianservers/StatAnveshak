@@ -7,7 +7,7 @@ type Listener = (event: { request?: { url: string; method: string; mode: string 
 function setup() {
   const listeners: Record<string, Listener> = {}
   const buckets = new Map<string, Map<string, unknown>>()
-  const windows = [{ url: 'https://example.test/#/statistics/nonparametric-statistics', navigate: vi.fn(async () => undefined) }]
+  const windows = [{ url: 'https://example.test/#/statistics/nonparametric-statistics', navigate: vi.fn(() => new Promise<undefined>(() => undefined)) }]
   const fresh = { ok: true, body: 'fresh index', clone() { return this } }
   const fetch = vi.fn(async () => fresh)
   const caches = {
@@ -53,11 +53,11 @@ describe('service worker update', () => {
 
   it('fetches current HTML before using an offline cached copy', async () => {
     const { listeners, buckets, fresh, fetch } = setup()
-    buckets.set('statanveshak-v2', new Map([['/index.html', { body: 'old index' }]]))
+    buckets.set('statanveshak-v3', new Map([['/index.html', { body: 'old index' }]]))
     let response: Promise<unknown> = Promise.resolve()
     listeners.fetch({ request: { url: 'https://example.test/', method: 'GET', mode: 'navigate' }, respondWith: (promise) => { response = promise } })
     expect(await response).toBe(fresh)
     expect(fetch).toHaveBeenCalledOnce()
-    expect(buckets.get('statanveshak-v2')?.get('/index.html')).toBe(fresh)
+    expect(buckets.get('statanveshak-v3')?.get('/index.html')).toBe(fresh)
   })
 })
