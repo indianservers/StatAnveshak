@@ -25,6 +25,8 @@ import { CorrelationLabScreen } from '../../components/correlation-association/C
 import { RegressionLabScreen } from '../../components/regression-studio/RegressionLabScreen'
 import { TimeSeriesLabScreen } from '../../components/time-series-basics/TimeSeriesLabScreen'
 import { AnovaLabScreen } from '../../components/anova-studio/AnovaLabScreen'
+import { NonparametricLabScreen } from '../../components/nonparametric/NonparametricLabScreen'
+import { RemainingLabScreen } from '../../components/statistics/remaining/RemainingLabScreen'
 import { RelatedLearning } from '../../components/learning/RelatedLearning'
 import { PF_STUDIO_SLUG } from '../../lib/probabilityFoundations'
 import { RV_STUDIO_SLUG } from '../../lib/randomVariables'
@@ -57,6 +59,8 @@ export function LabPage() {
   if (studio.slug === REG_STUDIO_SLUG) return <RegressionLabScreen studio={studio} lab={lab} />
   if (studio.slug === TS_STUDIO_SLUG) return <TimeSeriesLabScreen studio={studio} lab={lab} />
   if (studio.slug === ANOVA_STUDIO_SLUG) return <AnovaLabScreen studio={studio} lab={lab} />
+  if (studio.slug === 'nonparametric-statistics') return <NonparametricLabScreen studio={studio} lab={lab} />
+  if (['estimation', 'hypothesis-testing', 'reliability-survival', 'multivariate-statistics', 'statistical-simulation', 'quality-decision-making'].includes(studio.slug)) return <RemainingLabScreen studio={studio} lab={lab} />
   const accent = ACCENTS[studio.accent]
   const index = studio.labs.findIndex((item) => item.slug === lab.slug)
   const previous = index > 0 ? studio.labs[index - 1] : undefined
