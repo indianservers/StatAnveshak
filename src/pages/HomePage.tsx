@@ -35,6 +35,7 @@ import type { Dataset, Project, SampleDataset } from '../types'
 import { StudiosHomePage } from './statistics/StudiosHomePage'
 import { AllStudiosSection } from '../components/statistics/AllStudiosSection'
 import { HomeWelcome } from '../components/home/HomeWelcome'
+import { AnalysisCatalogSection } from '../components/home/AnalysisCatalogSection'
 
 type HomeMode = 'overview' | 'datasets' | 'guided' | 'recent'
 type DatasetSort = 'popular' | 'name' | 'rows' | 'columns'
@@ -308,6 +309,8 @@ function OverviewMode({
           {QUICK_ACTIONS.map((action) => <QuickActionCard key={action.to} {...action} />)}
         </div>
       </section>
+
+      <AnalysisCatalogSection />
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
         <RecentWorkPanel projects={projects} datasets={datasets} recentPages={recentPages} onOpenDataset={onOpenDataset} onLoadSample={onLoadSample} />

@@ -8,6 +8,7 @@ import { FOCUS_RING } from '../../components/statistics/studioTheme'
 import { TeachingDatasetChip } from '../../components/visual/TeachingDatasetChip'
 import { PageBack } from '../../components/ui/PageBack'
 import { useStore } from '../../store/useStore'
+import { AnalysisCatalogSection } from '../../components/home/AnalysisCatalogSection'
 
 export function StudiosHomePage() {
   return (
@@ -15,6 +16,7 @@ export function StudiosHomePage() {
       <StudioIconStyles />
       <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-7">
         <StudiosHero />
+        <AnalysisCatalogSection />
         <AllStudiosSection />
         <FooterNote />
       </div>
