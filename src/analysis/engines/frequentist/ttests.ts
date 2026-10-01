@@ -182,7 +182,10 @@ function wilcoxonExact(n: number, W: number, alternative: Alternative): number {
   return Math.min(1, 2 * Math.min(le, ge) / total)
 }
 
-function raincloud(groups: { name: string; values: number[] }[], yTitle: string): PlotSpec {
+function raincloud(groups: { name: string; values: number[] }[], yTitle: string, reference?: { value: number; label: string }): PlotSpec {
+  const allValues = groups.flatMap((group) => group.values)
+  const limits = reference && allValues.length ? [Math.min(...allValues, reference.value), Math.max(...allValues, reference.value)] : null
+  const padding = limits ? (limits[1] - limits[0] || 1) * 0.08 : 0
   return {
     id: 'raincloud',
     title: `Raincloud — ${yTitle}`,
@@ -202,7 +205,17 @@ function raincloud(groups: { name: string; values: number[] }[], yTitle: string)
       marker: { size: 6, opacity: 0.55, color: '#4338ca' },
       fillcolor: 'rgba(79,70,229,0.28)',
     })),
-    layout: { xaxis: { title: '' }, yaxis: { title: yTitle }, violinmode: 'overlay', showlegend: groups.length > 1, margin: { t: 40, r: 20, b: 48, l: 56 } },
+    layout: {
+      xaxis: { title: '' },
+      yaxis: { title: yTitle, ...(limits ? { range: [limits[0] - padding, limits[1] + padding] } : {}) },
+      violinmode: 'overlay',
+      showlegend: groups.length > 1,
+      margin: { t: 40, r: 20, b: 48, l: 56 },
+      ...(reference ? {
+        shapes: [{ type: 'line', xref: 'paper', x0: 0, x1: 1, yref: 'y', y0: reference.value, y1: reference.value, line: { color: '#e11d48', width: 2, dash: 'dash' } }],
+        annotations: [{ xref: 'paper', x: 1, yref: 'y', y: reference.value, text: reference.label, showarrow: false, xanchor: 'right', yanchor: 'bottom', font: { color: '#be123c', size: 11 } }],
+      } : {}),
+    },
   }
 }
 
@@ -338,7 +351,7 @@ export function runPairedT(rows: Record<string, unknown>[], options: AnalysisOpt
       'Bayesian paired t arrives in Phase 4.',
     ],
     tables,
-    plots: [raincloud([{ name: `${m1} − ${m2}`, values: diffs }], 'Difference')],
+    plots: [raincloud([{ name: `${m1} − ${m2}`, values: diffs }], 'Paired difference', { value: 0, label: 'No difference (0)' })],
   }
 }
 
@@ -389,6 +402,6 @@ export function runOneSampleT(rows: Record<string, unknown>[], options: Analysis
       'Bayesian one-sample t arrives in Phase 4.',
     ],
     tables,
-    plots: [raincloud([{ name: variable, values: x }], variable)],
+    plots: [raincloud([{ name: variable, values: x }], variable, { value: mu0, label: `Test value (${mu0})` })],
   }
 }

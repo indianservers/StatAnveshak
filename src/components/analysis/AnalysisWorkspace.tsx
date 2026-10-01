@@ -9,9 +9,6 @@ import { useStore } from '../../store/useStore'
 import { DatasetEmptyState } from '../ui/DatasetEmptyState'
 import { PageBack } from '../ui/PageBack'
 import { useToast } from '../ui/toastContext'
-import { SamplingMachine } from '../visual/SamplingMachine'
-import { useReducedMotion } from '../visual/useReducedMotion'
-import { numericColumn } from '../../lib/stats'
 import { formatStat } from '../../lib/statEngine'
 
 type Props = { analysisId: string }
@@ -20,7 +17,6 @@ export function AnalysisWorkspace({ analysisId }: Props) {
   const { activeDataset, theme } = useStore()
   const { notify } = useToast()
   const navigate = useNavigate()
-  const reducedMotion = useReducedMotion()
   const analysis = ANALYSIS_BY_ID[analysisId] ?? ANALYSIS_CATALOG[0]
   const [query, setQuery] = useState('')
   const [options, setOptions] = useState<AnalysisOptions>({})
@@ -62,7 +58,9 @@ export function AnalysisWorkspace({ analysisId }: Props) {
       } else if (field.kind === 'select' || (field.kind === 'variables' && !field.multiple)) {
         const pool = field.role === 'numeric' ? numericPool : field.role === 'categorical' ? catCols : allCols
         const offset = field.key === 'measure2' || field.key === 'covariate' || field.key === 'columns' ? 1 : 0
-        next[field.key] = pool[offset] ?? pool[0] ?? ''
+        next[field.key] = analysis.id === 't.paired' && (field.key === 'measure1' || field.key === 'measure2')
+          ? ''
+          : pool[offset] ?? pool[0] ?? ''
       } else if (field.kind === 'choice') {
         next[field.key] = field.options[0]?.value ?? ''
       } else if (field.kind === 'toggle') {
@@ -160,13 +158,9 @@ export function AnalysisWorkspace({ analysisId }: Props) {
     return <DatasetEmptyState preferredPath={`/analysis/${analysis.id}`} description="Load a dataset to run JASP-catalog analyses. Learn Stats, Bayes labs, and summary-statistics analyses also run without a table." />
   }
 
-  const samplingColumn = String(options.variable ?? options.dependent ?? options.measure1 ?? numericPool[0] ?? '')
-  const samplingValues = activeDataset && samplingColumn ? numericColumn(activeDataset.data, samplingColumn) : []
-  const showSampling = analysis.id.startsWith('t.') && samplingValues.length >= 8
-
   return (
     <div className="flex h-full min-h-[calc(100vh-7rem)] flex-col lg:flex-row">
-      <aside className="flex w-full shrink-0 flex-col border-b border-slate-200 bg-white lg:w-64 lg:border-b-0 lg:border-r dark:border-slate-700 dark:bg-slate-800">
+      <aside className="flex w-full shrink-0 flex-col border-b border-slate-200 bg-white lg:w-52 lg:border-b-0 lg:border-r dark:border-slate-700 dark:bg-slate-800">
         <div className="border-b border-slate-200 p-3 dark:border-slate-700">
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">JASP modules</p>
           <label className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 dark:border-slate-600 dark:bg-slate-900">
@@ -200,8 +194,8 @@ export function AnalysisWorkspace({ analysisId }: Props) {
         </nav>
       </aside>
 
-      <section className="flex w-full shrink-0 flex-col border-b border-slate-200 bg-slate-50 lg:w-80 lg:border-b-0 lg:border-r dark:border-slate-700 dark:bg-slate-900">
-        <div className="border-b border-slate-200 p-4 dark:border-slate-700">
+      <section className="flex w-full shrink-0 flex-col border-b border-slate-200 bg-slate-50 lg:w-64 lg:border-b-0 lg:border-r dark:border-slate-700 dark:bg-slate-900">
+        <div className="border-b border-slate-200 p-3 dark:border-slate-700">
           <PageBack fallback="/data/preview" label="Back to Data" />
           <h1 className="mt-2 text-lg font-bold text-slate-800 dark:text-white">{analysis.title}</h1>
           <p className="mt-1 text-xs leading-5 text-slate-500">{analysis.description}</p>
@@ -231,7 +225,12 @@ export function AnalysisWorkspace({ analysisId }: Props) {
             </div>
           )}
         </div>
-        <div className="min-h-0 flex-1 space-y-4 overflow-auto p-4">
+        <div className="min-h-0 flex-1 space-y-3 overflow-auto p-3">
+          {analysis.id === 't.paired' && (
+            <p className="rounded-md border border-indigo-200 bg-indigo-50 p-2 text-xs leading-5 text-indigo-900 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-200">
+              Choose two measurements of the same quantity, in matching units. Each row is one pair.
+            </p>
+          )}
           {options.inference === 'bayesian' && analysis.bayesian && (
             <label className="block text-xs font-semibold text-slate-500">
               rscale (JZS / Cauchy)
@@ -292,7 +291,7 @@ export function AnalysisWorkspace({ analysisId }: Props) {
                     value={String(options[field.key] ?? '')}
                     onChange={(event) => setOptions((value) => ({ ...value, [field.key]: event.target.value }))}
                   >
-                    {!field.required && <option value="">None</option>}
+                    <option value="">{field.required ? 'Select a column' : 'None'}</option>
                     {pool.map((col) => <option key={col} value={col}>{col}</option>)}
                   </select>
                 </label>
@@ -378,12 +377,6 @@ export function AnalysisWorkspace({ analysisId }: Props) {
       </section>
 
       <section className="min-w-0 flex-1 overflow-auto bg-white p-4 dark:bg-slate-950">
-        {showSampling && (
-          <div className="mb-6">
-            <SamplingMachine key={samplingColumn} values={samplingValues} column={samplingColumn} reducedMotion={reducedMotion} />
-            <p className="mt-2 text-xs text-slate-500">Play grows the sampling picture. Run analysis still fills the t-test table below.</p>
-          </div>
-        )}
         {error && (
           <div className="mb-4 flex items-start gap-2 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
             <AlertTriangle size={16} className="mt-0.5 shrink-0" />
@@ -414,6 +407,7 @@ export function AnalysisWorkspace({ analysisId }: Props) {
                 </ul>
               </div>
             )}
+            {analysis.id.startsWith('t.') && result.plots.map((plot) => <PlotPanel key={plot.id} plot={plot} theme={theme} />)}
             {result.tables.map((table) => {
               const shown = table.rows.slice(0, 80)
               return (
@@ -444,7 +438,7 @@ export function AnalysisWorkspace({ analysisId }: Props) {
               </div>
               )
             })}
-            {result.plots.map((plot) => <PlotPanel key={plot.id} plot={plot} theme={theme} />)}
+            {!analysis.id.startsWith('t.') && result.plots.map((plot) => <PlotPanel key={plot.id} plot={plot} theme={theme} />)}
             {result.footnotes.length > 0 && (
               <div className="text-xs leading-5 text-slate-500">
                 {result.footnotes.map((note, index) => (
