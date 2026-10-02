@@ -652,7 +652,7 @@ Until those five are true, do not spend design time on new metric cards.
 - Do not add more homepage tiles.
 - Do not duplicate Stat Modules as yet another menu of the same tests.
 - Do not animate for decoration (gradients, particles with no statistical meaning).
-- Do not chase JASP’s table density on teaching screens.
+- Do not chase dense desktop-stats-app table density on teaching screens.
 - Do not hide formulas; pin them to the picture.
 
 The product that ranks first is not the one with the most modules. It is the one where **every control moves a statistical object the learner can see**.

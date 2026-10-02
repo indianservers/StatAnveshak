@@ -274,7 +274,7 @@ export function runDescriptiveStatistics(rows: Record<string, unknown>[], option
     assumptions,
     footnotes: [
       'Std. Deviation and Variance are sample (n − 1) estimators.',
-      'Quantiles use R type 7 (JASP / R default).',
+      'Quantiles use R type 7 (R default).',
       'Skewness and kurtosis are Fisher G1 / G2 (excess kurtosis).',
       'Shapiro–Wilk follows Royston AS R94; p is the normality p-value.',
       'Mean confidence interval uses the Student-t critical value with n − 1 df.',

@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Search } from 'lucide-react'
-import { ANALYSIS_BY_ID, JASP_MODULE_ORDER, analysesForModule } from '../../analysis/catalog'
+import { ANALYSIS_BY_ID, MODULE_ORDER, analysesForModule } from '../../analysis/catalog'
 import { useStore } from '../../store/useStore'
 
-const GROUPS = JASP_MODULE_ORDER.map((module) => ({
+const GROUPS = MODULE_ORDER.map((module) => ({
   module,
   items: analysesForModule(module).filter((item) => item.implemented),
 })).filter((group) => group.items.length > 0)

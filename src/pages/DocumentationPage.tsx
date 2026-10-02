@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { BookOpen, Database, FileText, GraduationCap, Link2, Search, ShieldCheck, Sigma } from 'lucide-react'
 import { CORE_SITE_LINKS, MODULE_SITE_LINKS, SITE_CATALOG, type SiteCatalogEntry } from '../lib/siteCatalog'
-import { ANALYSIS_CATALOG, JASP_MODULE_ORDER, analysesForModule } from '../analysis/catalog'
+import { ANALYSIS_CATALOG, MODULE_ORDER, analysesForModule } from '../analysis/catalog'
 import { useSeoMetadata } from '../lib/seo'
 import { PageBack } from '../components/ui/PageBack'
 
@@ -111,10 +111,10 @@ export function DocumentationPage() {
             <h2 className="text-lg font-bold text-slate-800 dark:text-white">Statistics Tools</h2>
           </div>
           <p className="mb-4 max-w-3xl text-sm text-slate-500">
-            Each JASP module maps to one or more analysis IDs in the workspace. Frequentist and Bayesian share the same ID.
+            Each Stat Anveshak module maps to one or more analysis IDs in the workspace. Frequentist and Bayesian share the same ID.
           </p>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {JASP_MODULE_ORDER.map((module) => {
+            {MODULE_ORDER.map((module) => {
               const items = analysesForModule(module)
               const first = items[0]
               return (
@@ -129,7 +129,7 @@ export function DocumentationPage() {
               )
             })}
           </div>
-          <p className="mt-3 text-xs text-slate-400">{ANALYSIS_CATALOG.length} analyses · {JASP_MODULE_ORDER.length} modules · all implemented</p>
+          <p className="mt-3 text-xs text-slate-400">{ANALYSIS_CATALOG.length} analyses · {MODULE_ORDER.length} modules · all implemented</p>
         </section>
 
         <section id="data-analysis" className="mb-6 scroll-mt-24 rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">

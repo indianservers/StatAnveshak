@@ -29,7 +29,7 @@ describe('phase 8 Learn Stats', () => {
 })
 
 describe('analysis catalog phase 8', () => {
-  it('implements every catalog id across 35 JASP modules', () => {
+  it('implements every catalog id across 35 analysis modules', () => {
     const implemented = ANALYSIS_CATALOG.filter((item) => item.implemented).map((item) => item.id).sort()
     expect(implemented).toEqual(PHASE8_IMPLEMENTED)
     expect(ANALYSIS_CATALOG.every((item) => item.implemented)).toBe(true)

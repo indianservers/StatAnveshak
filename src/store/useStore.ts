@@ -83,8 +83,6 @@ interface AppState {
   addChart: (c: ChartConfig) => void
   removeChart: (id: string) => void
 
-  sidebarOpen: boolean
-  setSidebarOpen: (v: boolean) => void
   activeModule: string
   setActiveModule: (m: string) => void
   theme: AppTheme
@@ -205,8 +203,6 @@ export const useStore = create<AppState>((set) => ({
   addChart: (c) => set((s) => ({ charts: [...s.charts, c] })),
   removeChart: (id) => set((s) => ({ charts: s.charts.filter((c) => c.id !== id) })),
 
-  sidebarOpen: loadBool('pref-sidebar-open', true),
-  setSidebarOpen: (v) => { savePref('pref-sidebar-open', v); set({ sidebarOpen: v }) },
   activeModule: 'home',
   setActiveModule: (m) => set({ activeModule: m }),
   theme: loadTheme(),

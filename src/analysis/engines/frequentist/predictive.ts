@@ -56,7 +56,7 @@ export function runPredictive(rows: Record<string, unknown>[], options: Analysis
       analysisId: 'predictive.analytics',
       title: 'Predictive Analytics',
       interpretation: `Holt linear holdout on ${yName}: test n = ${test.length}, RMSE = ${round(rmse)}, MAE = ${round(mae)}.`,
-      assumptions: ['Row order is time. Holt additive trend with α = 0.3, β = 0.1. This is the series workflow in JASP Predictive Analytics, not a black-box ML stack.'],
+      assumptions: ['Row order is time. Holt additive trend with α = 0.3, β = 0.1. This is the Predictive Analytics series workflow, not a black-box ML stack.'],
       footnotes: ['Linear and logistic holdout modes share this analysis ID.'],
       tables: [{ id: 'fc', title: 'Holdout accuracy', columns: ['RMSE', 'MAE', 'Train n', 'Test n'], rows: [[round(rmse), round(mae), train.length, test.length]] }],
       plots: [{
@@ -123,7 +123,7 @@ export function runPredictive(rows: Record<string, unknown>[], options: Analysis
     analysisId: 'predictive.analytics',
     title: 'Predictive Analytics',
     interpretation: `Linear holdout: RMSE = ${round(rmse)}, MAE = ${round(mae)}, R² = ${round(r2)}, test n = ${test.length}.`,
-    assumptions: ['Row-order train/test split. Predictors are numeric. This is JASP-style predictive scoring of a linear model, not boosting/trees (Phase 7).'],
+    assumptions: ['Row-order train/test split. Predictors are numeric. This is predictive scoring of a linear model, not boosting/trees (Phase 7).'],
     footnotes: ['Coefficients are estimated on the training slice only.'],
     tables: [
       { id: 'acc', title: 'Holdout accuracy', columns: ['RMSE', 'MAE', 'R²', 'Train n', 'Test n'], rows: [[round(rmse), round(mae), round(r2), train.length, test.length]] },

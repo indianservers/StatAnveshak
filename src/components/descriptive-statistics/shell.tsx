@@ -10,6 +10,7 @@ import {
   type DsTab,
 } from '../../lib/descriptiveStatistics'
 import type { StudioLab } from '../../lib/statisticsStudios'
+import { StudioLabsMenu } from '../statistics/StudioLabsMenu'
 import { LabHeroArt } from './icons'
 import { DescriptiveStatsStudioStyles } from './styles'
 
@@ -67,6 +68,8 @@ export function DescriptiveStatsLabShell({
           Descriptive Statistics <span className="mx-1">›</span> Lab {index + 1} of {DS_STUDIO.labs.length}
         </p>
       </div>
+
+      <StudioLabsMenu studio={DS_STUDIO} current={lab.slug} />
 
       <header className="grid items-center gap-5 lg:grid-cols-[minmax(0,1fr)_auto]">
         <div>

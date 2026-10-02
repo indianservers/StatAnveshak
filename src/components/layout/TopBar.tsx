@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { AlertTriangle, ChevronRight, Clock, Columns3, Contrast, Database, FileText, HelpCircle, LogOut, Minus, Moon, MoreHorizontal, Palette, Plus, RotateCcw, Save, Search, Sun, Target, Type } from 'lucide-react'
+import { AlertTriangle, ChevronRight, Clock, Columns3, Contrast, Database, FileText, FlaskConical, HelpCircle, LogOut, Minus, Moon, MoreHorizontal, Palette, Plus, Save, Search, Sun, Target, Type } from 'lucide-react'
 import { useStore } from '../../store/useStore'
 import { saveDataset } from '../../lib/storage'
 import { useToast } from '../ui/toastContext'
@@ -130,7 +130,18 @@ export function TopBar() {
   const iconBtn = 'flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'
 
   return (
-    <header className="relative z-20 flex min-h-12 shrink-0 items-center gap-2 border-b border-slate-200 bg-white py-1.5 pl-14 pr-2 dark:border-slate-700 dark:bg-slate-800 sm:gap-3 sm:pr-3 md:px-4">
+    <header className="relative z-20 flex min-h-12 shrink-0 items-center gap-2 border-b border-slate-200 bg-white px-2 py-1.5 dark:border-slate-700 dark:bg-slate-800 sm:gap-3 sm:px-3 md:px-4">
+      <Link
+        to="/"
+        className="flex shrink-0 items-center gap-2 rounded-md pr-1 text-slate-900 hover:text-indigo-700 dark:text-white dark:hover:text-indigo-300"
+        title="Stat Anveshak home"
+      >
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500 text-white">
+          <FlaskConical size={16} />
+        </span>
+        <span className="hidden text-base font-bold tracking-tight sm:inline">Stat Anveshak</span>
+      </Link>
+
       <div className="flex shrink-0 items-center rounded-lg border border-slate-200 p-0.5 dark:border-slate-600" role="tablist" aria-label="Workspace mode">
         {(['learn', 'analyze'] as const).map((mode) => (
           <button

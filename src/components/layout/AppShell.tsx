@@ -1,7 +1,7 @@
 import { Outlet, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
-import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
+import { MainNav } from './MainNav'
 import { useStore } from '../../store/useStore'
 import { ToastProvider } from '../ui/Toast'
 import { CommandPalette } from '../ui/CommandPalette'
@@ -51,9 +51,9 @@ export function AppShell() {
       <ToastProvider>
         <SeoMetadata />
         <div className={`flex h-screen overflow-hidden ${density === 'compact' ? 'ui-compact' : ''} ${highContrast ? 'bg-black' : 'bg-slate-50 dark:bg-slate-900'} ${colorblindPalette ? 'palette-cb' : ''} ${motion === 'reduced' ? 'motion-reduced' : ''} caption-size-${captionSize}`}>
-          <Sidebar />
-          <div className="flex flex-col flex-1 overflow-hidden">
+          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
             <TopBar />
+            <MainNav />
             <main className="min-h-0 flex-1 overflow-auto page-fade">
               <div className="flex min-h-full flex-col">
                 <div className="flex-1">

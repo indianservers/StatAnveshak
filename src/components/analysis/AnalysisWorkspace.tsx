@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Copy, Play, Search } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Copy, Loader2, Play, Search } from 'lucide-react'
 import Plotly from 'plotly.js-dist-min'
-import { ANALYSIS_BY_ID, ANALYSIS_CATALOG, JASP_MODULE_ORDER, analysesForModule } from '../../analysis/catalog'
+import { ANALYSIS_BY_ID, ANALYSIS_CATALOG, MODULE_ORDER, analysesForModule } from '../../analysis/catalog'
 import type { AnalysisDef, AnalysisOptions, AnalysisResult, PlotSpec } from '../../analysis/types'
-import { runAnalysisInWorker } from '../../lib/workerClient'
+import { isAbortError, runAnalysisInWorker } from '../../lib/workerClient'
 import { useStore } from '../../store/useStore'
 import { DatasetEmptyState } from '../ui/DatasetEmptyState'
 import { PageBack } from '../ui/PageBack'
@@ -12,6 +12,9 @@ import { useToast } from '../ui/toastContext'
 import { formatStat } from '../../lib/statEngine'
 
 type Props = { analysisId: string }
+
+/** Short pause after the last option edit so typing a number does not start a run per keystroke. */
+const AUTO_RUN_DELAY_MS = 180
 
 export function AnalysisWorkspace({ analysisId }: Props) {
   const { activeDataset, theme } = useStore()
@@ -24,7 +27,10 @@ export function AnalysisWorkspace({ analysisId }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [running, setRunning] = useState(false)
   const [collapsed, setCollapsed] = useState<string[]>([])
+  const [seededKey, setSeededKey] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
+  const abortRef = useRef<AbortController | null>(null)
+  const seedKey = `${analysis.id}::${activeDataset?.id ?? ''}`
 
   const numericCols = activeDataset?.schema.filter((col) => col.type === 'numeric').map((col) => col.name) ?? []
   const preferredNumeric = (activeDataset?.schema ?? [])
@@ -36,7 +42,7 @@ export function AnalysisWorkspace({ analysisId }: Props) {
 
   const modules = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return JASP_MODULE_ORDER.map((module) => {
+    return MODULE_ORDER.map((module) => {
       const items = analysesForModule(module).filter((item) => !q || `${item.title} ${item.moduleLabel} ${item.id}`.toLowerCase().includes(q))
       return items.length ? { module, label: items[0].moduleLabel, items } : null
     }).filter(Boolean) as Array<{ module: string; label: string; items: AnalysisDef[] }>
@@ -71,33 +77,48 @@ export function AnalysisWorkspace({ analysisId }: Props) {
         next[field.key] = Object.fromEntries(field.items.map((item) => [item.key, item.key === 'tukey']))
       }
     }
+    abortRef.current?.abort()
     // Options reset when the analysis or dataset changes.
     // eslint-disable-next-line react-hooks/set-state-in-effect -- seed the option panel for the selected analysis
     setOptions(next)
+    setSeededKey(seedKey)
     setResult(null)
     setError(null)
-    const requiredReady = analysis.fields.filter((field) => 'required' in field && field.required).every((field) => {
-      const value = next[field.key]
-      if (Array.isArray(value)) return value.length > 0
-      return value !== undefined && value !== ''
-    })
-    const needsNumeric = analysis.fields.some((field) => 'role' in field && field.role === 'numeric' && 'required' in field && Boolean(field.required))
-    const rows = activeDataset?.data ?? []
-    if (needsNumeric && numericPool.length === 0 && !analysis.allowEmptyData) {
-      setError('No suitable numeric columns are available for this analysis.')
-      return
-    }
-    if (analysis.implemented && (rows.length || analysis.allowEmptyData) && requiredReady) {
-      void runAnalysisInWorker(analysis.id, rows, next).then(setResult).catch((err) => setError(publicError(err)))
-    }
   }, [analysis.id, activeDataset?.id]) // eslint-disable-line react-hooks/exhaustive-deps -- seed options only when the analysis or dataset identity changes
+
+  const needsNumeric = analysis.fields.some((field) => 'role' in field && field.role === 'numeric' && 'required' in field && Boolean(field.required))
+  const noNumericColumns = needsNumeric && numericPool.length === 0 && !analysis.allowEmptyData
+  const requiredReady = analysis.fields.filter((field) => 'required' in field && field.required).every((field) => {
+    const value = options[field.key]
+    if (Array.isArray(value)) return value.length > 0
+    return value !== undefined && value !== ''
+  })
+  const rows = activeDataset?.data
+  const hasRows = Boolean(rows?.length) || Boolean(analysis.allowEmptyData)
+
+  const execute = async (opts: AnalysisOptions) => {
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+    setRunning(true)
+    setError(null)
+    try {
+      const next = await runAnalysisInWorker(analysis.id, rows ?? [], opts, controller.signal)
+      if (!controller.signal.aborted) setResult(next)
+    } catch (err) {
+      if (!isAbortError(err) && !controller.signal.aborted) setError(publicError(err))
+    } finally {
+      if (abortRef.current === controller) {
+        abortRef.current = null
+        setRunning(false)
+      }
+    }
+  }
 
   const run = async () => {
     if (!activeDataset && !analysis.allowEmptyData) return
-    const needsNumeric = analysis.fields.some((field) => 'role' in field && field.role === 'numeric' && 'required' in field && Boolean(field.required))
-    if (needsNumeric && numericCols.length === 0 && !analysis.allowEmptyData) {
+    if (noNumericColumns) {
       setResult(null)
-      setError('No suitable numeric columns are available for this analysis.')
       return
     }
     if (!analysis.implemented) {
@@ -113,22 +134,23 @@ export function AnalysisWorkspace({ analysisId }: Props) {
       })
       return
     }
-    setRunning(true)
-    setError(null)
-    try {
-      const next = await runAnalysisInWorker(analysis.id, activeDataset?.data ?? [], options)
-      setResult(next)
-    } catch (err) {
-      setError(publicError(err))
-    } finally {
-      setRunning(false)
-    }
+    await execute(options)
   }
 
   const runRef = useRef(run)
+  const executeRef = useRef(execute)
   useEffect(() => {
     runRef.current = run
+    executeRef.current = execute
   })
+
+  useEffect(() => {
+    if (seededKey !== seedKey || !analysis.implemented || !hasRows || noNumericColumns || !requiredReady) return
+    const timer = window.setTimeout(() => void executeRef.current(options), AUTO_RUN_DELAY_MS)
+    return () => window.clearTimeout(timer)
+  }, [seededKey, seedKey, analysis.implemented, hasRows, noNumericColumns, requiredReady, options, rows])
+
+  useEffect(() => () => abortRef.current?.abort(), [])
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -147,22 +169,25 @@ export function AnalysisWorkspace({ analysisId }: Props) {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  const shownResult = analysis.implemented && !requiredReady ? null : result
+  const shownError = error ?? (noNumericColumns ? 'No suitable numeric columns are available for this analysis.' : null)
+
   const copyTables = async () => {
-    if (!result) return
-    const text = result.tables.map((table) => [table.title, table.columns.join('\t'), ...table.rows.map((row) => row.join('\t'))].join('\n')).join('\n\n')
+    if (!shownResult) return
+    const text = shownResult.tables.map((table) => [table.title, table.columns.join('\t'), ...table.rows.map((row) => row.join('\t'))].join('\n')).join('\n\n')
     await navigator.clipboard.writeText(text)
     notify('Results copied.', 'success')
   }
 
   if (!activeDataset && !analysis.allowEmptyData) {
-    return <DatasetEmptyState preferredPath={`/analysis/${analysis.id}`} description="Load a dataset to run JASP-catalog analyses. Learn Stats, Bayes labs, and summary-statistics analyses also run without a table." />
+    return <DatasetEmptyState preferredPath={`/analysis/${analysis.id}`} description="Load a dataset to run Stat Anveshak catalog analyses. Learn Stats, Bayes labs, and summary-statistics analyses also run without a table." />
   }
 
   return (
     <div className="flex h-full min-h-[calc(100vh-7rem)] flex-col lg:flex-row">
       <aside className="flex w-full shrink-0 flex-col border-b border-slate-200 bg-white lg:w-52 lg:border-b-0 lg:border-r dark:border-slate-700 dark:bg-slate-800">
         <div className="border-b border-slate-200 p-3 dark:border-slate-700">
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">JASP modules</p>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Analysis modules</p>
           <label className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 dark:border-slate-600 dark:bg-slate-900">
             <Search size={14} className="text-slate-400" />
             <input ref={searchRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search analyses" aria-label="Search analyses" className="w-full bg-transparent text-sm outline-none" />
@@ -211,13 +236,7 @@ export function AnalysisWorkspace({ analysisId }: Props) {
                   key={mode}
                   type="button"
                   className={`flex-1 rounded px-2 py-1 font-semibold ${options.inference === mode ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-300'}`}
-                  onClick={() => {
-                    const next = { ...options, inference: mode }
-                    setOptions(next)
-                    if (analysis.implemented && (activeDataset?.data.length || analysis.allowEmptyData)) {
-                      void runAnalysisInWorker(analysis.id, activeDataset?.data ?? [], next).then(setResult).catch((err) => setError(publicError(err)))
-                    }
-                  }}
+                  onClick={() => setOptions((value) => ({ ...value, inference: mode }))}
                 >
                   {mode === 'frequentist' ? 'Frequentist' : 'Bayesian'}
                 </button>
@@ -368,47 +387,62 @@ export function AnalysisWorkspace({ analysisId }: Props) {
           })}
         </div>
         <div className="border-t border-slate-200 p-3 dark:border-slate-700">
-          <button type="button" onClick={() => void run()} disabled={running} className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">
-            <Play size={15} />
-            {running ? 'Running…' : analysis.implemented ? 'Run analysis' : 'Show phase note'}
+          <button type="button" onClick={() => void run()} className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+            {running ? <Loader2 size={15} className="animate-spin" aria-hidden /> : <Play size={15} aria-hidden />}
+            {analysis.implemented ? 'Run analysis' : 'Show phase note'}
           </button>
-          <p className="mt-2 text-center text-[11px] text-slate-400">Ctrl/⌘ + Enter to run. / focuses the catalog search.</p>
+          <p className="mt-2 text-center text-[11px] text-slate-400">
+            {analysis.implemented ? 'Results update as you change options. ' : ''}Ctrl/⌘ + Enter re-runs. / focuses the catalog search.
+          </p>
         </div>
       </section>
 
       <section className="min-w-0 flex-1 overflow-auto bg-white p-4 dark:bg-slate-950">
-        {error && (
+        {shownError && (
           <div className="mb-4 flex items-start gap-2 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
             <AlertTriangle size={16} className="mt-0.5 shrink-0" />
-            {error}
+            {shownError}
           </div>
         )}
-        {!result && !error && (
-          <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-slate-200 text-sm text-slate-400 dark:border-slate-700">
-            Assign variables and run. Results stay in this collection until you run again.
+        {!shownResult && !shownError && (
+          <div className="flex h-64 items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200 px-4 text-center text-sm text-slate-400 dark:border-slate-700">
+            {running ? (
+              <><Loader2 size={16} className="animate-spin" aria-hidden /> Running analysis…</>
+            ) : analysis.implemented && !requiredReady ? (
+              'Choose the required variables (*) and the results appear here instantly.'
+            ) : (
+              'Assign variables. Results update automatically as you change options.'
+            )}
           </div>
         )}
-        {result && (
-          <div className="space-y-6">
+        {shownResult && (
+          <div className="space-y-6" aria-busy={running}>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h2 className="text-xl font-bold text-slate-800 dark:text-white">{result.title}</h2>
-                <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">{result.interpretation}</p>
+                <h2 className="text-xl font-bold text-slate-800 dark:text-white">{shownResult.title}</h2>
+                <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">{shownResult.interpretation}</p>
               </div>
-              <button type="button" onClick={() => void copyTables()} disabled={!result.tables.length} className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40 dark:border-slate-600 dark:text-slate-300">
-                <Copy size={13} /> Copy tables
-              </button>
+              <div className="flex items-center gap-2">
+                {running && (
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-300" role="status">
+                    <Loader2 size={13} className="animate-spin" aria-hidden /> Updating…
+                  </span>
+                )}
+                <button type="button" onClick={() => void copyTables()} disabled={!shownResult.tables.length} className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40 dark:border-slate-600 dark:text-slate-300">
+                  <Copy size={13} /> Copy tables
+                </button>
+              </div>
             </div>
-            {result.assumptions.length > 0 && (
+            {shownResult.assumptions.length > 0 && (
               <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
                 <p className="mb-1 font-semibold">Assumptions and data notes</p>
                 <ul className="list-disc space-y-1 pl-5">
-                  {result.assumptions.map((item) => <li key={item}>{item}</li>)}
+                  {shownResult.assumptions.map((item) => <li key={item}>{item}</li>)}
                 </ul>
               </div>
             )}
-            {analysis.id.startsWith('t.') && result.plots.map((plot) => <PlotPanel key={plot.id} plot={plot} theme={theme} />)}
-            {result.tables.map((table) => {
+            {analysis.id.startsWith('t.') && shownResult.plots.map((plot) => <PlotPanel key={plot.id} plot={plot} theme={theme} />)}
+            {shownResult.tables.map((table) => {
               const shown = table.rows.slice(0, 80)
               return (
               <div key={table.id} className="overflow-auto rounded-xl border border-slate-300 dark:border-slate-600">
@@ -438,10 +472,10 @@ export function AnalysisWorkspace({ analysisId }: Props) {
               </div>
               )
             })}
-            {!analysis.id.startsWith('t.') && result.plots.map((plot) => <PlotPanel key={plot.id} plot={plot} theme={theme} />)}
-            {result.footnotes.length > 0 && (
+            {!analysis.id.startsWith('t.') && shownResult.plots.map((plot) => <PlotPanel key={plot.id} plot={plot} theme={theme} />)}
+            {shownResult.footnotes.length > 0 && (
               <div className="text-xs leading-5 text-slate-500">
-                {result.footnotes.map((note, index) => (
+                {shownResult.footnotes.map((note, index) => (
                   <p key={note}><span className="font-semibold">Note {index + 1}.</span> {note}</p>
                 ))}
               </div>

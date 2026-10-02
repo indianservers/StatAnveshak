@@ -288,7 +288,7 @@ export function runIndependentT(rows: Record<string, unknown>[], options: Analys
       : `${method} t(${round(param.df, 3)}) = ${round(param.t)}, p = ${round(p)} (${alternative}). Mean difference ${groups[0].name} − ${groups[1].name} = ${round(param.diff)}. ${significanceStatement(p, alpha)} Cohen's d = ${round(d)}.`,
     assumptions,
     footnotes: [
-      'Student uses a pooled variance; Welch uses separate variances and Satterthwaite df (JASP default).',
+      'Student uses a pooled variance; Welch uses separate variances and Satterthwaite df (default).',
       'Levene uses absolute deviations from group medians (Brown–Forsythe).',
       'Mann–Whitney uses midranks; exact enumeration when n1+n2 ≤ 30 and there are no ties, otherwise a continuity-corrected normal approximation with tie correction.',
       'Bayesian t-tests arrive in Phase 4.',
@@ -347,7 +347,7 @@ export function runPairedT(rows: Record<string, unknown>[], options: AnalysisOpt
       diffs.length < 30 ? 'Small sample of differences: inspect Shapiro–Wilk on the difference scores.' : 't on differences is reasonably robust for moderate n.',
     ],
     footnotes: [
-      'Zeros are dropped for Wilcoxon (R/JASP convention). Exact signed-rank p-values are used for n≤15 with no ties.',
+      'Zeros are dropped for Wilcoxon (R convention). Exact signed-rank p-values are used for n≤15 with no ties.',
       'Bayesian paired t arrives in Phase 4.',
     ],
     tables,

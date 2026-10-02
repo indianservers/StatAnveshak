@@ -63,7 +63,7 @@ export function runNetwork(rows: Record<string, unknown>[], options: AnalysisOpt
     footnotes: [
       bayesian
         ? 'Bayesian mode uses a Wishart-like ridge ρ ≈ 1/n (or your ρ), which is the posterior mean of a conjugate precision with scale S + ρI.'
-        : 'This is a ridge GGM, not the JASP mgm/qgraph bootstrap suite.',
+        : 'This is a ridge GGM, not the mgm/qgraph bootstrap suite.',
     ],
     tables: [
       { id: 'edges', title: 'Partial correlations', columns: ['From', 'To', 'Partial r'], rows: edges.map((e) => [e[0], e[1], round(e[2])]) },

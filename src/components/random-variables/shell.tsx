@@ -10,6 +10,7 @@ import {
   type RvTab,
 } from '../../lib/randomVariables'
 import type { StudioLab } from '../../lib/statisticsStudios'
+import { StudioLabsMenu } from '../statistics/StudioLabsMenu'
 import { LabHeroArt } from './icons'
 import { RandomVariablesStudioStyles } from './styles'
 
@@ -70,6 +71,8 @@ export function RandomVariableLabShell({
           Random Variables <span className="mx-1">›</span> Lab {index + 1} of {RV_STUDIO.labs.length}
         </p>
       </div>
+
+      <StudioLabsMenu studio={RV_STUDIO} current={lab.slug} />
 
       <header className="grid items-center gap-5 lg:grid-cols-[minmax(0,1fr)_auto]">
         <div>

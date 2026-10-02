@@ -63,7 +63,7 @@ describe('time-series ACF/PACF', () => {
 })
 
 describe('analysis catalog', () => {
-  it('implements Phase 1–4 catalog engines and lists every JASP module', () => {
+  it('implements Phase 1–4 catalog engines and lists every analysis module', () => {
     const implemented = ANALYSIS_CATALOG.filter((item) => item.implemented).map((item) => item.id).sort()
     expect(implemented).toEqual(PHASE8_IMPLEMENTED)
     expect(new Set(ANALYSIS_CATALOG.map((item) => item.module)).size).toBe(35)

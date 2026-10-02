@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 import type { Studio, StudioLab } from '../../../lib/statisticsStudios'
 import { labPath, studioPath } from '../../../lib/statisticsStudios'
+import { StudioLabsMenu } from '../StudioLabsMenu'
 import { fmt } from './format'
 
 export function Card({ title, children, className = '' }: { title: string; children: ReactNode; className?: string }) {
@@ -75,6 +76,7 @@ export function LabShell({ studio, lab, children }: { studio: Studio; lab: Studi
   const next = studio.labs[index + 1]
   return <main className="min-w-0 bg-[#f7f8fb] px-4 py-6 text-slate-900 dark:bg-slate-950 dark:text-slate-100 sm:px-6 lg:px-8"><div className="mx-auto flex max-w-[1200px] flex-col gap-5">
     <nav className="flex flex-wrap items-center justify-between gap-2 text-sm"><Link to={studioPath(studio)} className="font-bold text-indigo-700 dark:text-indigo-300">← {studio.title}</Link><span className="text-slate-500">Lab {index + 1} of {studio.labs.length}</span></nav>
+    <StudioLabsMenu studio={studio} current={lab.slug} />
     <header className="rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50 to-white p-5 dark:border-indigo-950 dark:from-indigo-950/30 dark:to-slate-900"><p className="text-xs font-black uppercase tracking-[0.2em] text-indigo-700 dark:text-indigo-300">Interactive lab · {studio.title}</p><h1 className="mt-1 text-3xl font-black tracking-tight">{lab.title}</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">{lab.summary}</p></header>
     {children}
     <nav aria-label="Lab navigation" className="flex flex-wrap justify-between gap-3 border-t border-slate-200 pt-5 dark:border-slate-800"><Link to={previous ? labPath(studio.slug, previous.slug) : studioPath(studio)} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold dark:border-slate-700 dark:bg-slate-900"><ArrowLeft size={15} /> {previous?.title ?? 'Studio home'}</Link>{next && <Link to={labPath(studio.slug, next.slug)} className="inline-flex items-center gap-2 rounded-xl bg-indigo-700 px-4 py-2 text-sm font-bold text-white">{next.title} <ArrowRight size={15} /></Link>}</nav>

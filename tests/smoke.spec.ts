@@ -142,7 +142,7 @@ test('solver page includes Karl Pearson practice set', async ({ page }) => {
 test('analysis workspace runs descriptive statistics', async ({ page }) => {
   await gotoApp(page, '/#/analysis/descriptives.statistics')
   await expect(page.getByRole('heading', { name: 'Descriptive Statistics' }).first()).toBeVisible()
-  await expect(page.getByText('JASP modules')).toBeVisible()
+  await expect(page.getByText('Analysis modules')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Run analysis' })).toBeVisible()
   await page.getByRole('button', { name: 'Run analysis' }).click()
   await expect(page.getByRole('heading', { name: 'Descriptive Statistics' }).nth(1)).toBeVisible({ timeout: 20_000 })

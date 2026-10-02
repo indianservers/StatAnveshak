@@ -71,7 +71,7 @@ export function sdOf(values: number[], kind: SpreadKind = 'sample'): number {
   return Math.sqrt(varianceOf(values, kind))
 }
 
-/** R type-7 quantile (JASP / R default). */
+/** R type-7 quantile (R default). */
 export function quantileType7(sorted: number[], p: number): number {
   if (sorted.length === 0) return Number.NaN
   if (sorted.length === 1) return sorted[0]

@@ -11,6 +11,7 @@ import {
   type CltTab,
 } from '../../lib/samplingDistributionsClt'
 import type { StudioLab } from '../../lib/statisticsStudios'
+import { StudioLabsMenu } from '../statistics/StudioLabsMenu'
 import { LabHeroArt } from './icons'
 import { SamplingDistributionsStudioStyles } from './styles'
 
@@ -75,6 +76,8 @@ export function SamplingDistributionsLabShell({
           </div>
         </div>
       </div>
+
+      <StudioLabsMenu studio={CLT_STUDIO} current={lab.slug} />
 
       <header className="grid items-center gap-5 lg:grid-cols-[minmax(0,1fr)_auto]">
         <div>

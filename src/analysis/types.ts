@@ -1,4 +1,4 @@
-export type JaspModuleId =
+export type AnalysisModuleId =
   | 'descriptives'
   | 'tTests'
   | 'anova'
@@ -47,7 +47,7 @@ export type AnalysisOptionField =
 
 export type AnalysisDef = {
   id: string
-  module: JaspModuleId
+  module: AnalysisModuleId
   moduleLabel: string
   title: string
   description: string

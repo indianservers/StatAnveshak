@@ -82,7 +82,7 @@ function betaPlot(alpha: number, beta: number, p0: number) {
 
 const notes = [
   'Default t/ANOVA/regression priors are JZS Cauchy / Zellner–Siow with r = √2/2 unless you change rscale.',
-  'Binomial uses a Beta(α, β) prior (JASP default α=β=1 is uniform).',
+  'Binomial uses a Beta(α, β) prior (default α=β=1 is uniform).',
   'ANOVA/regression BF₁₀ is the g-prior integral versus the intercept-only model, not Gibbs MCMC. JAGS Gibbs for conjugate models is available as jags.model.',
 ]
 
@@ -778,7 +778,7 @@ function runRobustT(rows: Record<string, unknown>[], options: AnalysisOptions): 
     analysisId: 'robustT.modelAveraged',
     title: 'Robust T-Tests',
     interpretation: `Model-averaged location uses t_ν with ν ∈ {1,4,30} (weights ${w.map((v) => round(v)).join(', ')}). JZS BF₁₀ on all data = ${reportBf(bfAll).bf10}; truncated (|z|<3) BF₁₀ = ${reportBf(bfTrunc).bf10}.`,
-    assumptions: ['This is a finite t-mixture + truncated MA, not JASP’s full MCMC robust-t suite. Weights are BIC-style on a common location/scale MLE.'],
+    assumptions: ['This is a finite t-mixture + truncated MA, not a full MCMC robust-t suite. Weights are BIC-style on a common location/scale MLE.'],
     footnotes: notes,
     tables: [
       bfBlock('JZS (Gaussian sampling)', bfAll, [['truncated JZS', reportBf(bfTrunc).bf10], ['mixture weight Cauchy', round(w[0])]]),

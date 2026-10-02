@@ -1,4 +1,4 @@
-import type { AnalysisDef, JaspModuleId } from './types'
+import type { AnalysisDef, AnalysisModuleId } from './types'
 
 const descriptives: AnalysisDef[] = [
   {
@@ -756,7 +756,7 @@ const RAW_CATALOG: AnalysisDef[] = [
     module: 'distributions',
     moduleLabel: 'Distributions',
     title: 'Distribution Families',
-    description: 'Compare JASP-list families (including skew-normal, Wald, ZIP/ZINB, mixtures, stretched beta) with KS / chi-square GOF.',
+    description: 'Compare distribution families (including skew-normal, Wald, ZIP/ZINB, mixtures, stretched beta) with KS / chi-square GOF.',
     phase: 7,
     implemented: true,
     frequentist: true,
@@ -1470,7 +1470,7 @@ export const ANALYSIS_CATALOG: AnalysisDef[] = RAW_CATALOG.map((item) => {
 
 export const ANALYSIS_BY_ID = Object.fromEntries(ANALYSIS_CATALOG.map((item) => [item.id, item])) as Record<string, AnalysisDef>
 
-export const JASP_MODULE_ORDER: JaspModuleId[] = [
+export const MODULE_ORDER: AnalysisModuleId[] = [
   'descriptives', 'tTests', 'anova', 'mixedModels', 'regression', 'frequencies', 'factor',
   'acceptanceSampling', 'audit', 'bain', 'bayesFactorFunctions', 'bfpack', 'bsts', 'circular',
   'cochrane', 'distributions', 'equivalence', 'jags', 'learnBayes', 'learnStats', 'machineLearning',
@@ -1478,7 +1478,7 @@ export const JASP_MODULE_ORDER: JaspModuleId[] = [
   'reliability', 'robustTTests', 'sem', 'survival', 'timeSeries', 'summaryStatistics', 'visualModeling',
 ]
 
-export function analysesForModule(module: JaspModuleId) {
+export function analysesForModule(module: AnalysisModuleId) {
   return ANALYSIS_CATALOG.filter((item) => item.module === module)
 }
 

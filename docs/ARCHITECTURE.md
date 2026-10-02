@@ -8,7 +8,7 @@ StatAnveshak is a Vite React application that runs analysis entirely in the brow
 - Layout: `src/components/layout` owns global navigation and top-level controls.
 - State: `src/store/useStore.ts` holds active datasets, projects, charts, preferences, and hydrated IndexedDB data.
 - Storage: `src/lib/storage.ts` wraps Dexie for datasets and projects.
-- Analysis registry: `src/analysis/catalog.ts` is the canonical list of JASP modules. `runAnalysis(id, rows, options)` in `src/analysis/runAnalysis.ts` is the only math entry point. Frequentist and Bayesian are a toggle on the same analysis ID.
+- Analysis registry: `src/analysis/catalog.ts` is the canonical list of analysis modules. `runAnalysis(id, rows, options)` in `src/analysis/runAnalysis.ts` is the only math entry point. Frequentist and Bayesian are a toggle on the same analysis ID.
 - Engines: `src/analysis/engines/frequentist/` and `src/analysis/engines/bayesian/` implement tables, plots, and footnotes. Learn Stats and Learn Bayes are UI shells over those engines.
 - Golden tests: `src/analysis/golden/` is the numeric ship gate (`npm run test:unit`).
 - Samples: `src/lib/sampleData.ts` creates built-in datasets for demos and teaching.

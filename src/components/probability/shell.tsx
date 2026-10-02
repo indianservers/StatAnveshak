@@ -10,6 +10,7 @@ import {
   type PfTab,
 } from '../../lib/probabilityFoundations'
 import type { StudioLab } from '../../lib/statisticsStudios'
+import { StudioLabsMenu } from '../statistics/StudioLabsMenu'
 import { LabHeroArt } from './icons'
 import { ProbabilityStudioStyles } from './styles'
 
@@ -73,6 +74,8 @@ export function ProbabilityLabShell({
           Probability Foundations <span className="mx-1">›</span> {lab.title}
         </p>
       </div>
+
+      <StudioLabsMenu studio={PF_STUDIO} current={lab.slug} />
 
       <header className="grid items-center gap-5 lg:grid-cols-[minmax(0,1fr)_auto]">
         <div>

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, RotateCcw, Shuffle } from 'lucide-react'
 import type { Studio, StudioLab } from '../../lib/statisticsStudios'
 import { labPath, studioPath } from '../../lib/statisticsStudios'
+import { StudioLabsMenu } from '../statistics/StudioLabsMenu'
 import { averageRanks, bootstrapDifference, exactPermutation, kruskalWallis, mannWhitney, mean, median, signTest, signedRankTest } from '../../lib/nonparametricLabs'
 
 const format = (value: number, digits = 2) => Number.isFinite(value) ? value.toFixed(digits) : '—'
@@ -236,6 +237,7 @@ export function NonparametricLabScreen({ studio, lab }: { studio: Studio; lab: S
   return <main className="min-w-0 bg-[#f6f8f3] px-4 py-6 text-slate-900 dark:bg-slate-950 dark:text-slate-100 sm:px-6 lg:px-8">
     <div className="mx-auto flex max-w-[1200px] flex-col gap-5">
       <nav className="flex flex-wrap items-center justify-between gap-2 text-sm"><Link to={studioPath(studio)} className="font-bold text-lime-700 dark:text-lime-300">← Nonparametric Statistics</Link><span className="text-slate-500">Lab {index + 1} of {studio.labs.length}</span></nav>
+      <StudioLabsMenu studio={studio} current={lab.slug} />
       <header className="rounded-2xl border border-lime-100 bg-gradient-to-r from-lime-50 to-white p-5 dark:border-lime-950 dark:from-lime-950/30 dark:to-slate-900"><p className="text-xs font-black uppercase tracking-[0.2em] text-lime-700 dark:text-lime-300">Interactive lab</p><h1 className="mt-1 text-3xl font-black tracking-tight">{lab.title}</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">{lab.summary}</p></header>
       {lab.slug === 'sign-test' && <PairedLab mode="sign" />}
       {lab.slug === 'wilcoxon-signed-rank' && <PairedLab mode="wilcoxon" />}

@@ -12,6 +12,7 @@ import {
   type SmTab,
 } from '../../lib/samplingMethods'
 import type { StudioLab } from '../../lib/statisticsStudios'
+import { StudioLabsMenu } from '../statistics/StudioLabsMenu'
 import { LabHeroArt } from './icons'
 import { SamplingMethodsStudioStyles } from './styles'
 
@@ -69,6 +70,8 @@ export function SamplingMethodsLabShell({
           Lab {index + 1} of {SM_STUDIO.labs.length}
         </p>
       </div>
+
+      <StudioLabsMenu studio={SM_STUDIO} current={lab.slug} />
 
       <header className="grid items-center gap-5 lg:grid-cols-[minmax(0,1fr)_auto]">
         <div>

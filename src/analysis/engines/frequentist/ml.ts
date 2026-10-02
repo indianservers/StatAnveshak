@@ -465,7 +465,7 @@ export function runMlRegression(rows: Record<string, unknown>[], options: Analys
     title: 'ML Regression',
     interpretation: `${algo} regression on ${yName}. ${sc.summary}`,
     assumptions: ['Holdout metrics use in-sample fits except KNN (leave-one-out). Trees are CART-style axis splits; boosting is residual trees; NN is a 1-hidden-layer MLP; SVM here is linear.'],
-    footnotes: ['This is a browser TypeScript suite, not scikit-learn / JASP ML WASM. Regularized linear is coordinate-descent ridge/lasso.'],
+    footnotes: ['This is a browser TypeScript suite, not scikit-learn / ML WASM. Regularized linear is coordinate-descent ridge/lasso.'],
     tables: [{ id: 'score', title: 'Fit', columns: sc.columns, rows: sc.rows }],
     plots: [{
       id: 'fit',

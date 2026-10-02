@@ -14,7 +14,7 @@ Use **Clean & Transform** for formula-style column creation and **Stats Workbenc
 
 ## Analyze
 
-Open **Analysis** (`/analysis/:analysisId`) for the JASP catalog. One ID per method; Frequentist | Bayesian is a toggle on the same page. **Learn Stats** (`/analysis/learnStats.labs`) and **Learn Bayes** are teaching labs that call those engines. Legacy **Inference**, **Regression**, and **Explore** routes redirect into the workspace.
+Open **Analysis** (`/analysis/:analysisId`) for the Stat Anveshak catalog. One ID per method; Frequentist | Bayesian is a toggle on the same page. **Learn Stats** (`/analysis/learnStats.labs`) and **Learn Bayes** are teaching labs that call those engines. Legacy **Inference**, **Regression**, and **Explore** routes redirect into the workspace.
 
 ## Export
 
