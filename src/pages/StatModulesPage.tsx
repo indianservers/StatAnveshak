@@ -14,6 +14,8 @@ import { sampleToDataset } from '../lib/dataset'
 import { saveDataset, saveProject } from '../lib/storage'
 import { createProjectBundle, shareableReportHtml } from '../lib/shareBundles'
 import type { AnalysisLogEntry, Dataset, Project } from '../types'
+import { SpecificGuide } from '../components/learning/SpecificGuide'
+import { statModuleGuide } from '../lib/guides/statModuleGuides'
 
 const GROUP_ICONS: Record<StatModuleGroup, typeof Calculator> = {
   Inferential: Calculator,
@@ -381,7 +383,7 @@ export function StatModulesPage() {
   }, [moduleKey, selectModule])
 
   if (!activeDataset) {
-    return <StatModulesEmptyState onLoadSample={loadSample} />
+    return <div className="p-4">{statModuleGuide(selectedModule.key) && <SpecificGuide guide={statModuleGuide(selectedModule.key)!} />}<StatModulesEmptyState onLoadSample={loadSample} /></div>
   }
 
   return (
@@ -592,6 +594,7 @@ export function StatModulesPage() {
               This module is Analyze tooling (workflow metadata), not a teaching lab. Switch to Analyze to keep it in the gallery.
             </p>
           )}
+          {statModuleGuide(selectedModule.key) && <SpecificGuide guide={statModuleGuide(selectedModule.key)!} />}
           {panel === 'report' && (
             <>
           {dataQualityReport && (

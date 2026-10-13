@@ -5,11 +5,12 @@ import {
   generateRepeated,
   oneWayAnova,
   repeatedMeasuresAnova,
-  subjectCentered,
   type RmPresetId,
 } from '../../../lib/anovaStudio'
 import { AnovaCard, AnovaSelect, AnovaSlider, AnovaToggle, Insight, SigBadge } from '../shared'
 import { TrajectoryPlot } from '../plots'
+import { AnovaDataTools } from '../AnovaDataTools'
+import type { AnovaObservation } from '../../../lib/anovaStudio'
 
 export function RepeatedMeasuresAnovaLab() {
   const [preset, setPreset] = useState<RmPresetId>('rm-improvement')
@@ -17,12 +18,14 @@ export function RepeatedMeasuresAnovaLab() {
   const [conditions, setConditions] = useState(4)
   const [seed, setSeed] = useState(11)
   const [centered, setCentered] = useState(false)
-  const rows = useMemo(
+  const [custom, setCustom] = useState<AnovaObservation[] | null>(null)
+  const [alpha, setAlpha] = useState(0.05)
+  const generated = useMemo(
     () => generateRepeated({ preset, seed, subjects, conditions }),
     [preset, seed, subjects, conditions],
   )
-  const view = centered ? subjectCentered(rows) : rows
-  const result = useMemo(() => repeatedMeasuresAnova(rows), [rows])
+  const rows = custom ?? generated
+  const result = useMemo(() => repeatedMeasuresAnova(rows, alpha), [rows, alpha])
   const naive = useMemo(() => oneWayAnova(rows), [rows])
   const series = result.subjects.map((subject) => ({
     id: subject.id,
@@ -31,6 +34,7 @@ export function RepeatedMeasuresAnovaLab() {
 
   return (
     <div className="space-y-4">
+      <AnovaDataTools slug="repeated-measures-anova" rows={rows} onRows={setCustom} alpha={alpha} onAlpha={setAlpha} />
       <section className="anova-hero grid items-center gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(240px,0.9fr)]">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-blue-500">Same subjects, multiple measurements</p>
@@ -50,17 +54,17 @@ export function RepeatedMeasuresAnovaLab() {
             <AnovaSelect
               label="Preset"
               value={preset}
-              onChange={(value) => setPreset(value as RmPresetId)}
+              onChange={(value) => { setCustom(null); setPreset(value as RmPresetId) }}
               options={[
                 { value: 'rm-improvement', label: 'Treatment improvement over time' },
                 { value: 'rm-crossover', label: 'Crossover / alternating conditions' },
                 { value: 'rm-baseline', label: 'Baseline differences, little change' },
               ]}
             />
-            <AnovaSlider label="Number of conditions" value={conditions} min={2} max={6} step={1} onChange={setConditions} />
-            <AnovaSlider label="Number of subjects" value={subjects} min={6} max={24} step={1} onChange={setSubjects} />
+            <AnovaSlider label="Number of conditions" value={conditions} min={2} max={6} step={1} onChange={v => { setCustom(null); setConditions(v) }} />
+            <AnovaSlider label="Number of subjects" value={subjects} min={6} max={24} step={1} onChange={v => { setCustom(null); setSubjects(v) }} />
             <AnovaToggle label="Subject-centered scores" checked={centered} onChange={setCentered} />
-            <button type="button" className="anova-btn anova-btn-ghost w-full" onClick={() => setSeed((value) => value + 1)}>
+            <button type="button" className="anova-btn anova-btn-ghost w-full" onClick={() => { setCustom(null); setSeed((value) => value + 1) }}>
               Resample
             </button>
           </div>
@@ -103,7 +107,7 @@ export function RepeatedMeasuresAnovaLab() {
           </p>
           <p className="text-lg font-bold text-slate-500">p = {formatP(result.p)}</p>
           <div className="mt-2">
-            <SigBadge significant={Number.isFinite(result.p) && result.p < 0.05} />
+            <SigBadge significant={Number.isFinite(result.p) && result.p < alpha} />
           </div>
           <table className="anova-table mt-3">
             <tbody>
@@ -135,7 +139,7 @@ export function RepeatedMeasuresAnovaLab() {
           <TrajectoryPlot series={series} conditions={result.conditions} means={centered ? result.condMeans.map((m) => m - result.grandMean) : result.condMeans} />
         </AnovaCard>
         <AnovaCard title="Sphericity & within-subject design">
-          <Insight title={result.sphericity.automatic ? 'Sphericity holds automatically' : 'Mauchly’s test of sphericity'} tone={result.sphericity.automatic || (result.sphericity.p ?? 1) >= 0.05 ? 'ok' : 'warn'}>
+          <Insight title={result.sphericity.automatic ? 'Sphericity holds automatically' : 'Mauchly’s test of sphericity'} tone={result.sphericity.automatic || (result.sphericity.p ?? 1) >= alpha ? 'ok' : 'warn'}>
             {result.sphericity.note}
           </Insight>
           {!result.sphericity.automatic && result.sphericity.w !== undefined && (

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, TrendingUp } from 'lucide-react'
+import { ArrowRight, Star, TrendingUp } from 'lucide-react'
 import { ANALYSIS_BY_ID } from '../../analysis/catalog'
 import { useStore } from '../../store/useStore'
 import { FOCUS_RING } from '../statistics/studioTheme'
@@ -21,6 +21,7 @@ const COUNT_LABEL = ANALYSIS_COUNT >= 10 ? `${Math.floor(ANALYSIS_COUNT / 10) * 
 
 export function HomeAnalysisTools() {
   const setWorkspaceMode = useStore((state) => state.setWorkspaceMode)
+  const { favoriteModules, toggleFavoriteModule } = useStore()
 
   return (
     <HomeSection
@@ -30,18 +31,18 @@ export function HomeAnalysisTools() {
       title="Analysis Tools"
       description={`Explore ${COUNT_LABEL} analysis methods across ${MODULE_GROUPS.length} modules. Choose a method, then run it on your dataset.`}
       action={(
-        <Link to="/analysis" onClick={() => setWorkspaceMode('analyze')} className={HOME_ACTION_CLASS}>
-          Open analysis workspace <ArrowRight size={15} aria-hidden />
+        <Link to="/tools" onClick={() => setWorkspaceMode('analyze')} className={HOME_ACTION_CLASS}>
+          Open Tools Hub <ArrowRight size={15} aria-hidden />
         </Link>
       )}
     >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
         {AVAILABLE_TOOLS.map((tool, index) => (
+          <div key={tool.id} className="relative flex min-w-0 flex-col">
           <Link
-            key={tool.id}
             to={`/analysis/${tool.id}`}
             onClick={() => setWorkspaceMode('analyze')}
-            className={`home-rise group flex min-h-[8.5rem] flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lg dark:border-slate-800 dark:bg-slate-900 dark:hover:border-indigo-800 ${FOCUS_RING}`}
+            className={`home-rise group flex min-h-[8.5rem] flex-1 flex-col rounded-2xl border border-slate-200 bg-white p-4 pr-12 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lg dark:border-slate-800 dark:bg-slate-900 dark:hover:border-indigo-800 ${FOCUS_RING}`}
             style={{ animationDelay: `${index * 60}ms` }}
           >
             <span className="flex items-start gap-3">
@@ -57,6 +58,8 @@ export function HomeAnalysisTools() {
               <ArrowRight size={14} />
             </span>
           </Link>
+          <button type="button" aria-label={`${favoriteModules.includes(`/analysis/${tool.id}`) ? 'Remove' : 'Add'} ${tool.title} tool ${favoriteModules.includes(`/analysis/${tool.id}`) ? 'from' : 'to'} favorites`} aria-pressed={favoriteModules.includes(`/analysis/${tool.id}`)} onClick={() => toggleFavoriteModule(`/analysis/${tool.id}`)} className={`absolute right-1 top-1 flex min-h-11 min-w-11 items-center justify-center rounded-lg text-amber-600 ${FOCUS_RING}`}><Star size={16} fill={favoriteModules.includes(`/analysis/${tool.id}`) ? 'currentColor' : 'none'} /></button>
+          </div>
         ))}
       </div>
     </HomeSection>

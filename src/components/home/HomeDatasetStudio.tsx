@@ -8,6 +8,8 @@ import type { SampleDataset } from '../../types'
 import { FOCUS_RING } from '../statistics/studioTheme'
 import { HOME_ACTION_CLASS, HomeSection } from './HomeSection'
 import { useOpenInAnalyze } from './useOpenInAnalyze'
+import { importDatasetFile } from '../../lib/importDataset'
+import { storageFailureMessage } from '../../lib/safeStorage'
 
 const POPULAR_IDS = ['student-marks', 'iris-flowers', 'housing-prices', 'customer-churn', 'hospital-readmission', 'city-air-quality', 'campaign-ab-test']
 const POPULAR = POPULAR_IDS.map((id) => SAMPLE_DATASETS.find((sample) => sample.id === id)).filter((sample): sample is SampleDataset => Boolean(sample))
@@ -17,17 +19,34 @@ export function HomeDatasetStudio() {
   const { activeDataset, addDataset, setActiveDataset } = useStore()
   const openInAnalyze = useOpenInAnalyze()
   const [loadingId, setLoadingId] = useState<string | null>(null)
+  const [error, setError] = useState('')
+  const [dragOver, setDragOver] = useState(false)
+
+  const upload = async (file?: File) => {
+    if (!file || loadingId) return
+    setLoadingId('upload'); setError('')
+    try {
+      const dataset = await importDatasetFile(file)
+      await saveDataset(dataset)
+      addDataset(dataset); setActiveDataset(dataset)
+      openInAnalyze('/data/preview')
+    } catch (error) { setError(error instanceof Error ? error.message : 'Could not load the file.') }
+    finally { setLoadingId(null) }
+  }
 
   const loadSample = async (id: string) => {
     const sample = SAMPLE_DATASETS.find((item) => item.id === id)
     if (!sample) return
     setLoadingId(id)
+    setError('')
     try {
       const dataset = sampleToDataset(sample)
+      await saveDataset(dataset)
       addDataset(dataset)
       setActiveDataset(dataset)
-      await saveDataset(dataset)
       openInAnalyze('/data/preview')
+    } catch (error) {
+      setError(storageFailureMessage(error))
     } finally {
       setLoadingId(null)
     }
@@ -46,6 +65,10 @@ export function HomeDatasetStudio() {
         </button>
       )}
     >
+      <div onDragOver={(event) => { event.preventDefault(); setDragOver(true) }} onDragLeave={() => setDragOver(false)} onDrop={(event) => { event.preventDefault(); setDragOver(false); if (event.dataTransfer.files.length > 1) { setError('Drop one file at a time, or use the upload workspace for multiple files.'); return }; void upload(event.dataTransfer.files[0]) }} className={`mb-4 rounded-xl border-2 border-dashed p-4 ${dragOver ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950' : 'border-slate-300 dark:border-slate-600'}`}>
+        <label className="block text-sm font-bold">{loadingId === 'upload' ? 'Importing dataset…' : 'Drop a dataset here or choose a file'}<input aria-label="Upload dataset from home" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls,.json" disabled={loadingId !== null} onChange={(event) => { void upload(event.target.files?.[0]); event.target.value = '' }} className="mt-2 block w-full text-xs file:mr-3 file:min-h-11 file:rounded-lg file:border-0 file:bg-indigo-600 file:px-4 file:text-white" /></label><p className="mt-2 text-xs text-slate-600 dark:text-slate-300">CSV, TSV, TXT, Excel, JSON · First Excel sheet · Parsed and saved in this browser.</p>
+      </div>
+      {error && <p role="alert" className="mb-3 rounded-xl bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-950 dark:text-rose-200">{error}</p>}
       <div className="grid overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50/80 via-white to-indigo-50/40 dark:border-slate-800 dark:from-slate-950/60 dark:via-slate-900 dark:to-indigo-950/20 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(220px,0.55fr)]">
         <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center">
           <DatabaseArt />

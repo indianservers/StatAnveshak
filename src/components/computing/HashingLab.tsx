@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import { COLLISION_METHODS, HASH_METHODS, parseHashKeys, parseTableSize, runHashing, type CollisionMethod, type HashMethod } from '../../lib/hashingLab'
+import { SpecificGuide } from '../learning/SpecificGuide'
+import { hashingGuide } from '../../lib/guides/variantGuides'
 
 export function HashingLab() {
   const [keysInput, setKeysInput] = useState('12, 23, 44, 55')
@@ -26,6 +28,7 @@ export function HashingLab() {
 
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+      <div className="min-w-0 xl:col-span-2"><SpecificGuide guide={hashingGuide(hashMethod, collisionMethod)!} /></div>
       <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
         <h2 className="text-lg font-bold text-slate-800 dark:text-white">Input</h2>
         <label className="mt-3 block text-xs font-semibold text-slate-500">

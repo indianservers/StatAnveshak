@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
+import { readLocal, writeLocal } from '../../lib/safeStorage'
 
 export function HomeSection({
   id,
@@ -18,8 +19,9 @@ export function HomeSection({
   action?: ReactNode
   children: ReactNode
 }) {
+  const [collapsed, setCollapsed] = useState(() => readLocal(`home-collapsed-${id}`) === 'true')
   return (
-    <section aria-labelledby={id} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+    <section aria-labelledby={id} className="home-panel scroll-mt-24 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconClass}`}>
@@ -30,9 +32,9 @@ export function HomeSection({
             <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">{description}</p>
           </div>
         </div>
-        {action}
+        <div className="flex flex-wrap items-center gap-2">{!collapsed && action}<button type="button" aria-expanded={!collapsed} aria-controls={`${id}-content`} aria-label={`${collapsed ? 'Expand' : 'Collapse'} ${title}`} onClick={() => { const next = !collapsed; setCollapsed(next); writeLocal(`home-collapsed-${id}`, String(next)) }} className={HOME_ACTION_CLASS}>{collapsed ? 'Expand' : 'Collapse'}</button></div>
       </div>
-      {children}
+      <div id={`${id}-content`} hidden={collapsed}>{children}</div>
     </section>
   )
 }

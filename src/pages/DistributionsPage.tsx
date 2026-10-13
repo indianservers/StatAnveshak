@@ -37,11 +37,20 @@ import {
   Triangle,
   TrendingUp,
   Waves,
+  Search,
+  Star,
   type LucideIcon,
 } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { DistributionUIProvider } from '../components/distributions/DistributionUIProvider'
+import { DistributionAppearance } from '../components/distributions/DistributionAppearance'
+import { useDistributionUI } from '../components/distributions/distributionUI'
+import { readStringArray, writeLocalJson } from '../lib/safeStorage'
+import { useStore } from '../store/useStore'
 import { PageBack } from '../components/ui/PageBack'
 import { DistributionLesson } from '../components/distributions/DistributionLesson'
+import { StudioLearningPanel } from '../components/statistics/StudioLearningPanel'
+import { distributionGuide } from '../lib/guides/variantGuides'
 import { useReducedMotion } from '../components/visual/useReducedMotion'
 import {
   defaultParams,
@@ -115,6 +124,10 @@ const initialOpenGroups = (selectedId: DistributionId): Record<DistGroup, boolea
 }
 
 export function DistributionsPage() {
+  return <DistributionUIProvider><DistributionsStudio /></DistributionUIProvider>
+}
+
+function DistributionsStudio() {
   const { distributionId } = useParams()
   const navigate = useNavigate()
   const reducedMotion = useReducedMotion()
@@ -123,25 +136,27 @@ export function DistributionsPage() {
   const dist = DISTRIBUTION_BY_ID[selected]
   const [params, setParams] = useState<Record<string, number>>(() => defaultParams(dist))
   const [openGroups, setOpenGroups] = useState<Record<DistGroup, boolean>>(() => initialOpenGroups(initial))
+  const [query, setQuery] = useState('')
+  const [favoritesOnly, setFavoritesOnly] = useState(false)
+  const [mobileBrowse, setMobileBrowse] = useState(false)
+  const [recent, setRecent] = useState(() => readStringArray('distribution-recent').filter((id) => Boolean(DISTRIBUTION_BY_ID[id as DistributionId])).slice(0, 5))
+  const favorites = useStore((state) => state.favoriteModules)
+  const { focus } = useDistributionUI()
+  const filtered = DISTRIBUTIONS.filter((item) => `${item.name} ${item.family} ${item.explanation}`.toLowerCase().includes(query.trim().toLowerCase()) && (!favoritesOnly || favorites.includes(`/distributions/${item.id}`)))
 
-  useEffect(() => {
-    if (!DISTRIBUTION_BY_ID[distributionId as DistributionId]) return
-    const next = distributionId as DistributionId
-    setSelected(next)
-    setParams(defaultParams(DISTRIBUTION_BY_ID[next]))
-  }, [distributionId])
-
-  useEffect(() => {
-    const group = groupLabel(DISTRIBUTION_BY_ID[selected])
-    setOpenGroups((prev) => (prev[group] ? prev : { ...prev, [group]: true }))
-  }, [selected])
+  if (selected !== initial) {
+    setSelected(initial)
+    setParams(defaultParams(DISTRIBUTION_BY_ID[initial]))
+    setOpenGroups(previous => ({ ...previous, [groupLabel(DISTRIBUTION_BY_ID[initial])]: true }))
+  }
+  if (recent[0] !== selected) setRecent([selected, ...recent.filter(id => id !== selected)].slice(0, 5))
+  useEffect(() => { writeLocalJson('distribution-recent', recent) }, [recent])
 
   const goTo = (id: DistributionId) => {
     const search = window.location.hash.split('?')[1]
     const tab = new URLSearchParams(search).get('tab')
     navigate(tab ? `/distributions/${id}?tab=${tab}` : `/distributions/${id}`)
-    setSelected(id)
-    setParams(defaultParams(DISTRIBUTION_BY_ID[id]))
+    setMobileBrowse(false)
   }
 
   const toggleGroup = (group: DistGroup) => {
@@ -152,7 +167,7 @@ export function DistributionsPage() {
 
   return (
     <div className="flex min-h-full flex-col bg-[#f7f8fc] dark:bg-slate-950 lg:flex-row">
-      <aside className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95 lg:static lg:z-0 lg:h-auto lg:w-60 lg:shrink-0 lg:overflow-y-auto lg:border-b-0 lg:border-r">
+      <aside aria-label="Distribution browser" className="dist-navigation border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95 lg:w-60 lg:shrink-0 lg:border-b-0 lg:border-r">
         <div className="px-3 pt-3">
           <PageBack fallback="/statistics" label="Back to Learning" />
           <div className="mt-2 flex items-center gap-2">
@@ -178,11 +193,22 @@ export function DistributionsPage() {
           </select>
         </label>
 
+        <button type="button" className="dist-ui-button mx-3 mb-2 lg:!hidden" aria-expanded={mobileBrowse} aria-controls="distribution-mobile-browser" onClick={() => setMobileBrowse((value) => !value)}>{mobileBrowse ? 'Close distribution browser' : 'Browse & search distributions'}</button>
+        <div id="distribution-mobile-browser" className={`${mobileBrowse ? 'block' : 'hidden'} lg:block`}>
+          <div className="space-y-2 px-3 py-2">
+            <label className="block text-xs font-bold"><span className="flex items-center gap-2"><Search size={14} aria-hidden />Find a distribution</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, family, or use case…" className="dist-ui-control mt-1 w-full" /></label>
+            <button type="button" className="dist-ui-button w-full" aria-pressed={favoritesOnly} onClick={() => setFavoritesOnly(!favoritesOnly)}><Star size={14} aria-hidden />{favoritesOnly ? 'Show all distributions' : 'Favorites only'}</button>
+            <p role="status" className="text-xs text-slate-500">{filtered.length} of {DISTRIBUTIONS.length} distributions</p>
+            {filtered.length === 0 && <p className="rounded-xl bg-slate-50 p-3 text-xs dark:bg-slate-950">No matches. Try another name or show all distributions.</p>}
+            {!query && !favoritesOnly && recent.length > 0 && <details><summary className="cursor-pointer text-xs font-bold">Recently viewed</summary><div className="mt-1 space-y-1">{recent.map((id) => <button type="button" key={id} className="block w-full rounded-lg px-2 text-left text-xs" onClick={() => goTo(id as DistributionId)}>{DISTRIBUTION_BY_ID[id as DistributionId].name}</button>)}</div></details>}
+          </div>
+
         <div className="space-y-2 px-3 pb-3 lg:hidden">
           {GROUPS.map((group) => {
             const GroupIcon = GROUP_ICONS[group]
-            const items = DISTRIBUTIONS.filter((item) => groupLabel(item) === group)
-            const open = openGroups[group]
+            const items = filtered.filter((item) => groupLabel(item) === group)
+            const open = Boolean(query || favoritesOnly) || openGroups[group]
+            if (!items.length) return null
             return (
               <div key={group}>
                 <button
@@ -214,6 +240,7 @@ export function DistributionsPage() {
                             key={item.id}
                             type="button"
                             onClick={() => goTo(item.id)}
+                            aria-current={selected === item.id ? 'page' : undefined}
                             className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full px-3 text-xs font-bold ${
                               selected === item.id
                                 ? 'bg-indigo-600 text-white'
@@ -236,8 +263,9 @@ export function DistributionsPage() {
         <div className="hidden p-3 lg:block">
           {GROUPS.map((group) => {
             const GroupIcon = GROUP_ICONS[group]
-            const items = DISTRIBUTIONS.filter((item) => groupLabel(item) === group)
-            const open = openGroups[group]
+            const items = filtered.filter((item) => groupLabel(item) === group)
+            const open = Boolean(query || favoritesOnly) || openGroups[group]
+            if (!items.length) return null
             return (
               <div key={group} className="mb-2">
                 <button
@@ -269,6 +297,7 @@ export function DistributionsPage() {
                           key={item.id}
                           type="button"
                           onClick={() => goTo(item.id)}
+                          aria-current={active ? 'page' : undefined}
                           className={`mb-1 flex min-h-10 w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                             active
                               ? 'bg-indigo-600 text-white shadow-sm'
@@ -290,9 +319,12 @@ export function DistributionsPage() {
             )
           })}
         </div>
+        </div>
       </aside>
 
       <main className="min-w-0 flex-1 p-3 sm:p-5">
+        <DistributionAppearance id={dist.id} name={dist.name} />
+        {focus && <label className="mb-3 block text-xs font-bold">Distribution in focus<select value={selected} onChange={(event) => goTo(event.target.value as DistributionId)} className="dist-ui-control ml-2">{DISTRIBUTIONS.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
         <DistributionLesson
           key={dist.id}
           dist={dist}
@@ -300,6 +332,7 @@ export function DistributionsPage() {
           onParam={(key, value) => setParams((prev) => sanitizeParams(dist, { ...prev, [key]: value }))}
           onReset={() => setParams(defaultParams(dist))}
         />
+        <StudioLearningPanel key={`distributions/${dist.id}`} studio="distributions" title="Distributions" activeLab={dist.id} labs={DISTRIBUTIONS.map(item => ({ id: item.id, title: item.name, href: `/distributions/${item.id}`, level: item.family === 'multivariate' ? 'advanced' : ['bernoulli', 'binomial', 'normal', 'discrete_uniform', 'continuous_uniform'].includes(item.id) ? 'intro' : 'core', concepts: [item.family, ...item.params.map(p => p.label)], guide: distributionGuide(item) }))} />
       </main>
     </div>
   )

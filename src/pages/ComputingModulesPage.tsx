@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Binary, Braces, KeyRound, ListOrdered, Network, Search, ShieldCheck } from 'lucide-react'
 import { COMPUTING_MODULE_BY_KEY, COMPUTING_MODULES, type ComputingModuleKey } from '../lib/computingModules'
 import { HashingLab } from '../components/computing/HashingLab'
+import { SpecificGuide } from '../components/learning/SpecificGuide'
+import { computingGuide } from '../lib/guides/variantGuides'
 
 const ICONS: Record<ComputingModuleKey, typeof KeyRound> = {
   cryptography: KeyRound,
@@ -77,7 +79,7 @@ export function ComputingModulesPage() {
   const { moduleKey } = useParams()
   const navigate = useNavigate()
   const initialKey = COMPUTING_MODULE_BY_KEY[moduleKey as ComputingModuleKey] ? moduleKey as ComputingModuleKey : 'cryptography'
-  const [activeKey, setActiveKey] = useState<ComputingModuleKey>(initialKey)
+  const activeKey = initialKey
   const module = COMPUTING_MODULE_BY_KEY[activeKey]
 
   useEffect(() => {
@@ -87,13 +89,12 @@ export function ComputingModulesPage() {
   }, [moduleKey, navigate])
 
   const select = (key: ComputingModuleKey) => {
-    setActiveKey(key)
     navigate(`/modules/${key}`)
   }
 
   return (
-    <div className="flex h-full overflow-hidden">
-      <aside className="w-72 shrink-0 overflow-y-auto border-r border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden lg:flex-row">
+      <aside className="max-h-44 w-full shrink-0 overflow-y-auto border-b border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800 lg:max-h-none lg:w-72 lg:border-b-0 lg:border-r">
         <div className="mb-3 px-1">
           <h1 className="font-bold text-slate-800 dark:text-white">Computer Science Modules</h1>
           <p className="text-xs text-slate-400">Separate teaching pages for core computing topics.</p>
@@ -115,7 +116,7 @@ export function ComputingModulesPage() {
         })}
       </aside>
 
-      <main className="flex-1 overflow-y-auto p-6">
+      <main className="min-h-0 min-w-0 flex-1 overflow-y-auto p-4 sm:p-6">
         <div className="mx-auto max-w-6xl">
           <div className="mb-5 text-xs text-slate-400">
             <Link to="/learn" className="hover:text-indigo-600">Learn</Link> / Modules / {module.title}
@@ -129,14 +130,11 @@ export function ComputingModulesPage() {
           </div>
 
           <div className="grid gap-5 xl:grid-cols-3">
+            <div className="min-w-0 xl:col-span-3"><SpecificGuide guide={computingGuide(activeKey)!} /></div>
             <section className="xl:col-span-2 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
               <ModuleDemo activeKey={activeKey} />
             </section>
             <section className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
-              <h2 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">Guide</h2>
-              <ol className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                {module.steps.map((step, index) => <li key={step}><strong>Step {index + 1}:</strong> {step}</li>)}
-              </ol>
               <h3 className="mb-2 mt-5 text-sm font-semibold text-slate-700 dark:text-slate-200">Concepts</h3>
               <div className="flex flex-wrap gap-2">
                 {module.concepts.map((concept) => (

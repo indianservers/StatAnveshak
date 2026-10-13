@@ -980,11 +980,11 @@ export function boxStats(values: number[]): { min: number; q1: number; median: n
   }
 }
 
-export function simpleEffectsA(rows: AnovaObservation[]): Array<{ b: string; result: OneWayResult }> {
+export function simpleEffectsA(rows: AnovaObservation[], alpha = ANOVA_ALPHA): Array<{ b: string; result: OneWayResult }> {
   const bLevels = unique(rows.map((row) => row.b))
   return bLevels.map((b) => ({
     b,
-    result: oneWayAnova(rows.filter((row) => row.b === b).map((row) => ({ ...row, a: row.a }))),
+    result: oneWayAnova(rows.filter((row) => row.b === b).map((row) => ({ ...row, a: row.a })), alpha),
   }))
 }
 

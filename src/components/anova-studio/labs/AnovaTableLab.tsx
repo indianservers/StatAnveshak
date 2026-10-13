@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { WORKED_ONE_WAY, formatNum, formatP, generateOneWay, oneWayAnova } from '../../../lib/anovaStudio'
 import { AnovaCard, AnovaSelect, FormulaBlock, Insight, QuizBlock } from '../shared'
 import { FDistPlot } from '../plots'
+import { AnovaDataTools } from '../AnovaDataTools'
+import type { AnovaObservation } from '../../../lib/anovaStudio'
 
 type CellId = 'ssb' | 'ssw' | 'sst' | 'dfb' | 'dfw' | 'dft' | 'msb' | 'msw' | 'f' | 'p' | null
 
@@ -22,8 +24,9 @@ export function AnovaTableLab() {
   const [source, setSource] = useState<'worked' | 'live'>('worked')
   const [alpha, setAlpha] = useState(0.05)
   const [clicked, setClicked] = useState<CellId>('f')
+  const [custom, setCustom] = useState<AnovaObservation[] | null>(null)
   const live = useMemo(() => generateOneWay({ preset: 'moderate-diffs', k: 3, n: 10, seed: 4, withinSd: 5.1 }), [])
-  const rows = source === 'worked' ? WORKED_ONE_WAY : live
+  const rows = custom ?? (source === 'worked' ? WORKED_ONE_WAY : live)
   const result = useMemo(() => oneWayAnova(rows, alpha), [rows, alpha])
   const explain = clicked ? EXPLAINS[clicked] : 'Click any SS, df, MS, F, or p cell to see how that number is built.'
 
@@ -37,6 +40,7 @@ export function AnovaTableLab() {
 
   return (
     <div className="space-y-4">
+      <AnovaDataTools slug="anova-table" rows={rows} onRows={setCustom} alpha={alpha} onAlpha={setAlpha} />
       <section className="anova-hero">
         <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-blue-500">The ANOVA framework</p>
         <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950 dark:text-white">Partition variation. Test for meaningful group differences.</h2>
@@ -88,8 +92,8 @@ export function AnovaTableLab() {
           <Insight title="Interpretation" tone={result.significant ? 'ok' : 'info'}>
             F({result.dfB}, {result.dfW}) = {formatNum(result.f, 2)} with p = {formatP(result.p)}
             {result.significant
-              ? ` is smaller than α = ${alpha}, so at least one mean differs.`
-              : ` is not smaller than α = ${alpha}. The data are compatible with equal means.`}
+              ? `; p is smaller than α = ${alpha}, so at least one mean differs.`
+              : `; p is not smaller than α = ${alpha}. Fail to reject equal population means.`}
           </Insight>
         </AnovaCard>
 
@@ -120,7 +124,7 @@ export function AnovaTableLab() {
           <AnovaSelect
             label="Dataset"
             value={source}
-            onChange={(value) => setSource(value as 'worked' | 'live')}
+            onChange={(value) => { setCustom(null); setSource(value as 'worked' | 'live') }}
             options={[
               { value: 'worked', label: 'Plant / teaching worked example (n = 10 per group)' },
               { value: 'live', label: 'Live generated sample' },

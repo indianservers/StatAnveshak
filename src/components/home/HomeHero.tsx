@@ -53,7 +53,7 @@ export function HomeHero({ analysisCount }: { analysisCount: number }) {
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
                 <Play size={12} fill="currentColor" aria-hidden />
               </span>
-              Get Started
+              Upload Dataset
               <ArrowRight size={16} className="transition group-hover:translate-x-0.5" aria-hidden />
             </button>
             <Link
@@ -63,6 +63,7 @@ export function HomeHero({ analysisCount }: { analysisCount: number }) {
               <LayoutGrid size={17} className="text-indigo-500" aria-hidden />
               Explore Studios
             </Link>
+            <button type="button" onClick={() => document.getElementById('home-datasets-heading')?.scrollIntoView({ block: 'start' })} className={`inline-flex min-h-12 items-center rounded-xl px-4 text-sm font-bold text-indigo-700 underline dark:text-indigo-300 ${FOCUS_RING}`}>Try a sample dataset</button>
           </div>
 
           <ul className="home-rise mt-8 grid gap-4 sm:grid-cols-3" style={{ animationDelay: '320ms' }}>

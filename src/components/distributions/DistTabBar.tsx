@@ -1,23 +1,5 @@
-import { Activity, BookOpen, Lightbulb, PenLine, Table2, type LucideIcon } from 'lucide-react'
-
-export const DIST_TABS = [
-  { id: 'learn', label: 'Learn', icon: Lightbulb },
-  { id: 'viz', label: 'Visualization', icon: Activity },
-  { id: 'sample', label: 'Sample data', icon: Table2 },
-  { id: 'formulas', label: 'Formulas', icon: BookOpen },
-  { id: 'practice', label: 'Practice', icon: PenLine },
-] as const
-
-export type DistTabId = (typeof DIST_TABS)[number]['id']
-
-export function isDistTabId(value: string | null): value is DistTabId {
-  return DIST_TABS.some((tab) => tab.id === value)
-}
-
-export function tabFromQuery(value: string | null): DistTabId {
-  if (value === 'how' || value === 'learn') return 'learn'
-  return isDistTabId(value) ? value : 'learn'
-}
+import type { LucideIcon } from 'lucide-react'
+import { DIST_TABS, type DistTabId } from './distTabs'
 
 export function DistTabBar({
   value,
@@ -45,6 +27,16 @@ export function DistTabBar({
             aria-controls={`dist-panel-${tab.id}`}
             tabIndex={active ? 0 : -1}
             onClick={() => onChange(tab.id)}
+            onKeyDown={(event) => {
+              const index = DIST_TABS.findIndex((item) => item.id === tab.id)
+              const nextIndex = event.key === 'ArrowRight' ? (index + 1) % DIST_TABS.length : event.key === 'ArrowLeft' ? (index - 1 + DIST_TABS.length) % DIST_TABS.length : event.key === 'Home' ? 0 : event.key === 'End' ? DIST_TABS.length - 1 : -1
+              if (nextIndex < 0) return
+              event.preventDefault()
+              const next = DIST_TABS[nextIndex]
+              onChange(next.id)
+              const button = document.getElementById(`dist-tab-${next.id}`)
+              button?.focus(); button?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+            }}
             className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl px-3 text-sm font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
               active
                 ? 'bg-indigo-600 text-white shadow-sm'
@@ -99,3 +91,4 @@ const STYLES = `
 export function DistLessonStyles() {
   return <style>{STYLES}</style>
 }
+

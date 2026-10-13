@@ -27,6 +27,14 @@ const CSS = `
     var(--anova-wash);
 }
 .anova-studio * { box-sizing: border-box; }
+.anova-studio :is(button, summary, select, input:not([type=range]):not([type=checkbox])) { min-height: 44px; }
+.anova-studio :is(button, summary, select, input, textarea, a):focus-visible { outline: 2px solid #2563eb; outline-offset: 3px; }
+.anova-studio summary { display: list-item; padding: 10px 0; }
+.anova-studio textarea { padding: 10px; }
+.anova-studio .text-slate-400 { color: #475569; }
+.dark .anova-studio :is(.text-slate-400, .text-slate-500) { color: #cbd5e1; }
+.dark .anova-studio svg text { fill: #cbd5e1; }
+.dark .anova-studio svg path[stroke="#0f172a"] { stroke: #cbd5e1; }
 .anova-card {
   background: var(--anova-card);
   border: 1px solid var(--anova-line);
@@ -60,6 +68,7 @@ const CSS = `
 }
 .dark .anova-btn-ghost { background: #0f172a; color: #e2e8f0; border-color: #334155; }
 .anova-btn-ghost:hover { background: #f8fafc; box-shadow: none; }
+.dark .anova-btn-ghost:hover { background: #1e293b; color: #f8fafc; }
 .anova-chip {
   display: inline-flex;
   align-items: center;

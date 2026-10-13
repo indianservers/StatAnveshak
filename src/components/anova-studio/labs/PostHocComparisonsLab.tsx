@@ -9,22 +9,28 @@ import {
 } from '../../../lib/anovaStudio'
 import { AnovaCard, Insight, QuizBlock, SigBadge } from '../shared'
 import { ForestPlot } from '../plots'
+import { AnovaDataTools } from '../AnovaDataTools'
+import type { AnovaObservation } from '../../../lib/anovaStudio'
 
 export function PostHocComparisonsLab() {
   const [method, setMethod] = useState<PostHocMethod>('tukey')
   const [highlight, setHighlight] = useState<string>()
   const [preset, setPreset] = useState<'strong-diffs' | 'unequal-n'>('strong-diffs')
-  const rows = useMemo(
+  const [custom, setCustom] = useState<AnovaObservation[] | null>(null)
+  const [alpha, setAlpha] = useState(0.05)
+  const generated = useMemo(
     () => generateOneWay({ preset, k: 4, n: 12, seed: 19, separation: 0.85, withinSd: 6, labels: ['A', 'B', 'C', 'D'] }),
     [preset],
   )
-  const anova = useMemo(() => oneWayAnova(rows), [rows])
-  const post = useMemo(() => postHocComparisons(anova, method), [anova, method])
+  const rows = custom ?? generated
+  const anova = useMemo(() => oneWayAnova(rows, alpha), [rows, alpha])
+  const post = useMemo(() => postHocComparisons(anova, method, alpha), [anova, method, alpha])
   const selected = post.pairs.find((pair) => `${pair.a} vs ${pair.b}` === highlight) ?? post.pairs[0]
   const largest = [...post.pairs].sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff))[0]
 
   return (
     <div className="space-y-4">
+      <AnovaDataTools slug="post-hoc-comparisons" rows={rows} onRows={setCustom} alpha={alpha} onAlpha={setAlpha} />
       <section className="anova-hero">
         <p className="text-sm leading-7 text-slate-600">
           A significant ANOVA tells you that at least one group mean is different. Post-hoc comparisons help you find out which specific groups differ, while controlling for multiple comparisons.
@@ -34,7 +40,7 @@ export function PostHocComparisonsLab() {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)]">
         <AnovaCard title="Pairwise group comparisons">
           <p className="mb-2 text-sm text-slate-500">
-            {post.methodTitle} intervals for mean differences. Intervals that do not cross 0 indicate a significant difference. Each pair also has a shape so color is not the only cue.
+            {post.methodTitle}: {method === 'holm' ? 'individual unadjusted t intervals; use adjusted p-values for family decisions.' : 'simultaneous intervals for mean differences; intervals excluding 0 indicate a rejected pair.'} Each pair also has a shape so color is not the only cue.
           </p>
           <ForestPlot pairs={post.pairs} highlight={highlight} onSelect={setHighlight} />
         </AnovaCard>
@@ -59,7 +65,7 @@ export function PostHocComparisonsLab() {
           <p className="mt-3 text-xs text-slate-400">
             {preset === 'unequal-n' ? 'Unequal n: Tukey is labeled Tukey–Kramer.' : 'Equal n: Tukey HSD.'} Bonferroni is more conservative and is not used as a stand-in for Tukey.
           </p>
-          <button type="button" className="anova-btn anova-btn-ghost mt-3 w-full" onClick={() => setPreset((value) => (value === 'strong-diffs' ? 'unequal-n' : 'strong-diffs'))}>
+          <button type="button" className="anova-btn anova-btn-ghost mt-3 w-full" onClick={() => { setCustom(null); setPreset((value) => (value === 'strong-diffs' ? 'unequal-n' : 'strong-diffs')) }}>
             Toggle {preset === 'strong-diffs' ? 'unequal n' : 'equal n'}
           </button>
         </AnovaCard>
@@ -117,7 +123,7 @@ export function PostHocComparisonsLab() {
       <div className="grid gap-4 xl:grid-cols-2">
         <AnovaCard title="Worked example">
           <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Omnibus F({anova.dfB}, {anova.dfW}) = {formatNum(anova.f, 2)}, p = {formatP(anova.p)}. That is the permission slip to look at pairs — not a list of which pairs differ.
+            Omnibus F({anova.dfB}, {anova.dfW}) = {formatNum(anova.f, 2)}, p = {formatP(anova.p)}. It does not identify which pairs differ. Follow your prespecified comparison plan, with appropriate multiplicity adjustment.
           </p>
           <Insight title="Read the family" tone="ok">
             {largest
@@ -128,7 +134,7 @@ export function PostHocComparisonsLab() {
         <AnovaCard title="Interpretation guide">
           <ul className="space-y-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
             <li>A significant adjusted p-value (typically &lt; 0.05) indicates a difference between those two groups.</li>
-            <li>Confidence intervals that do not include 0 indicate a significant difference.</li>
+            <li>{method === 'holm' ? 'Holm-adjusted decisions can differ from individual unadjusted confidence intervals.' : 'Simultaneous Tukey intervals that exclude 0 indicate a significant pair.'}</li>
             <li>Post-hoc tests control the family-wise error rate when you look at many pairs.</li>
             <li>Use Tukey for all pairwise comparisons. Holm is a labeled fallback. Do not call Bonferroni “Tukey.”</li>
           </ul>

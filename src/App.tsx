@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { HashRouter, Routes, Route } from 'react-router-dom'
 import { AppShell } from './components/layout/AppShell'
 import { ErrorBoundary } from './components/ui/ErrorBoundary'
+import { HomeVisitTracker } from './components/home/HomeVisitTracker'
 
 const HomePage = lazy(() => import('./pages/HomePage').then((m) => ({ default: m.HomePage })))
 const ProjectsPage = lazy(() => import('./pages/ProjectsPage').then((m) => ({ default: m.ProjectsPage })))
@@ -20,6 +21,7 @@ const InferencePage = lazy(() => import('./pages/InferencePage').then((m) => ({ 
 const RegressionPage = lazy(() => import('./pages/RegressionPage').then((m) => ({ default: m.RegressionPage })))
 const AdvancedAnalysisPage = lazy(() => import('./pages/AdvancedAnalysisPage').then((m) => ({ default: m.AdvancedAnalysisPage })))
 const AnalysisPage = lazy(() => import('./pages/AnalysisPage').then((m) => ({ default: m.AnalysisPage })))
+const ToolsPage = lazy(() => import('./pages/ToolsPage').then((m) => ({ default: m.ToolsPage })))
 const StatModulesPage = lazy(() => import('./pages/StatModulesPage').then((m) => ({ default: m.StatModulesPage })))
 const ComputingModulesPage = lazy(() => import('./pages/ComputingModulesPage').then((m) => ({ default: m.ComputingModulesPage })))
 const SyllabusModulesPage = lazy(() => import('./pages/SyllabusModulesPage').then((m) => ({ default: m.SyllabusModulesPage })))
@@ -55,6 +57,7 @@ function App() {
   return (
     <ErrorBoundary>
       <HashRouter>
+        <HomeVisitTracker />
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route element={<AppShell />}>
@@ -68,6 +71,7 @@ function App() {
               <Route path="data/query" element={<QueryPage />} />
               <Route path="explore/summary" element={<SummaryPage />} />
               <Route path="analysis" element={<AnalysisPage />} />
+              <Route path="tools" element={<ToolsPage />} />
               <Route path="analysis/:analysisId" element={<AnalysisPage />} />
               <Route path="explore/charts" element={<ChartsPage />} />
               <Route path="explore/correlation" element={<CorrelationPage />} />

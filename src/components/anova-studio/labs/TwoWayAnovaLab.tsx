@@ -9,6 +9,8 @@ import {
 } from '../../../lib/anovaStudio'
 import { AnovaCard, AnovaSelect, AnovaToggle, Insight, SigBadge } from '../shared'
 import { InteractionPlot } from '../plots'
+import { AnovaDataTools } from '../AnovaDataTools'
+import type { AnovaObservation } from '../../../lib/anovaStudio'
 
 export function TwoWayAnovaLab() {
   const [preset, setPreset] = useState<TwoWayPresetId>('interaction')
@@ -16,13 +18,17 @@ export function TwoWayAnovaLab() {
   const [showLines, setShowLines] = useState(true)
   const [showPoints, setShowPoints] = useState(true)
   const [seed, setSeed] = useState(21)
-  const rows = useMemo(() => generateTwoWay({ preset, seed, nPerCell: 4, unbalanced }), [preset, seed, unbalanced])
-  const result = useMemo(() => twoWayAnova(rows), [rows])
-  const simple = useMemo(() => (result.interactionDominates ? simpleEffectsA(rows) : []), [result.interactionDominates, rows])
+  const [custom, setCustom] = useState<AnovaObservation[] | null>(null)
+  const [alpha, setAlpha] = useState(0.05)
+  const generated = useMemo(() => generateTwoWay({ preset, seed, nPerCell: 4, unbalanced }), [preset, seed, unbalanced])
+  const rows = custom ?? generated
+  const result = useMemo(() => twoWayAnova(rows, alpha), [rows, alpha])
+  const simple = useMemo(() => (result.interactionDominates ? simpleEffectsA(rows, alpha) : []), [result.interactionDominates, rows, alpha])
   const term = (name: string) => result.terms.find((item) => item.name === name)
 
   return (
     <div className="space-y-4">
+      <AnovaDataTools slug="two-way-anova" rows={rows} onRows={setCustom} alpha={alpha} onAlpha={setAlpha} />
       <section className="anova-hero">
         <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-blue-500">More than main effects</p>
         <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950 dark:text-white">Do factors work together?</h2>
@@ -42,7 +48,7 @@ export function TwoWayAnovaLab() {
             <AnovaSelect
               label="Dataset"
               value={preset}
-              onChange={(value) => setPreset(value as TwoWayPresetId)}
+              onChange={(value) => { setCustom(null); setPreset(value as TwoWayPresetId) }}
               options={[
                 { value: 'plant-growth', label: 'Plant growth (example)' },
                 { value: 'interaction', label: 'Crossing interaction' },
@@ -51,8 +57,8 @@ export function TwoWayAnovaLab() {
             />
             <AnovaToggle label="Show interaction lines" checked={showLines} onChange={setShowLines} />
             <AnovaToggle label="Show cell-mean markers" checked={showPoints} onChange={setShowPoints} />
-            <AnovaToggle label="Unbalanced cells (Type I SS)" checked={unbalanced} onChange={setUnbalanced} />
-            <button type="button" className="anova-btn anova-btn-ghost w-full" onClick={() => setSeed((value) => value + 1)}>
+            <AnovaToggle label="Unbalanced cells (Type I SS)" checked={unbalanced} onChange={value => { setCustom(null); setUnbalanced(value) }} />
+            <button type="button" className="anova-btn anova-btn-ghost w-full" onClick={() => { setCustom(null); setSeed((value) => value + 1) }}>
               Resample
             </button>
             <p className="text-xs leading-5 text-slate-400">{result.ssNote}</p>

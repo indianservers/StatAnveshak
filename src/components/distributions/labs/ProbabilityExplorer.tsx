@@ -30,7 +30,7 @@ export function ProbabilityExplorer({ dist, params, data }: { dist: Distribution
     if (cMode === 'right') return { p: 1 - dist.cdf(lo, params, data), shade: { lo, hi: 1e9 }, label: `P(X ≥ ${fmt(lo)})` }
     if (cMode === 'two') {
       const p = dist.cdf(lo, params, data) + (1 - dist.cdf(hi, params, data))
-      return { p, shade: { lo, hi }, label: `P(X ≤ ${fmt(lo)} or X ≥ ${fmt(hi)})` }
+      return { p, shade: { lo, hi, outside: true }, label: `P(X ≤ ${fmt(lo)} or X ≥ ${fmt(hi)})` }
     }
     return { p: Math.max(0, dist.cdf(hi, params, data) - dist.cdf(lo, params, data)), shade: { lo, hi }, label: `P(${fmt(lo)} ≤ X ≤ ${hi})` }
   }, [a, b, cMode, dMode, data, discrete, dist, k, params])
@@ -44,6 +44,7 @@ export function ProbabilityExplorer({ dist, params, data }: { dist: Distribution
           <button
             key={mode}
             type="button"
+            aria-pressed={(discrete ? dMode : cMode) === mode}
             onClick={() => (discrete ? setDMode(mode as DiscreteMode) : setCMode(mode as ContinuousMode))}
             className={`min-h-10 rounded-full px-3 text-xs font-bold ${
               (discrete ? dMode : cMode) === mode ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'

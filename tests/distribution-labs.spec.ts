@@ -29,13 +29,13 @@ test('bernoulli tokens, dirichlet simplex, and comparison navigation work', asyn
   await expect(page.getByText('Empirical p̂')).toBeVisible()
 
   await page.goto('/#/distributions/dirichlet?tab=viz', { waitUntil: 'domcontentloaded' })
-  await expect(page.getByRole('heading', { name: 'Uncertainty about market shares' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Uncertainty about market shares' }).first()).toBeVisible()
   await page.getByRole('button', { name: 'Drop 40 compositions' }).click()
   await expect(page.getByRole('button', { name: 'Clear' })).toBeVisible()
 
   await page.getByRole('link', { name: /Beta/ }).first().click()
   await expect(page).toHaveURL(/#\/distributions\/beta/)
-  await expect(page.getByRole('heading', { name: 'Unknown click-through probability' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Unknown click-through probability' }).first()).toBeVisible()
 })
 
 test('workbench and datasets routes stay intact', async ({ page }) => {
@@ -44,3 +44,4 @@ test('workbench and datasets routes stay intact', async ({ page }) => {
   await page.goto('/#/data/upload', { waitUntil: 'domcontentloaded' })
   await expect(page.getByRole('heading', { name: 'Upload Data' })).toBeVisible()
 })
+

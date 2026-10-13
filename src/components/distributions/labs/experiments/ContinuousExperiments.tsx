@@ -60,7 +60,7 @@ export function ZScoreLab({ dist, params, onParam }: LabProps) {
           <button key={item} type="button" onClick={() => setMode(item)} className={`min-h-10 rounded-full px-3 text-xs font-bold ${mode === item ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800'}`}>{item}</button>
         ))}
       </div>
-      <div className="h-[200px]"><DistChart dist={dist} params={params} highlightX={z} shade={mode === 'left' ? { lo: -8, hi: z } : mode === 'right' ? { lo: z, hi: 8 } : { lo: -Math.abs(z), hi: Math.abs(z) }} /></div>
+      <div className="h-[200px]"><DistChart dist={dist} params={params} highlightX={z} shade={mode === 'left' ? { lo: -8, hi: z } : mode === 'right' ? { lo: z, hi: 8 } : { lo: -Math.abs(z), hi: Math.abs(z), outside: mode === 'two' }} /></div>
       <p className="text-center text-sm font-black text-indigo-700">Probability = {fmt(p, 4)}</p>
     </div>
   )

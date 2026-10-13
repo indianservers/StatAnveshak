@@ -59,6 +59,8 @@ export function ParameterControls({
               {LABELS[param.key] ?? param.label}
               <input
                 type="number"
+                aria-label={LABELS[param.key] ?? param.label}
+                aria-invalid={Boolean(error)}
                 className={`w-20 rounded-lg border bg-white px-2 py-1 text-right text-sm font-bold dark:bg-slate-950 ${error ? 'border-rose-400 dark:border-rose-500' : 'border-slate-200 dark:border-slate-700'}`}
                 value={Number.isFinite(value) ? value : ''}
                 min={param.min}
@@ -69,6 +71,7 @@ export function ParameterControls({
             </span>
             <input
               type="range"
+              aria-label={`${LABELS[param.key] ?? param.label} slider`}
               min={param.min}
               max={param.max}
               step={param.step}
@@ -77,6 +80,7 @@ export function ParameterControls({
               className="w-full accent-indigo-600"
             />
             {error ? <span className="mt-1 block text-xs font-normal text-rose-600">{error}</span> : null}
+            <span className="flex justify-between text-xs text-slate-500"><span>{param.min}</span><span>Step {param.step}</span><span>{param.max}</span></span>
           </label>
         )
       })}

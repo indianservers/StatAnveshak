@@ -35,6 +35,9 @@ import { StudioIconStyles } from '../visual/StudioIcons'
 import { LabMark, StudioHeroMark } from './labMarks'
 import { StudioCard } from './StudioCard'
 import { ACCENTS, FOCUS_RING, LEVEL_CLASSES, LEVEL_LABELS } from './studioTheme'
+import { SpecificGuide } from '../learning/SpecificGuide'
+import { studioLabGuide } from '../../lib/guides/studioGuides'
+import { StudioLearningKit } from './StudioLearningKit'
 
 type LabIconComponent = ComponentType<{ id: string; size?: number }>
 type HeroArtComponent = ComponentType<{ active: boolean }>
@@ -78,6 +81,13 @@ export function StudioPage({ studio }: { studio: Studio }) {
       <StudioIconStyles />
       <div className="mx-auto flex w-full max-w-[1300px] flex-col gap-6">
         <StudioHero studio={studio} categoryTitle={category?.title} levels={levels} />
+        <StudioLearningKit studio={studio} />
+
+        {studio.slug === ANOVA_STUDIO_SLUG && <section className="rounded-2xl border border-blue-100 bg-blue-50 p-5 dark:border-slate-700 dark:bg-slate-900" aria-labelledby="anova-data-guide-heading">
+          <h2 id="anova-data-guide-heading" className="text-lg font-black">Learn with your own data in every lab</h2>
+          <p className="mt-2 text-sm leading-6">Follow five short steps: choose the design, prepare data, check the model, read the result, and explain your findings. Every lab includes templates, file and table import, editable observations, and portable sessions. Open “Lab-specific calculations and experiments” for robust tests, paired comparisons, and diagnostics.</p>
+          <Link className={`${HOME_ACTION_CLASS} mt-3`} to={labPath(studio.slug, studio.labs[0].slug)}>Start the guided one-way lab <ArrowRight size={15} aria-hidden /></Link>
+        </section>}
 
         <HomeSection
           id="studio-labs-heading"
@@ -115,6 +125,13 @@ export function StudioPage({ studio }: { studio: Studio }) {
             </div>
           </HomeSection>
         )}
+
+        <HomeSection id="studio-specific-guides" icon={GraduationCap} iconClass={ACCENTS[studio.accent].chip} title={`${studio.title} guides`} description={studio.summary}>
+          <div className="grid min-w-0 gap-3 md:grid-cols-2">{studio.labs.map(lab => {
+            const guide = studioLabGuide(studio.slug, lab.slug)
+            return guide ? <div key={lab.slug} className="min-w-0"><SpecificGuide guide={guide} /><Link to={labPath(studio.slug, lab.slug)} className={HOME_ACTION_CLASS}>Open {lab.title} <ArrowRight size={14} aria-hidden /></Link></div> : null
+          })}</div>
+        </HomeSection>
 
         <Link
           to={STUDIOS_ROOT}

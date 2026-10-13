@@ -86,6 +86,7 @@ export function GroupBoxPlot({
   selectedId,
   onSelect,
   onMove,
+  onEditStart,
   yLabel = 'Response',
   height = 280,
 }: {
@@ -100,13 +101,13 @@ export function GroupBoxPlot({
   selectedId?: string
   onSelect?: (id: string | undefined) => void
   onMove?: (id: string, y: number) => void
+  onEditStart?: () => void
   yLabel?: string
   height?: number
 }) {
   const svgRef = useRef<SVGSVGElement | null>(null)
   const [dragging, setDragging] = useState<string | null>(null)
   const width = 560
-  const names = groups.map((group) => group.name)
   const ys = points.map((point) => point.y)
   const yd = extent([...ys, grandMean], 0.14)
   const slot = (width - PLOT.left - PLOT.right) / Math.max(groups.length, 1)
@@ -181,7 +182,7 @@ export function GroupBoxPlot({
                       onPointerDown={(event) => {
                         event.preventDefault()
                         onSelect?.(point.id)
-                        if (onMove) setDragging(point.id)
+                        if (onMove) { onEditStart?.(); setDragging(point.id) }
                       }}
                     >
                       <Marker x={x} y={y} shape={style.shape} color={style.color} selected={selectedId === point.id} size={4} />

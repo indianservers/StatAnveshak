@@ -26,16 +26,17 @@ export function TeachingDatasetChip({ compact = false }: { compact?: boolean }) 
   }
 
   return (
-    <div className="relative">
+    <div className="relative min-w-0 max-w-full">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="inline-flex max-w-full items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-left text-xs font-semibold text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
+        title={`${isTeaching ? 'Teaching dataset' : 'Dataset'} · ${name} · ${rows} rows`}
+        className="inline-flex min-w-0 max-w-full items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-left text-xs font-semibold text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
       >
         <span className="truncate">
           {isTeaching ? 'Teaching dataset' : 'Dataset'} · {name} · {rows} rows
         </span>
-        <ChevronDown size={14} />
+        <ChevronDown size={14} className="shrink-0" />
       </button>
       {open && (
         <div className="absolute right-0 z-30 mt-2 max-h-72 w-72 overflow-auto rounded-xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900">

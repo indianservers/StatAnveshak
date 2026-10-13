@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Beaker, BookOpen, Check, Copy, Lightbulb } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { DistChart } from './DistChart'
 import { DistHero } from './DistHero'
-import { DistLessonStyles, DistTabBar, tabFromQuery, type DistTabId } from './DistTabBar'
+import { DistLessonStyles, DistTabBar } from './DistTabBar'
+import { tabFromQuery, type DistTabId } from './distTabs'
 import { DistSamplePanel } from './DistSamplePanel'
 import { PracticeProblems } from './PracticeProblems'
 import { ComparePanel } from './labs/ComparePanel'
@@ -19,7 +20,10 @@ import { EMPIRICAL_PRESETS, getDistributionExperience } from '../../lib/distribu
 import { getDistributionLearnExtras } from '../../lib/distributionLearnExtras'
 import { getDistributionLesson } from '../../lib/distributionLessons'
 import { sanitizeParams, type Distribution } from '../../lib/distributions'
-import { useReducedMotion } from '../visual/useReducedMotion'
+import { useDistributionUI } from './distributionUI'
+import { useAnimationVisibility } from './useAnimationVisibility'
+import { SpecificGuide } from '../learning/SpecificGuide'
+import { distributionGuide } from '../../lib/guides/variantGuides'
 
 const fmt = (value: number, digits = 4) => {
   if (!Number.isFinite(value)) return '—'
@@ -41,19 +45,19 @@ export function DistributionLesson({
 }) {
   const lesson = getDistributionLesson(dist.id)
   const experience = getDistributionExperience(dist.id)
-  const reduced = useReducedMotion()
+  const { reduced, replay } = useDistributionUI()
+  const heroRef = useRef<HTMLDivElement>(null)
+  const heroVisible = useAnimationVisibility(heroRef)
   const location = useLocation()
   const navigate = useNavigate()
-  const [tab, setTab] = useState<DistTabId>(() => {
-    const fromSearch = new URLSearchParams(location.search).get('tab')
-    const fromHash = new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('tab')
-    return tabFromQuery(fromSearch ?? fromHash)
-  })
+  const tab = tabFromQuery(new URLSearchParams(location.search).get('tab'))
   const selectTab = (next: DistTabId) => {
-    setTab(next)
-    navigate({ pathname: location.pathname, search: next === 'learn' ? '' : `?tab=${next}` }, { replace: true })
+    const search = new URLSearchParams(location.search)
+    if (next === 'learn') search.delete('tab'); else search.set('tab', next)
+    navigate({ pathname: location.pathname, search: search.toString() })
   }
   const [copied, setCopied] = useState(false)
+  const [copyError, setCopyError] = useState('')
   const [picked, setPicked] = useState<string | null>(null)
   const [checked, setChecked] = useState(false)
 
@@ -66,9 +70,8 @@ export function DistributionLesson({
   })()
 
   const copyFormula = async () => {
-    await navigator.clipboard.writeText(lesson.formulaLatex)
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 1400)
+    try { await navigator.clipboard.writeText(lesson.formulaLatex); setCopied(true); setCopyError(''); window.setTimeout(() => setCopied(false), 1400) }
+    catch { setCopyError('Clipboard unavailable. Select the formula text to copy it manually.') }
   }
 
   const labProps = { dist, params: p, onParam, experience, reduced }
@@ -78,6 +81,7 @@ export function DistributionLesson({
   return (
     <div className="dist-lesson mx-auto flex w-full max-w-[1100px] flex-col gap-3 pb-10 sm:gap-4">
       <DistLessonStyles />
+      <SpecificGuide guide={distributionGuide(dist)} />
       <header className="grid gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(220px,0.8fr)] lg:items-start">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-indigo-500">Distributions Studio</p>
@@ -92,22 +96,22 @@ export function DistributionLesson({
             {[['Mean', meanText], ['Variance', varText], ['SD', sdText]].map(([label, value]) => (
               <div key={label} className="rounded-2xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
                 <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{label}</dt>
-                <dd className="truncate text-sm font-black text-slate-900 dark:text-white">{value}</dd>
+                <dd title={String(value)} className="break-words text-sm font-black tabular-nums text-slate-900 dark:text-white">{value}</dd>
               </div>
             ))}
           </dl>
         </div>
-        <div className={`relative min-h-[148px] overflow-hidden rounded-[24px] bg-gradient-to-br from-indigo-50 via-white to-violet-50 p-3 sm:p-4 dark:from-slate-900 dark:to-indigo-950 ${reduced ? '' : 'dl-hero-on'}`}>
-          <DistHero id={dist.id} />
+        <div ref={heroRef} data-animation-visible={heroVisible} className={`dist-header-hero relative min-h-[148px] overflow-hidden rounded-[24px] bg-gradient-to-br from-indigo-50 via-white to-violet-50 p-3 sm:p-4 dark:from-slate-900 dark:to-indigo-950 ${reduced ? '' : 'dl-hero-on'}`}>
+          <DistHero key={replay} id={dist.id} />
           <p className="absolute right-3 top-2 max-w-[130px] text-right text-[11px] font-semibold italic text-indigo-500 sm:right-4 sm:top-3">{lesson.heroNote}</p>
         </div>
       </header>
 
-      <div className="sticky top-0 z-10 -mx-1 bg-[#f7f8fc]/95 px-1 py-1 backdrop-blur dark:bg-slate-950/90">
+      <div className="dist-tab-shell sticky top-0 z-10 -mx-1 px-1 py-1 backdrop-blur">
         <DistTabBar value={tab} onChange={selectTab} />
       </div>
 
-      <div key={`${dist.id}-${tab}`} id={`dist-panel-${tab}`} role="tabpanel" aria-labelledby={`dist-tab-${tab}`} className="dl-panel">
+      <div key={`${dist.id}-${tab}`} id={`dist-panel-${tab}`} role="tabpanel" tabIndex={0} aria-labelledby={`dist-tab-${tab}`} className="dl-panel">
         {tab === 'learn' ? (
           <div className="grid gap-4">
             <ScenarioPanel experience={experience} />
@@ -200,9 +204,10 @@ export function DistributionLesson({
                   <h2 className="text-base font-black text-slate-950 dark:text-white">Formulas</h2>
                 </div>
                 <button type="button" onClick={() => void copyFormula()} className="inline-flex min-h-11 items-center gap-1 px-2 text-xs font-bold text-slate-500 hover:text-indigo-600">
-                  {copied ? <Check size={14} /> : <Copy size={14} />} Copy
+                  {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? 'Copied' : 'Copy'}
                 </button>
               </div>
+              {copyError && <p role="status" className="mb-2 text-xs text-rose-600">{copyError}</p>}
               <p className="text-xs text-slate-500">{lesson.formulaNote}</p>
               <div className="mt-3 overflow-x-auto rounded-2xl bg-slate-50 px-3 py-4 text-center dark:bg-slate-950">
                 <MathText value={lesson.formulaLatex} block />
@@ -254,3 +259,4 @@ export function DistributionLesson({
     </div>
   )
 }
+

@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 import {
@@ -10,10 +10,12 @@ import {
   anovaStudioPath,
   loadAnovaProgress,
   markAnovaLabComplete,
+  saveAnovaProgress,
 } from '../../lib/anovaStudio'
 import { STUDIOS_ROOT } from '../../lib/statisticsStudios'
 import type { StudioLab } from '../../lib/statisticsStudios'
 import { AnovaStudioStyles } from './styles'
+import { recordLearningVisit } from '../../lib/learningProgress'
 
 export function AnovaFrame({ children }: { children: ReactNode }) {
   return (
@@ -25,12 +27,15 @@ export function AnovaFrame({ children }: { children: ReactNode }) {
 }
 
 export function AnovaSidebar({ current }: { current?: string }) {
+  const [mobileOpen, setMobileOpen] = useState(!current)
   const progress = loadAnovaProgress()
   const done = progress.completed.filter((slug) => ANOVA_STUDIO.labs.some((lab) => lab.slug === slug))
   const pct = Math.round((done.length / ANOVA_STUDIO.labs.length) * 100)
 
   return (
     <aside className="anova-sidebar space-y-4">
+      <button type="button" aria-expanded={mobileOpen} aria-controls="anova-sidebar-content" onClick={() => setMobileOpen((value) => !value)} className="anova-btn anova-btn-ghost w-full lg:!hidden">{mobileOpen ? 'Hide labs & progress' : 'Show labs & progress'} · {pct}% complete</button>
+      <div id="anova-sidebar-content" className={`${mobileOpen ? 'block' : 'hidden'} space-y-4 lg:block`}>
       <nav className="anova-card p-3" aria-label="ANOVA labs">
         <Link to={STUDIOS_ROOT} className="mb-1 !min-h-8 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">
           ← Back to all studios
@@ -40,9 +45,9 @@ export function AnovaSidebar({ current }: { current?: string }) {
           <span>ANOVA Studio</span>
         </Link>
         {ANOVA_STUDIO.labs.map((lab, index) => (
-          <Link key={lab.slug} to={anovaLabPath(lab.slug)} className={lab.slug === current ? 'is-on' : ''}>
+          <Link key={lab.slug} to={anovaLabPath(lab.slug)} aria-current={lab.slug === current ? 'page' : undefined} className={lab.slug === current ? 'is-on' : ''}>
             <span>
-              {index + 1}. {lab.title}
+              {index + 1}. {lab.title}{done.includes(lab.slug) ? ' ✓' : ''}
             </span>
             <span aria-hidden>›</span>
           </Link>
@@ -51,7 +56,7 @@ export function AnovaSidebar({ current }: { current?: string }) {
       <div className="anova-card p-4">
         <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Your progress</p>
         <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">{pct}%</p>
-        <div className="mt-2 h-2 rounded-full bg-slate-100 dark:bg-slate-800">
+        <div role="progressbar" aria-label="Completed ANOVA labs" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} className="mt-2 h-2 rounded-full bg-slate-100 dark:bg-slate-800">
           <div className="h-2 rounded-full bg-blue-600" style={{ width: `${pct}%` }} />
         </div>
         <p className="mt-2 text-xs text-slate-400">
@@ -62,6 +67,7 @@ export function AnovaSidebar({ current }: { current?: string }) {
         “Better questions. Deeper insights. A more data-literate you.”
         <footer className="mt-2 text-[11px] font-bold text-slate-400">— StatAnveshak</footer>
       </blockquote>
+      </div>
     </aside>
   )
 }
@@ -91,9 +97,18 @@ export function AnovaLabShell({
   const copy = ANOVA_HOME_COPY[lab.slug]
   const pct = Math.round(((index + 1) / ANOVA_STUDIO.labs.length) * 100)
 
-  useEffect(() => {
-    markAnovaLabComplete(lab.slug)
-  }, [lab.slug])
+  const [progress, setProgress] = useState(loadAnovaProgress)
+  const [completionStatus, setCompletionStatus] = useState('')
+  const completed = progress.completed.includes(lab.slug)
+  const toggleComplete = () => {
+    try {
+      const next = completed ? { completed: progress.completed.filter((slug) => slug !== lab.slug) } : markAnovaLabComplete(lab.slug)
+      if (completed) saveAnovaProgress(next)
+      setProgress(next)
+      recordLearningVisit(anovaLabPath(lab.slug), lab.title)
+      setCompletionStatus(completed ? 'Lab marked incomplete.' : 'Lab marked complete.')
+    } catch { setCompletionStatus('Progress could not be saved in this browser.') }
+  }
 
   return (
     <AnovaChrome current={lab.slug}>
@@ -129,6 +144,7 @@ export function AnovaLabShell({
       </header>
 
       {children}
+      <div className="anova-card flex flex-wrap items-center justify-between gap-3 p-4"><p className="text-sm">Finished experimenting and reviewing the explanation?</p><button className="anova-btn" aria-pressed={completed} onClick={toggleComplete}>{completed ? 'Completed — mark incomplete' : 'Mark lab complete'}</button><p role="status" className="w-full text-xs">{completionStatus}</p></div>
 
       <footer className="mt-2 flex flex-col gap-3 border-t border-slate-200 pt-5 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
         {previous ? (

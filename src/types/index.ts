@@ -12,6 +12,7 @@ export interface ColumnSchema {
   mean?: number
   std?: number
   sample: unknown[]
+  categoryOrder?: string[]
 }
 
 export interface DatasetMeta {

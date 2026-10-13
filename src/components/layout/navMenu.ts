@@ -227,7 +227,7 @@ export const NAV_MENU: NavCategory[] = [
     label: 'Analysis',
     icon: FlaskConical,
     mode: 'analyze',
-    match: ['/analysis', '/inference', '/regression', '/advanced', '/stat-modules', '/syllabus', '/modules'],
+    match: ['/analysis', '/tools', '/inference', '/regression', '/advanced', '/stat-modules', '/syllabus', '/modules'],
     footer: { label: 'Open the Analysis workspace (all modules)', to: '/analysis', icon: LayoutDashboard },
     groups: [
       {
@@ -286,6 +286,7 @@ export const NAV_MENU: NavCategory[] = [
         icon: Library,
         items: [
           { label: 'Analysis Workspace', to: '/analysis', icon: LayoutDashboard, description: 'All 35 modules' },
+          { label: 'Tools Hub', to: '/tools', icon: Wand2, description: '50 preparation, analysis, and reporting features' },
           { label: 'Inference Tests', to: '/inference', icon: Sigma, description: 'Sampling-distribution machine' },
           { label: 'Advanced Analysis', to: '/advanced', icon: Rocket, description: 'Diagnostics and workflows' },
           { label: 'Stat Modules', to: '/stat-modules', icon: Boxes, description: 'Large module library' },

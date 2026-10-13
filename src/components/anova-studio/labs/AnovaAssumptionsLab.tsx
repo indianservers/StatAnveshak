@@ -10,21 +10,27 @@ import {
 } from '../../../lib/anovaStudio'
 import { AnovaCard, AnovaSelect, Insight, QuizBlock } from '../shared'
 import { ResidualPlots, VarianceBars } from '../plots'
+import { AnovaDataTools } from '../AnovaDataTools'
+import type { AnovaObservation } from '../../../lib/anovaStudio'
 
 export function AnovaAssumptionsLab() {
   const [preset, setPreset] = useState<OneWayPresetId>('teaching-methods')
   const [method, setMethod] = useState<'brown-forsythe' | 'levene'>('brown-forsythe')
-  const rows = useMemo(() => generateOneWay({ preset, k: 3, n: 18, seed: 14 }), [preset])
-  const anova = useMemo(() => oneWayAnova(rows), [rows])
+  const [custom, setCustom] = useState<AnovaObservation[] | null>(null)
+  const [alpha, setAlpha] = useState(0.05)
+  const generated = useMemo(() => generateOneWay({ preset, k: 3, n: 18, seed: 14 }), [preset])
+  const rows = custom ?? generated
+  const anova = useMemo(() => oneWayAnova(rows, alpha), [rows, alpha])
   const residuals = useMemo(() => oneWayResiduals(rows), [rows])
   const test = useMemo(() => varianceTest(rows, method), [rows, method])
-  const varOk = test.p >= 0.05
+  const varOk = test.p >= alpha
   const skew =
     residuals.reduce((sum, point) => sum + point.residual ** 3, 0) /
     (residuals.length * Math.max(anova.msw, 1e-8) ** 1.5)
 
   return (
     <div className="space-y-4">
+      <AnovaDataTools slug="anova-assumptions" rows={rows} onRows={setCustom} alpha={alpha} onAlpha={setAlpha} />
       <section className="anova-hero">
         <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-blue-500">Valid results start with valid assumptions</p>
         <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950 dark:text-white">Check the assumptions. Trust your conclusions.</h2>
@@ -36,7 +42,7 @@ export function AnovaAssumptionsLab() {
       <AnovaSelect
         label="Dataset"
         value={preset}
-        onChange={(value) => setPreset(value as OneWayPresetId)}
+        onChange={(value) => { setCustom(null); setPreset(value as OneWayPresetId) }}
         options={[
           { value: 'teaching-methods', label: 'Teaching methods (reasonable assumptions)' },
           { value: 'unequal-var', label: 'Unequal variances' },
@@ -88,7 +94,7 @@ export function AnovaAssumptionsLab() {
             </tbody>
           </table>
           <Insight title={varOk ? 'Variances look compatible' : 'Variances may differ'} tone={varOk ? 'ok' : 'warn'}>
-            p = {formatP(test.p)} {varOk ? 'is not below 0.05. Fail to reject equal variances — that is not proof they are identical.' : 'is below 0.05. Consider Welch ANOVA rather than trusting the pooled MSW.'}
+            p = {formatP(test.p)} {varOk ? `is not below ${alpha}. Fail to reject equal variances — that is not proof they are identical.` : `is below ${alpha}. Consider Welch ANOVA rather than trusting the pooled MSW.`}
           </Insight>
         </AnovaCard>
         <AnovaCard title="Independence is a design claim">

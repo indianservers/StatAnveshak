@@ -423,3 +423,14 @@ body {
     stroke-dashoffset: 0;
   }
 }
+/* Home controls share accessible touch targets, spacing, and contrast. */
+.home-input { min-height: 44px; border: 1px solid #94a3b8; border-radius: 8px; padding: 8px 10px; background: transparent; color: inherit; }
+.home-mini { border-radius: 12px; padding: 16px; background: #f8fafc; }
+.dark .home-mini { background: #020617; }
+.home-link { color: #4338ca; text-decoration: underline; text-underline-offset: 3px; }
+.dark .home-link { color: #a5b4fc; }
+.home-screen :is(button, select, summary) { min-height: 44px; }
+.home-screen :is(.text-slate-400, .text-slate-500) { color: #475569; }
+.dark .home-screen :is(.text-slate-400, .text-slate-500) { color: #cbd5e1; }
+.home-screen :is(button, a, input, select, textarea, summary):focus-visible { outline: 2px solid #6366f1; outline-offset: 3px; }
+.home-motion-paused *, .home-motion-paused *::before, .home-motion-paused *::after { animation-play-state: paused !important; transition-duration: 0ms !important; }

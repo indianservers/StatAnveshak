@@ -1,0 +1,86 @@
+import { expect, test } from '@playwright/test'
+import { readFile } from 'node:fs/promises'
+import { STATISTICS_STUDIOS } from '../src/lib/statisticsStudios'
+import { studioLabGuide } from '../src/lib/guides/studioGuides'
+
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('anveshak-onboarding-complete', 'true')
+    localStorage.setItem('anveshak-tour-done', 'yes')
+    localStorage.setItem('home-tour-seen', 'true')
+    localStorage.setItem('pref-workspace-mode', 'learn')
+    localStorage.setItem('pref-motion', 'reduced')
+  })
+})
+for (const studio of STATISTICS_STUDIOS.filter(s => s.slug !== 'anova')) test(`${studio.slug}: search, filter, favorite, notes, progress and practice`, async ({ page }, info) => {
+  const errors: string[] = []
+  page.on('pageerror', error => errors.push(error.message))
+  const lab = studio.labs[0], guide = studioLabGuide(studio.slug, lab.slug)!
+  await page.goto(`/#/statistics/${studio.slug}`)
+  const workspace = page.getByRole('region', { name: `${studio.title} learning workspace`, exact: true })
+  await expect(workspace).toBeVisible()
+  await workspace.getByLabel('Search this studio').fill(lab.title)
+  await workspace.getByRole('combobox', { name: 'Difficulty', exact: true }).selectOption(lab.level)
+  await expect(workspace.getByText('1 matching labs', { exact: true })).toBeVisible()
+  await workspace.getByRole('button', { name: `Favorite ${lab.title}`, exact: true }).click()
+  await workspace.getByLabel('Favorites only').check()
+  await expect(workspace.getByRole('button', { name: `Favorite ${lab.title}`, exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await workspace.getByRole('link', { name: lab.title, exact: true }).click()
+  const activity = page.getByRole('region', { name: `${studio.title} learning workspace`, exact: true })
+  await activity.getByLabel(`Notes for ${lab.title}`, { exact: true }).fill(`My interpretation of ${lab.title}.`)
+  await activity.getByLabel('Reviewed required inputs', { exact: true }).check()
+  await activity.getByRole('radio', { name: guide.interpretation, exact: true }).check()
+  await activity.getByRole('button', { name: 'Check answer', exact: true }).click()
+  await expect(activity.getByText('Method check passed', { exact: true })).toBeVisible()
+  await activity.getByRole('button', { name: 'Reveal answer', exact: true }).click()
+  await expect(activity.getByRole('region', { name: `${lab.title} flashcards`, exact: true })).toContainText(guide.inputs)
+  await activity.getByRole('button', { name: 'Next flashcard', exact: true }).click()
+  await expect(activity.getByText('Flashcard 2 of 3', { exact: true })).toBeVisible()
+  await activity.getByRole('button', { name: 'Mark lab completed', exact: true }).click()
+  await expect(activity.getByRole('progressbar')).toHaveAttribute('value', '1')
+  await page.reload()
+  await expect(activity.getByLabel(`Notes for ${lab.title}`, { exact: true })).toHaveValue(`My interpretation of ${lab.title}.`)
+  await expect(activity.getByLabel('Reviewed required inputs', { exact: true })).toBeChecked()
+  await expect(activity.getByRole('button', { name: 'Mark as not completed', exact: true })).toBeVisible()
+  if (studio.slug === 'probability-foundations') {
+    await activity.getByRole('button', { name: 'Mark as not completed', exact: true }).scrollIntoViewIfNeeded()
+    await page.screenshot({ path: `tmp/other-studios-learning-${info.project.name}.png` })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true)
+  }
+  expect(errors).toEqual([])
+})
+test('portable progress roundtrips and rejects another studio without replacing notes', async ({ page }) => {
+  await page.goto('/#/statistics/probability-foundations/sample-space-events')
+  const workspace = page.getByRole('region', { name: 'Probability Foundations learning workspace', exact: true })
+  await workspace.getByLabel('Notes for Sample Space & Events', { exact: true }).fill('My event-space explanation.')
+  await workspace.getByRole('button', { name: 'Mark lab completed', exact: true }).click()
+  const downloadEvent = page.waitForEvent('download')
+  await workspace.getByRole('button', { name: 'Export learning progress', exact: true }).click()
+  const download = await downloadEvent
+  const content = await readFile((await download.path())!, 'utf8')
+  await workspace.getByLabel('Notes for Sample Space & Events', { exact: true }).fill('Changed note')
+  await workspace.getByLabel('Import learning progress', { exact: true }).setInputFiles({ name: 'progress.json', mimeType: 'application/json', buffer: Buffer.from(content) })
+  await expect(workspace.getByLabel('Notes for Sample Space & Events', { exact: true })).toHaveValue('My event-space explanation.')
+  await expect(workspace.getByRole('button', { name: 'Mark as not completed', exact: true })).toBeVisible()
+  const invalid = JSON.parse(content); invalid.studio = 'regression'
+  await workspace.getByLabel('Import learning progress', { exact: true }).setInputFiles({ name: 'wrong-studio.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(invalid)) })
+  await expect(workspace.getByText(/belongs to another studio/)).toBeVisible()
+  await expect(workspace.getByLabel('Notes for Sample Space & Events', { exact: true })).toHaveValue('My event-space explanation.')
+})
+test('Distributions shares learning features with model-specific notes and flashcards', async ({ page }, info) => {
+  await page.goto('/#/distributions/normal')
+  const workspace = page.getByRole('region', { name: 'Distributions learning workspace', exact: true })
+  await workspace.getByLabel('Notes for Normal', { exact: true }).fill('Normal parameters are location and spread.')
+  await workspace.getByRole('button', { name: 'Reveal answer', exact: true }).click()
+  await expect(workspace.getByRole('region', { name: 'Normal flashcards', exact: true })).toContainText('sigma standard deviation')
+  await workspace.getByRole('button', { name: 'Mark lab completed', exact: true }).click()
+  await page.goto('/#/distributions/poisson')
+  await expect(workspace.getByLabel('Notes for Poisson', { exact: true })).toHaveValue('')
+  await page.goto('/#/distributions/normal')
+  await expect(workspace.getByLabel('Notes for Normal', { exact: true })).toHaveValue('Normal parameters are location and spread.')
+  await expect(workspace.getByRole('progressbar')).toHaveAttribute('value', '1')
+  await page.getByRole('button', { name: 'Toggle theme (light)', exact: true }).click()
+  await workspace.getByRole('button', { name: 'Mark as not completed', exact: true }).scrollIntoViewIfNeeded()
+  await page.screenshot({ path: `tmp/other-studios-distributions-dark-${info.project.name}.png` })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true)
+})

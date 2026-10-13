@@ -39,8 +39,18 @@ import { REG_STUDIO_SLUG } from '../../lib/regressionStudio'
 import { TS_STUDIO_SLUG } from '../../lib/timeSeriesBasics'
 import { ANOVA_STUDIO_SLUG } from '../../lib/anovaStudio'
 import { useStore } from '../../store/useStore'
+import { SpecificGuide } from '../../components/learning/SpecificGuide'
+import { studioLabGuide } from '../../lib/guides/studioGuides'
+import { StudioLearningKit } from '../../components/statistics/StudioLearningKit'
 
 export function LabPage() {
+  const { studioSlug, labSlug } = useParams()
+  const guide = studioLabGuide(studioSlug ?? '', labSlug ?? '')
+  const found = getLab(studioSlug, labSlug)
+  return <>{guide && <div className="mx-auto w-full max-w-[1300px] px-4 pt-2 sm:px-6 lg:px-8"><SpecificGuide guide={guide} /></div>}<LabContent />{found && <div className="mx-auto w-full max-w-[1300px] px-4 pb-6 sm:px-6 lg:px-8"><StudioLearningKit studio={found.studio} activeLab={found.lab.slug} /></div>}</>
+}
+
+function LabContent() {
   const { studioSlug, labSlug } = useParams()
   const found = getLab(studioSlug, labSlug)
   const [iconActive, setIconActive] = useState(false)

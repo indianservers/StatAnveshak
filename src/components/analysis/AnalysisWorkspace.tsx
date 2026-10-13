@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Copy, Loader2, Play, Search } from 'lucide-react'
 import Plotly from 'plotly.js-dist-min'
 import { ANALYSIS_BY_ID, ANALYSIS_CATALOG, MODULE_ORDER, analysesForModule } from '../../analysis/catalog'
@@ -10,6 +10,8 @@ import { DatasetEmptyState } from '../ui/DatasetEmptyState'
 import { PageBack } from '../ui/PageBack'
 import { useToast } from '../ui/toastContext'
 import { formatStat } from '../../lib/statEngine'
+import { SpecificGuide } from '../learning/SpecificGuide'
+import { analysisGuide } from '../../lib/guides/analysisGuides'
 
 type Props = { analysisId: string }
 
@@ -180,12 +182,13 @@ export function AnalysisWorkspace({ analysisId }: Props) {
   }
 
   if (!activeDataset && !analysis.allowEmptyData) {
-    return <DatasetEmptyState preferredPath={`/analysis/${analysis.id}`} description="Load a dataset to run Stat Anveshak catalog analyses. Learn Stats, Bayes labs, and summary-statistics analyses also run without a table." />
+    return <div className="p-4">{analysisGuide(analysis.id, options) && <SpecificGuide guide={analysisGuide(analysis.id, options)!} />}<DatasetEmptyState preferredPath={`/analysis/${analysis.id}`} description="Load a dataset to run Stat Anveshak catalog analyses. Learn Stats, Bayes labs, and summary-statistics analyses also run without a table." /></div>
   }
 
   return (
     <div className="flex h-full min-h-[calc(100vh-7rem)] flex-col lg:flex-row">
       <aside className="flex w-full shrink-0 flex-col border-b border-slate-200 bg-white lg:w-52 lg:border-b-0 lg:border-r dark:border-slate-700 dark:bg-slate-800">
+        <Link to="/tools" className="m-3 rounded-xl border border-indigo-200 p-3 text-sm font-bold text-indigo-700 dark:border-indigo-800 dark:text-indigo-300">Tools Hub · prepare, compare & report →</Link>
         <div className="border-b border-slate-200 p-3 dark:border-slate-700">
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Analysis modules</p>
           <label className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 dark:border-slate-600 dark:bg-slate-900">
@@ -224,6 +227,7 @@ export function AnalysisWorkspace({ analysisId }: Props) {
           <PageBack fallback="/data/preview" label="Back to Data" />
           <h1 className="mt-2 text-lg font-bold text-slate-800 dark:text-white">{analysis.title}</h1>
           <p className="mt-1 text-xs leading-5 text-slate-500">{analysis.description}</p>
+          {analysisGuide(analysis.id, options) && <SpecificGuide guide={analysisGuide(analysis.id, options)!} />}
           {numericCols.length === 0 && analysis.fields.some((field) => 'role' in field && field.role === 'numeric' && 'required' in field && Boolean(field.required)) && !analysis.allowEmptyData && (
             <p className="mt-2 rounded-md bg-amber-50 p-2 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
               No suitable numeric columns are available for this analysis.

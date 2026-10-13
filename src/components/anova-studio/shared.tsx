@@ -65,6 +65,7 @@ export function AnovaSlider({
         onChange={(event) => onChange(Number(event.target.value))}
         className="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-blue-600 dark:bg-slate-700"
       />
+      <input aria-label={`${label} exact value`} type="number" min={min} max={max} step={step} value={value} className="anova-select mt-2" onChange={(event) => { if (!event.target.value) return; const next = Number(event.target.value); if (Number.isFinite(next) && next >= min && next <= max) onChange(Number((min + Math.round((next - min) / step) * step).toFixed(8))) }} />
     </label>
   )
 }
@@ -158,6 +159,7 @@ export type QuizItem = {
 }
 
 export function QuizBlock({ items }: { items: QuizItem[] }) {
+  const quizId = useId()
   const [index, setIndex] = useState(0)
   const [picked, setPicked] = useState<number | null>(null)
   const [checked, setChecked] = useState(false)
@@ -191,7 +193,7 @@ export function QuizBlock({ items }: { items: QuizItem[] }) {
             >
               <input
                 type="radio"
-                name={`anova-quiz-${index}`}
+                name={`anova-quiz-${quizId}-${index}`}
                 checked={selected}
                 onChange={() => {
                   setPicked(optionIndex)
