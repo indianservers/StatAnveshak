@@ -1,5 +1,5 @@
 import { Outlet, useLocation } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { TopBar } from './TopBar'
 import { MainNav } from './MainNav'
 import { useStore } from '../../store/useStore'
@@ -16,8 +16,13 @@ import { saveDataset } from '../../lib/storage'
 
 export function AppShell() {
   const location = useLocation()
+  const mainRef = useRef<HTMLElement>(null)
   const { theme, highContrast, largeText, zoomLevel, density, hydrateStorage, addDataset, setActiveDataset, motion, colorblindPalette, captionSize, storageStatus } = useStore()
   const darkSurface = theme === 'dark' || theme === 'midnight' || theme === 'forest'
+
+  useLayoutEffect(() => {
+    mainRef.current?.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [location.pathname])
 
   useEffect(() => {
     hydrateStorage()
@@ -54,9 +59,9 @@ export function AppShell() {
           <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
             <TopBar />
             <MainNav />
-            <main className="min-h-0 flex-1 overflow-auto page-fade">
+            <main ref={mainRef} className="min-h-0 flex-1 overflow-auto page-fade">
               <div className="flex min-h-full flex-col">
-                <div className="flex-1">
+                <div className="page-content flex-1">
                   <ErrorBoundary resetKey={location.pathname}>
                     {storageStatus === 'loading' ? <LoadingState /> : <Outlet />}
                   </ErrorBoundary>
