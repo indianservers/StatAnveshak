@@ -39,15 +39,18 @@ import { REG_STUDIO_SLUG } from '../../lib/regressionStudio'
 import { TS_STUDIO_SLUG } from '../../lib/timeSeriesBasics'
 import { ANOVA_STUDIO_SLUG } from '../../lib/anovaStudio'
 import { useStore } from '../../store/useStore'
-import { SpecificGuide } from '../../components/learning/SpecificGuide'
-import { studioLabGuide } from '../../lib/guides/studioGuides'
+import { StudioLabHeader } from '../../components/statistics/StudioLabHeader'
 import { StudioLearningKit } from '../../components/statistics/StudioLearningKit'
 
 export function LabPage() {
   const { studioSlug, labSlug } = useParams()
-  const guide = studioLabGuide(studioSlug ?? '', labSlug ?? '')
   const found = getLab(studioSlug, labSlug)
-  return <>{guide && <div className="mx-auto w-full max-w-[1300px] px-4 pt-2 sm:px-6 lg:px-8"><SpecificGuide guide={guide} /></div>}<LabContent />{found && <div className="mx-auto w-full max-w-[1300px] px-4 pb-6 sm:px-6 lg:px-8"><StudioLearningKit studio={found.studio} activeLab={found.lab.slug} /></div>}</>
+  if (!found) return <LabContent />
+  return <div className="unified-lab-page">
+    <StudioLabHeader studio={found.studio} lab={found.lab} />
+    <div className="lab-body"><LabContent /></div>
+    <div className="unified-learning-kit"><StudioLearningKit studio={found.studio} activeLab={found.lab.slug} /></div>
+  </div>
 }
 
 function LabContent() {

@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "./styles/reference.css";
+@import "./styles/all-pages.css";
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* Keep page introductions compact across workbenches, studios and labs. */

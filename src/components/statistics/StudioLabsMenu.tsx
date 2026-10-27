@@ -4,6 +4,15 @@ import { LayoutGrid } from 'lucide-react'
 import { labPath, studioPath, type Studio } from '../../lib/statisticsStudios'
 import { FOCUS_RING } from './studioTheme'
 
+const SHORT_LABELS: Record<string, string> = {
+  'sampling-distribution-of-the-mean': 'Sampling & CLT',
+  'sampling-distribution-of-a-proportion': 'Mean as a Prop.',
+  'central-limit-theorem': 'Central Limit Thm',
+  'law-of-large-numbers': 'Law of Large N',
+  'sampling-distribution-comparison': 'Compare Dist.',
+  'bootstrap-intuition': 'Bootstrap',
+}
+
 /** Every lab in the studio, so learners can jump between labs without going back to the studio page. */
 export function StudioLabsMenu({ studio, current }: { studio: Studio; current: string }) {
   const listRef = useRef<HTMLOListElement>(null)
@@ -18,7 +27,7 @@ export function StudioLabsMenu({ studio, current }: { studio: Studio; current: s
   return (
     <nav
       aria-label={`${studio.title} labs`}
-      className="flex min-w-0 items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+      className="reference-lab-menu flex min-w-0 items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
     >
       <Link
         to={studioPath(studio)}
@@ -36,7 +45,8 @@ export function StudioLabsMenu({ studio, current }: { studio: Studio; current: s
               <Link
                 to={labPath(studio.slug, lab.slug)}
                 aria-current={active ? 'page' : undefined}
-                title={lab.summary}
+                title={`${lab.title} · ${lab.summary}`}
+                aria-label={lab.title}
                 className={`flex items-center gap-1.5 whitespace-nowrap rounded-xl px-2.5 py-2 text-xs font-bold transition ${FOCUS_RING} ${
                   active
                     ? 'bg-indigo-600 text-white shadow-sm'
@@ -51,7 +61,7 @@ export function StudioLabsMenu({ studio, current }: { studio: Studio; current: s
                 >
                   {index + 1}
                 </span>
-                {lab.title}
+                {SHORT_LABELS[lab.slug] ?? lab.title}
               </Link>
             </li>
           )

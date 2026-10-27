@@ -1,50 +1,14 @@
 import { useMemo, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { AlertTriangle, ChevronRight, Clock, Columns3, Contrast, Database, FileText, FlaskConical, HelpCircle, LogOut, Minus, Moon, MoreHorizontal, Palette, Plus, Save, Search, Sun, Target, Type } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { AlertTriangle, Bell, Clock, Columns3, Contrast, Database, FileText, FlaskConical, HelpCircle, LogOut, Minus, Moon, Palette, Plus, Save, Search, Sun, Target, Type } from 'lucide-react'
 import { useStore } from '../../store/useStore'
 import { saveDataset } from '../../lib/storage'
 import { useToast } from '../ui/toastContext'
 import { datasetGuardrails } from '../../lib/guardrails'
+import { MainNav } from './MainNav'
 import { TeachingDatasetChip } from '../visual/TeachingDatasetChip'
 
-const PAGE_NAMES: Record<string, string> = {
-  '/': 'Home',
-  '/projects': 'Projects',
-  '/data/upload': 'Upload',
-  '/data/preview': 'Preview',
-  '/data/grid': 'Data Grid',
-  '/data/clean': 'Clean & Transform',
-  '/data/workbench': 'Statistics Workbench',
-  '/data/query': 'Query Workbench',
-  '/explore/summary': 'Descriptive Statistics',
-  '/analysis': 'Analysis',
-  '/explore/charts': 'Charts',
-  '/explore/correlation': 'Correlation',
-  '/explore/frequency': 'Frequency',
-  '/analysis/regression.correlation': 'Correlation',
-  '/analysis/frequencies.contingency': 'Contingency Tables',
-  '/analysis/regression.linear': 'Linear Regression',
-  '/distributions': 'Distributions Studio',
-  '/inference': 'Inference Tests',
-  '/regression': 'Regression',
-  '/advanced': 'Advanced Analysis',
-  '/stat-modules': 'Stat Modules',
-  '/syllabus': 'Syllabus Modules',
-  '/modules': 'CS Modules',
-  '/dashboard': 'Dashboard',
-  '/reports': 'Reports',
-  '/statistics': 'Statistics Studios',
-  '/learn': 'Continue Learning',
-  '/learn/wall': 'Lesson Wall',
-  '/classroom': 'Classroom',
-  '/professional-learning': 'Professional Learning',
-  '/solver': 'Solver',
-  '/documentation': 'Documentation',
-  '/docs': 'Documentation',
-  '/glossary': 'Glossary',
-  '/sitemap': 'Sitemap',
-  '/settings': 'Settings',
-}
+
 
 export function TopBar() {
   const {
@@ -73,7 +37,6 @@ export function TopBar() {
   const [showHelp, setShowHelp] = useState(false)
   const [showHealth, setShowHealth] = useState(false)
   const [showMore, setShowMore] = useState(false)
-  const location = useLocation()
   const navigate = useNavigate()
   const { notify } = useToast()
 
@@ -99,11 +62,7 @@ export function TopBar() {
     return `${numeric}N ${categorical}C`
   }, [activeDataset])
   const guardrails = useMemo(() => datasetGuardrails(activeDataset), [activeDataset])
-  const breadcrumb = useMemo(() => {
-    const parts = location.pathname.split('/').filter(Boolean)
-    if (parts.length === 0) return ['Workspace', 'Home']
-    return ['Workspace', ...parts.map((part) => PAGE_NAMES[`/${parts.slice(0, parts.indexOf(part) + 1).join('/')}`] ?? part.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()))]
-  }, [location.pathname])
+
 
   const handleSave = async () => {
     if (!activeDataset) return
@@ -130,7 +89,7 @@ export function TopBar() {
   const iconBtn = 'flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'
 
   return (
-    <header className="relative z-20 flex min-h-12 shrink-0 items-center gap-2 border-b border-slate-200 bg-white px-2 py-1.5 dark:border-slate-700 dark:bg-slate-800 sm:gap-3 sm:px-3 md:px-4">
+    <header className="reference-topbar relative z-40 flex min-h-12 shrink-0 items-center gap-2 border-b border-slate-200 bg-white px-2 py-1.5 dark:border-slate-700 dark:bg-slate-800 sm:gap-3 sm:px-3 md:px-4">
       <Link
         to="/"
         className="flex shrink-0 items-center gap-2 rounded-md pr-1 text-slate-900 hover:text-indigo-700 dark:text-white dark:hover:text-indigo-300"
@@ -142,36 +101,10 @@ export function TopBar() {
         <span className="hidden text-base font-bold tracking-tight sm:inline">Stat Anveshak</span>
       </Link>
 
-      <div className="flex shrink-0 items-center rounded-lg border border-slate-200 p-0.5 dark:border-slate-600" role="tablist" aria-label="Workspace mode">
-        {(['learn', 'analyze'] as const).map((mode) => (
-          <button
-            key={mode}
-            type="button"
-            onClick={() => setWorkspaceMode(mode)}
-            className={`rounded-md px-2.5 py-1 text-xs font-bold capitalize ${
-              workspaceMode === mode
-                ? 'bg-indigo-600 text-white'
-                : 'text-slate-500 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700'
-            }`}
-          >
-            {mode}
-          </button>
-        ))}
-      </div>
+      <MainNav />
 
-      <div className="flex min-w-0 flex-1 items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-        <nav className="hidden min-w-0 items-center gap-1 text-xs xl:flex" aria-label="Breadcrumb">
-          {breadcrumb.map((part, index) => (
-            <span key={`${part}-${index}`} className="inline-flex min-w-0 items-center gap-1">
-              {index === 0 ? (
-                <Link to="/" className="text-slate-400 hover:text-indigo-600">{part}</Link>
-              ) : (
-                <span className={`truncate ${index === breadcrumb.length - 1 ? 'font-medium text-slate-700 dark:text-slate-200' : 'text-slate-400'}`}>{part}</span>
-              )}
-              {index < breadcrumb.length - 1 && <ChevronRight size={12} className="shrink-0 text-slate-300 dark:text-slate-600" />}
-            </span>
-          ))}
-        </nav>
+      <div className="header-dataset flex min-w-0 items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+
 
         {activeProject && (
           <span className="hidden min-w-0 items-center gap-1.5 truncate 2xl:inline-flex">
@@ -239,20 +172,53 @@ export function TopBar() {
           </button>
         )}
 
+        <div className="relative header-status">
+          <button type="button" className={iconBtn} aria-label="Workspace status" aria-expanded={showHealth && !showMore} onClick={() => { setShowHealth(value => !value); setShowMore(false); setShowHelp(false) }}><Bell size={21} aria-hidden /></button>
+          {showHealth && !showMore && <div className="absolute right-0 top-11 z-40 w-64 rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-xl dark:border-slate-700 dark:bg-slate-900">
+            <p className="font-bold">Workspace status</p>
+            <p className="mt-2 text-xs text-slate-500">{dataHealth ? `${dataHealth.missingPct.toFixed(1)}% missing values in the active dataset.` : 'Choose a dataset to start exploring.'}</p>
+            <p className="mt-2 text-xs text-slate-500">{lastSavedLabel ? `Last saved ${lastSavedLabel}.` : 'Your data stays on this device.'}</p>
+          </div>}
+        </div>
         <div className="relative">
           <button
             type="button"
             onClick={() => { setShowMore((value) => !value); setShowHelp(false); setShowHealth(false) }}
             className={iconBtn}
             title="More workspace controls"
+            aria-label="More workspace controls"
             aria-expanded={showMore}
           >
-            <MoreHorizontal size={16} />
+            <span className="header-avatar">SA</span>
           </button>
           {showMore && (
             <div className="absolute right-0 top-10 z-40 w-72 rounded-lg border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-800">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Workspace</p>
+      <div className="flex shrink-0 items-center rounded-lg border border-slate-200 p-0.5 dark:border-slate-600" role="tablist" aria-label="Workspace mode">
+        {(['learn', 'analyze'] as const).map((mode) => (
+          <button
+            key={mode}
+            type="button"
+            onClick={() => setWorkspaceMode(mode)}
+            data-active={workspaceMode === mode}
+            aria-pressed={workspaceMode === mode}
+            className={`rounded-md px-2.5 py-1 text-xs font-bold capitalize ${
+              workspaceMode === mode
+                ? 'bg-indigo-600 text-white'
+                : 'text-slate-500 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700'
+            }`}
+          >
+            {mode}
+          </button>
+        ))}
+      </div>
+
+
               <div className="grid grid-cols-2 gap-2">
+                <MoreAction icon={theme === 'light' ? Moon : Sun} label="Toggle theme" onClick={toggleTheme} />
+                <MoreAction icon={HelpCircle} label="Keyboard shortcuts" onClick={() => { setShowHelp(true); setShowMore(false) }} />
+                {activeDataset && <MoreAction icon={Save} label="Save dataset" onClick={() => void handleSave()} />}
+                {activeDataset && <MoreAction icon={LogOut} label="Unload dataset" onClick={unloadDataset} />}
                 <MoreAction icon={Search} label="Command palette" hint="Ctrl K" onClick={openCommandPalette} />
                 {workspaceMode === 'analyze' && (
                   <MoreAction icon={Database} label="Datasets" onClick={() => { navigate('/data/upload'); setShowMore(false) }} />

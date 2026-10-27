@@ -26,6 +26,7 @@ export function HistogramChart({
   height = 220,
   className = '',
   ariaLabel = 'Histogram',
+  xDomain,
 }: PlotBase & {
   bins: HistBin[]
   mean?: number
@@ -33,6 +34,7 @@ export function HistogramChart({
   xLabel?: string
   yLabel?: string
   ariaLabel?: string
+  xDomain?: [number, number]
 }) {
   const width = 640
   const left = 44
@@ -40,9 +42,8 @@ export function HistogramChart({
   const top = 16
   const bottom = height - 34
   const maxCount = Math.max(1, ...bins.map((bin) => bin.count))
-  const x0 = bins[0]?.x0 ?? 0
-  const x1 = bins[bins.length - 1]?.x1 ?? 1
-  const barW = Math.max(1, (right - left) / Math.max(bins.length, 1) - 1)
+  const x0 = xDomain?.[0] ?? bins[0]?.x0 ?? 0
+  const x1 = xDomain?.[1] ?? bins[bins.length - 1]?.x1 ?? 1
   const overlayMax = overlay ? Math.max(...overlay.map((p) => p.y), 1e-6) : 1
   const scaleX = (value: number) => left + ((value - x0) / (x1 - x0 || 1)) * (right - left)
   const overlayPath = overlay
@@ -76,7 +77,7 @@ export function HistogramChart({
             key={bin.mid}
             x={scaleX(bin.x0) + 0.5}
             y={bottom - h}
-            width={barW}
+            width={Math.max(1, scaleX(bin.x1) - scaleX(bin.x0) - 1)}
             height={h}
             rx="2"
             fill="#818cf8"

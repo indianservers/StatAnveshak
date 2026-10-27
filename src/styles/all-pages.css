@@ -1,0 +1,74 @@
+/* Shared page canvas, panels, controls and introductions. */
+.page-content[class] { background: var(--ref-wash); color: var(--ref-ink); }
+.page-content[class] > :is(main,div,section)[class] { width: 100%; max-width: 1656px; margin-inline: auto; padding: 6px 28px 28px; background-color: var(--ref-wash); }
+.page-content[class] h1 { color: var(--ref-ink); font-size: 32px; line-height: 1.15; letter-spacing: -.035em; font-weight: 850; }
+.page-content[class] h1 + p { color: var(--ref-muted); font-size: 15px; line-height: 1.5; margin: 6px 0 16px; }
+.page-content[class] :is(h2,h3) { color: var(--ref-ink); letter-spacing: -.025em; }
+.page-content[class] :is(.pf-card,.rv-card,.ds-card,.sm-card,.clt-card,.bayes-card,.corr-card,.reg-card,.ts-card,.anova-card,.dist-card,.tool-card,.home-panel),
+.page-content[class] [class~="bg-white"][class~="border"][class*="rounded-"] {
+  background: var(--ref-paper); border-color: var(--ref-line); border-radius: 15px; box-shadow: 0 2px 6px #172c6005;
+}
+.page-content[class] :is(.pf-card,.rv-card,.ds-card,.sm-card,.clt-card,.bayes-card,.corr-card,.reg-card,.ts-card,.anova-card) > header { border-color: var(--ref-line); }
+.page-content[class] :is(.pf-card,.rv-card,.ds-card,.sm-card,.clt-card,.bayes-card,.corr-card,.reg-card,.ts-card,.anova-card) > header > div { color: var(--ref-ink); font-size: 17px; font-weight: 800; }
+.page-content[class] :is(button,a)[class~="bg-indigo-600"],
+.page-content[class] :is(button,a)[class~="bg-blue-600"],
+.page-content[class] :is(.pf-btn,.rv-btn,.ds-btn,.sm-btn,.clt-btn,.bayes-btn,.corr-btn,.reg-btn,.ts-btn,.anova-btn):not([class*="-ghost"]) {
+  background: linear-gradient(110deg,#7046ff,#5730ff); color: white; border-radius: 10px; border-color: transparent;
+}
+.page-content[class] :is(button,a)[class~="bg-indigo-50"] { background-color: #eeeaff; color: #5730ef; }
+.page-content[class] :is(input,select,textarea):not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]) { border-color: #d8e2f5; border-radius: 8px; }
+.page-content[class] input[type="range"] { accent-color: var(--ref-purple); }
+.page-content[class] :is(input,select,textarea,button,a,summary):focus-visible { outline-color: #8d72ff; }
+.page-content[class] [role="tablist"] { border: 1px solid var(--ref-line); padding: 4px; border-radius: 12px; gap: 4px; box-shadow: 0 2px 6px #172c6008; }
+.page-content[class] [role="tablist"] > [role="tab"] { min-height: 42px; border-radius: 9px; color: var(--ref-ink); background: transparent; }
+.page-content[class] [role="tablist"] > [role="tab"][aria-selected="true"] { color: #5730ef; background: #eeeaff; box-shadow: none; }
+
+/* Studio landing pages use a compact introduction instead of a tall hero. */
+.page-content section[aria-labelledby="studio-hero-heading"] { border: 0; background: transparent; box-shadow: none; border-radius: 0; }
+.page-content section[aria-labelledby="studio-hero-heading"] > :not(.relative.grid) { display: none; }
+.page-content section[aria-labelledby="studio-hero-heading"] > div.relative.grid { display: block; padding: 0; }
+.page-content section[aria-labelledby="studio-hero-heading"] > div.relative.grid > div:last-child:not(:first-child) { display: none; }
+.page-content section[aria-labelledby="studio-hero-heading"] h1 { font-size: 34px; }
+.page-content section[aria-labelledby="studio-hero-heading"] ul { display: flex; flex-wrap: wrap; gap: 24px; padding-top: 4px; }
+.page-content section[aria-labelledby="studio-hero-heading"] nav { display: none; }
+.page-content section[aria-labelledby="studio-hero-heading"] p { max-width: 1000px; line-height: 1.5; }
+
+/* All labs share the same heading, guide and numbered navigation. */
+.page-content[class] > .unified-lab-page { padding-top: 0; }
+.unified-lab-intro { display: flex; flex-direction: column; gap: 15px; margin-bottom: 15px; }
+.reference-lab-heading.reference-heading-no-modes { grid-template-columns: 1fr; }
+.reference-heading-no-modes .reference-title { justify-content: space-between; }
+.reference-heading-no-modes .reference-title > div { max-width: 1100px; }
+.unified-lab-page .lab-body main[class] { background: transparent; padding: 0; }
+.unified-lab-page .lab-body main > div[class*="max-w-"] { width: 100%; max-width: none; }
+.unified-learning-kit { margin-top: 20px; }
+.unified-lab-page .lab-body :is(header,section):has(h1),
+.unified-lab-page .lab-body .reference-lab-heading,
+.unified-lab-page .lab-body .reference-lab-menu,
+.unified-lab-page .lab-body nav[aria-label="Lab modes"],
+.unified-lab-page .lab-body nav[aria-label="Breadcrumb"],
+.unified-lab-page .lab-body :is(.bayes-sidebar,.corr-sidebar,.reg-sidebar,.ts-sidebar,.anova-sidebar),
+.unified-lab-page .lab-body nav:not([aria-label]):has(> a[href^="#/statistics/"]),
+.unified-lab-page .lab-body main > div.flex > div:first-child:has(> a[href^="#/statistics/"]),
+.unified-lab-page .lab-body .anova-chrome > div > div:first-child:has(> a[href^="#/statistics/"]) { display: none; }
+.unified-lab-page .lab-body .grid:has(> :is(.bayes-sidebar,.corr-sidebar,.reg-sidebar,.ts-sidebar,.anova-sidebar)) { grid-template-columns: minmax(0,1fr); gap: 0; }
+.unified-lab-page .lab-body .min-w-0.space-y-5 > :first-child + * { margin-top: 0; }
+.unified-lab-page .lab-body .ts-mountain { display: none; }
+.unified-lab-page .lab-body main > div.flex > div:first-child:has(> p[class*="uppercase"]) { display: none; }
+
+.dark .page-content[class] :is(button,a)[class~="bg-indigo-50"],
+.dark .page-content[class] [role="tablist"] > [role="tab"][aria-selected="true"],
+.dark .page-content nav[aria-label="Lab modes"] button[aria-current="page"] { background: #302654; color: #d4c9ff; }
+.dark .page-content[class] :is(input,select,textarea):not([type="range"]) { border-color: #354362; }
+.dark .reference-modes { background: var(--ref-paper); border-color: var(--ref-line); }
+@media (max-width: 1050px) { .page-content[class] h1 { font-size: 28px; } }
+@media (max-width: 760px) {
+  .page-content[class] > :is(main,div,section)[class] { padding: 6px 12px 20px; }
+  .page-content[class] h1 { font-size: 26px; }
+  .page-content[class] h1 + p { font-size: 13px; }
+  .page-content section[aria-labelledby="studio-hero-heading"] h1 { font-size: 28px; }
+  .page-content section[aria-labelledby="studio-hero-heading"] ul { gap: 14px; }
+  .unified-lab-intro { gap: 12px; margin-bottom: 12px; }
+  .reference-heading-no-modes .reference-title > div { min-width: 0; }
+  .reference-guide { flex-shrink: 0; }
+}

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, TableProperties } from 'lucide-react'
 import { useStore } from '../../store/useStore'
 import { sampleToDataset } from '../../lib/dataset'
 import { findSampleById, sampleLibraryMeta } from '../../lib/sampleLibrary'
@@ -33,8 +33,9 @@ export function TeachingDatasetChip({ compact = false }: { compact?: boolean }) 
         title={`${isTeaching ? 'Teaching dataset' : 'Dataset'} · ${name} · ${rows} rows`}
         className="inline-flex min-w-0 max-w-full items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-left text-xs font-semibold text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
       >
+        <TableProperties size={19} aria-hidden className="shrink-0 text-emerald-500" />
         <span className="truncate">
-          {isTeaching ? 'Teaching dataset' : 'Dataset'} · {name} · {rows} rows
+          {isTeaching ? 'Teaching dataset' : 'Dataset'} · {name}{!compact && ` · ${rows} rows`}
         </span>
         <ChevronDown size={14} className="shrink-0" />
       </button>

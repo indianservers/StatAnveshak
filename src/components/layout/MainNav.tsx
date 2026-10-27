@@ -69,7 +69,7 @@ export function MainNav() {
   const openCategory = NAV_MENU.find((category) => category.id === open)
 
   return (
-    <nav ref={navRef} aria-label="Main" className="relative z-30 shrink-0 border-b border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
+    <nav ref={navRef} aria-label="Main" className="reference-nav relative z-30 shrink-0 border-b border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
       <ul className="hidden items-center gap-0.5 px-2 sm:px-3 md:px-4 lg:flex">
         {NAV_MENU.map((category) => {
           const Icon = category.icon
@@ -81,7 +81,7 @@ export function MainNav() {
               : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white'
           }`
           return (
-            <li key={category.id}>
+            <li key={category.id} className="nav-category" data-category={category.id} data-active={active || expanded}>
               {category.to ? (
                 <Link to={category.to} onClick={() => choose(category)} aria-current={active ? 'page' : undefined} className={base}>
                   <Icon size={16} aria-hidden />
@@ -188,7 +188,7 @@ export function MainNav() {
                 active ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300' : 'text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700'
               }`
               return (
-                <li key={category.id}>
+                <li key={category.id} className="nav-category" data-category={category.id} data-active={active || expanded}>
                   {category.to ? (
                     <Link to={category.to} onClick={() => choose(category)} className={rowClass}>
                       <Icon size={17} aria-hidden />
